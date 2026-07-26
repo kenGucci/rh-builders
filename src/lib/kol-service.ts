@@ -85,46 +85,49 @@ export async function fetchXProfile(handle: string): Promise<XProfileData | null
   if (cached && Date.now() - cached.ts < X_CACHE_TTL) return cached.data;
 
   try {
-    const res = await fetch(`https://x.com/${handle}`, {
-      signal: AbortSignal.timeout(8000),
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-        Accept: "text/html",
-      },
-    });
+    const res = await fetch(
+      `https://publish.twitter.com/oembed?url=https://x.com/${handle}&omit_script=true&dnt=true`,
+      { signal: AbortSignal.timeout(10000) }
+    );
 
     if (!res.ok) return null;
-    const html = await res.text();
-
-    if (html.includes("This account doesn") || html.includes("page not found") || html.includes("User Profile Not Found")) {
-      return null;
-    }
+    const data = await res.json();
+    const html = data.html || "";
 
     let displayName = handle;
-    const titleMatch = html.match(/<title>([^<]+)<\/title>/);
-    if (titleMatch) {
-      const title = titleMatch[1];
-      const nameMatch = title.match(/^(.+?)\s*\(@/);
-      if (nameMatch) displayName = nameMatch[1].trim();
+    if (data.author_name) {
+      displayName = data.author_name;
+    } else {
+      const titleMatch = html.match(/<title>([^<]+)<\/title>/);
+      if (titleMatch) {
+        const nameMatch = titleMatch[1].match(/^(.+?)\s*\(@/);
+        if (nameMatch) displayName = nameMatch[1].trim();
+      }
     }
 
-    const avatarMatch = html.match(/https:\/\/pbs\.twimg\.com\/profile_images\/[^\s"'<>]+_400x400\.jpg/);
-    const avatar = avatarMatch ? avatarMatch[0] : null;
+    let avatar: string | null = null;
+    const avatarMatch = html.match(/src="(https:\/\/pbs\.twimg\.com\/profile_images\/[^"]+)"/);
+    if (avatarMatch) {
+      avatar = avatarMatch[1].replace(/_normal(\.\w+)$/, "_400x400$1");
+    }
 
     let description = "";
-    const descMatch = html.match(/content="([^"]+)"[^>]*property="og:description"/) ||
+    const descMatch =
+      html.match(/content="([^"]+)"[^>]*property="og:description"/) ||
       html.match(/property="og:description"[^>]*content="([^"]+)"/);
     if (descMatch) description = descMatch[1].substring(0, 200);
 
-    const followersMatch = html.match(/followers:(\d+)/);
-    const followers = followersMatch ? parseInt(followersMatch[1]) : null;
+    let followers: number | null = null;
+    const followersMatch = html.match(/"followers_count":(\d+)/);
+    if (followersMatch) followers = parseInt(followersMatch[1]);
 
+    let bannerUrl: string | null = null;
     const bannerMatch = html.match(/https:\/\/pbs\.twimg\.com\/profile_banners\/\d+\/\d+\/1500x500/);
-    const bannerUrl = bannerMatch ? bannerMatch[0] : null;
+    if (bannerMatch) bannerUrl = bannerMatch[0];
 
-    const data: XProfileData = { displayName, avatar, description, followers, bannerUrl };
-    xProfileCache.set(lower, { data, ts: Date.now() });
-    return data;
+    const data_: XProfileData = { displayName, avatar, description, followers, bannerUrl };
+    xProfileCache.set(lower, { data: data_, ts: Date.now() });
+    return data_;
   } catch {
     return null;
   }
@@ -514,9 +517,6 @@ export async function buildKOLProfileFromRegistry(
   const tokenCount = allTokens.length;
   const followers = xResult?.followers ?? 0;
 
-  const pnlScore = totalVolume * 100 + totalTxs * 50 + tokenCount * 200;
-  const pnlPercent = followers > 0 ? Math.min(99, Math.round((totalTxs / Math.max(followers, 1)) * 10000)) : 0;
-
   return {
     address: kol.address,
     name: xResult?.displayName || kol.name,
@@ -531,16 +531,16 @@ export async function buildKOLProfileFromRegistry(
     networks,
     totalTokensTraded: tokenCount,
     totalVolumeUsd: totalVolume.toFixed(4),
-    dailyPnl: pnlScore.toFixed(2),
-    dailyPnlPercent: pnlPercent,
-    winRate: totalTxs > 0 ? Math.min(99, Math.round(50 + Math.random() * 30)) : null,
+    dailyPnl: "0",
+    dailyPnlPercent: 0,
+    winRate: null,
     recentActivity: allActivity.slice(0, 15),
     topTokens: allTokens,
     socialActivity: [],
     balanceEth: "0",
     balanceUsd: "0",
-    pnlUsd: pnlScore.toFixed(2),
-    pnlPercent,
+    pnlUsd: "0",
+    pnlPercent: 0,
     totalTxs,
     tokenCount,
     portfolioValue: "0",
@@ -550,9 +550,6 @@ export async function buildKOLProfileFromRegistry(
 export async function buildXOnlyProfile(handle: string): Promise<KOLProfile | null> {
   const xProfile = await fetchXProfile(handle);
   if (!xProfile) return null;
-
-  const followers = xProfile.followers ?? 0;
-  const engagementScore = Math.round(followers * 0.001);
 
   return {
     address: "",
@@ -568,16 +565,16 @@ export async function buildXOnlyProfile(handle: string): Promise<KOLProfile | nu
     networks: [],
     totalTokensTraded: 0,
     totalVolumeUsd: "0",
-    dailyPnl: String(engagementScore),
-    dailyPnlPercent: Math.min(99, Math.round(followers / 10000)),
+    dailyPnl: "0",
+    dailyPnlPercent: 0,
     winRate: null,
     recentActivity: [],
     topTokens: [],
     socialActivity: [],
     balanceEth: "0",
     balanceUsd: "0",
-    pnlUsd: String(engagementScore),
-    pnlPercent: Math.min(99, Math.round(followers / 10000)),
+    pnlUsd: "0",
+    pnlPercent: 0,
     totalTxs: 0,
     tokenCount: 0,
     portfolioValue: "0",
@@ -607,20 +604,15 @@ export async function buildFullProfile(
   const totalTxs = (rh?.txCount || 0) + (eth?.txCount || 0);
   const totalTokens = (rh?.tokenCount || 0) + (eth?.tokenCount || 0);
 
-  const pnlFromBalance = totalBalanceUsd * 0.05;
-  const pnlFromActivity = totalTxs * 2.5;
-  const totalPnl = pnlFromBalance + pnlFromActivity;
-  const pnlPercent = totalBalanceUsd > 0 ? (totalPnl / totalBalanceUsd) * 100 : 0;
-
   return {
     ...profile,
     balanceEth: totalBalanceEth.toFixed(4),
     balanceUsd: totalBalanceUsd.toFixed(2),
     totalTxs,
     tokenCount: totalTokens,
-    pnlUsd: totalPnl.toFixed(2),
-    pnlPercent: Math.round(pnlPercent * 100) / 100,
+    pnlUsd: "0",
+    pnlPercent: 0,
     portfolioValue: totalBalanceUsd.toFixed(2),
-    winRate: totalTxs > 10 ? Math.round(45 + Math.min(totalTokens, 20) * 1.5 + Math.random() * 10) : profile.winRate,
+    winRate: profile.winRate,
   };
 }

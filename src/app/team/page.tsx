@@ -8,8 +8,8 @@ interface XProfile {
   avatar: string | null;
   description: string;
   followers: number | null;
-  bannerUrl: string | null;
   following: number | null;
+  bannerUrl: string | null;
   joinDate: string | null;
   location: string | null;
   website: string | null;
@@ -30,75 +30,29 @@ export default function TeamPage() {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    fetch("https://x.com/suggestionii", {
-      signal: AbortSignal.timeout(10000),
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-        Accept: "text/html",
-      },
-    })
+    fetch("/api/twitter?handle=suggestionii")
       .then((r) => {
         if (!r.ok) throw new Error();
-        return r.text();
+        return r.json();
       })
-      .then((html) => {
-        if (html.includes("This account doesn") || html.includes("page not found")) {
+      .then((data) => {
+        if (!data || data.error) {
           setError(true);
           setLoading(false);
           return;
         }
-
-        let displayName = "suggestionii";
-        const titleMatch = html.match(/<title>([^<]+)<\/title>/);
-        if (titleMatch) {
-          const nameMatch = titleMatch[1].match(/^(.+?)\s*\(@/);
-          if (nameMatch) displayName = nameMatch[1].trim();
-        }
-
-        const avatarMatch = html.match(/https:\/\/pbs\.twimg\.com\/profile_images\/[^\s"'<>]+_400x400\.jpg/);
-        const avatar = avatarMatch ? avatarMatch[0] : null;
-
-        let description = "";
-        const descMatch =
-          html.match(/content="([^"]+)"[^>]*property="og:description"/) ||
-          html.match(/property="og:description"[^>]*content="([^"]+)"/);
-        if (descMatch) description = descMatch[1].substring(0, 300);
-
-        const followersMatch = html.match(/followers:(\d+)/);
-        const followers = followersMatch ? parseInt(followersMatch[1]) : null;
-
-        const followingMatch = html.match(/following:(\d+)/);
-        const following = followingMatch ? parseInt(followingMatch[1]) : null;
-
-        const bannerMatch = html.match(/https:\/\/pbs\.twimg\.com\/profile_banners\/\d+\/\d+\/1500x500/);
-        const bannerUrl = bannerMatch ? bannerMatch[0] : null;
-
-        const joinDateMatch = html.match(/Joined\s+(\w+\s+\d{4})/i);
-        const joinDate = joinDateMatch ? joinDateMatch[1] : null;
-
-        const locationMatch = html.match(/"location":"([^"]+)"/);
-        const location = locationMatch ? locationMatch[1] : null;
-
-        const websiteMatch = html.match(/"url":"(https?:\/\/[^"]+)"/);
-        const website = websiteMatch ? websiteMatch[1] : null;
-
-        const verified = html.includes("verified") || html.includes("Verified");
-
-        const tweetMatch = html.match(/"statuses_count":(\d+)/);
-        const tweetCount = tweetMatch ? parseInt(tweetMatch[1]) : null;
-
         setProfile({
-          displayName,
-          avatar,
-          description,
-          followers,
-          bannerUrl,
-          following,
-          joinDate,
-          location,
-          website,
-          verified,
-          tweetCount,
+          displayName: data.displayName || "suggestionii",
+          avatar: data.avatarUrl || null,
+          description: data.description || "",
+          followers: data.followers,
+          following: data.following,
+          bannerUrl: data.bannerUrl || null,
+          joinDate: data.joinDate || null,
+          location: data.location || null,
+          website: data.website || null,
+          verified: data.verified || false,
+          tweetCount: data.tweetCount,
         });
         setLoading(false);
       })
@@ -122,7 +76,7 @@ export default function TeamPage() {
           <div className="h-64 rounded-2xl animate-shimmer" style={{ background: "var(--surface)" }} />
           <div className="h-48 rounded-2xl animate-shimmer" style={{ background: "var(--surface)" }} />
         </div>
-      ) : error ? (
+      ) : error || !profile ? (
         <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-8 text-center">
           <div className="text-sm text-[var(--text-muted)]">Could not load X profile.</div>
           <a
@@ -135,7 +89,7 @@ export default function TeamPage() {
             <ExternalLink size={12} />
           </a>
         </div>
-      ) : profile ? (
+      ) : (
         <>
           {/* Profile Card */}
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl overflow-hidden">
@@ -263,7 +217,7 @@ export default function TeamPage() {
             </div>
           </div>
         </>
-      ) : null}
+      )}
     </div>
   );
 }

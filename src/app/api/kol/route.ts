@@ -398,7 +398,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "KOL not found" }, { status: 404 });
     }
 
-    const profile = await buildFullProfile(kol, ethPrice);
+    const profile = await buildFullProfile({ ...kol, address: kol.address || "" }, ethPrice);
     return NextResponse.json({ kol: profile, ethPrice });
   }
 
@@ -420,7 +420,7 @@ export async function GET(request: NextRequest) {
     }
 
     const profiles = await Promise.allSettled(
-      matched.slice(0, 10).map((kol) => buildFullProfile(kol, ethPrice))
+      matched.slice(0, 10).map((kol) => buildFullProfile({ ...kol, address: kol.address || "" }, ethPrice))
     );
 
     const results = profiles
@@ -436,7 +436,7 @@ export async function GET(request: NextRequest) {
       : KOL_REGISTRY.filter((k) => k.tags.some((t) => t.toLowerCase().includes(category.toLowerCase())));
 
   const registryProfiles = await Promise.allSettled(
-    filtered.map((kol) => buildFullProfile(kol, ethPrice))
+    filtered.map((kol) => buildFullProfile({ ...kol, address: kol.address || "" }, ethPrice))
   );
 
   let profiles = registryProfiles
