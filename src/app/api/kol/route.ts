@@ -120,7 +120,7 @@ const KOL_REGISTRY = [
     ethAddresses: ["0xC0C800B42BcA429C1f3104d25cFE2A71d728d872"],
   },
   {
-    address: "",
+    address: null,
     name: "Hsaka",
     handle: "HsakaTrades",
     description: "Crypto trader and market commentator. Trusted voice in CT.",
@@ -128,7 +128,7 @@ const KOL_REGISTRY = [
     ethAddresses: [],
   },
   {
-    address: "",
+    address: null,
     name: "Ansem",
     handle: "blknoiz06",
     description: "Crypto researcher and analyst. Solana ecosystem champion.",
@@ -136,7 +136,7 @@ const KOL_REGISTRY = [
     ethAddresses: [],
   },
   {
-    address: "",
+    address: null,
     name: "DeFi Ignas",
     handle: "defi_ignas",
     description: "DeFi researcher. Yield farming deep dives and protocol analysis.",
@@ -144,7 +144,7 @@ const KOL_REGISTRY = [
     ethAddresses: [],
   },
   {
-    address: "",
+    address: null,
     name: "Miles Deutscher",
     handle: "milesdeutscher",
     description: "Crypto analyst and YouTuber. Market breakdowns and altcoin picks.",
@@ -152,7 +152,7 @@ const KOL_REGISTRY = [
     ethAddresses: [],
   },
   {
-    address: "",
+    address: null,
     name: "Coin Bureau",
     handle: "CoinBureau",
     description: "Crypto education and in-depth analysis. One of the largest crypto channels.",
@@ -160,7 +160,7 @@ const KOL_REGISTRY = [
     ethAddresses: [],
   },
   {
-    address: "",
+    address: null,
     name: "Crypto Banter",
     handle: "CryptoBanter",
     description: "Crypto trading live shows and real-time analysis.",
@@ -168,7 +168,7 @@ const KOL_REGISTRY = [
     ethAddresses: [],
   },
   {
-    address: "",
+    address: null,
     name: "Alex Becker",
     handle: "AlexBeckerWSB",
     description: "Crypto and gaming investor. NFT bull. CEO of Neo Tokyo.",
@@ -176,7 +176,7 @@ const KOL_REGISTRY = [
     ethAddresses: [],
   },
   {
-    address: "",
+    address: null,
     name: "Elliot Trades",
     handle: "ElliotTrades",
     description: "Crypto trader and content creator. Superfarm founder.",
@@ -184,7 +184,7 @@ const KOL_REGISTRY = [
     ethAddresses: [],
   },
   {
-    address: "",
+    address: null,
     name: "The Crypto Dog",
     handle: "TheCryptoDog",
     description: "Bitcoin and crypto trading commentary. OG since 2017.",
@@ -192,7 +192,7 @@ const KOL_REGISTRY = [
     ethAddresses: [],
   },
   {
-    address: "",
+    address: null,
     name: "CryptoHains",
     handle: "Cryptohains",
     description: "Robinhood Chain ecosystem builder and degen.",
@@ -200,7 +200,7 @@ const KOL_REGISTRY = [
     ethAddresses: [],
   },
   {
-    address: "",
+    address: null,
     name: "Bankless",
     handle: "BanklessHQ",
     description: "DeFi education, interviews, and alpha. Leading crypto media.",
@@ -209,7 +209,7 @@ const KOL_REGISTRY = [
   },
   // Additional real crypto KOLs (15 more to reach 50)
   {
-    address: "",
+    address: null,
     name: "Kelvin Koh",
     handle: "TheFirstVoyage",
     description: "Partner at The Spartan Group. Crypto investment and strategy.",
@@ -217,7 +217,7 @@ const KOL_REGISTRY = [
     ethAddresses: [],
   },
   {
-    address: "",
+    address: null,
     name: "Tetranode",
     handle: "Tetranode",
     description: "DeFi maximalist. Known for high-conviction trades and farming.",
@@ -225,7 +225,7 @@ const KOL_REGISTRY = [
     ethAddresses: [],
   },
   {
-    address: "",
+    address: null,
     name: "Gigantic Rebirth",
     handle: "GiganticRebirth",
     description: "Crypto whale and NFT collector. Known for bold market calls.",
@@ -233,7 +233,7 @@ const KOL_REGISTRY = [
     ethAddresses: [],
   },
   {
-    address: "",
+    address: null,
     name: "DegenSpartan",
     handle: "DegenSpartan",
     description: "DeFi degen. Yield farming legend and protocol critic.",
@@ -241,7 +241,7 @@ const KOL_REGISTRY = [
     ethAddresses: [],
   },
   {
-    address: "",
+    address: null,
     name: "Bobby Axelrod",
     handle: "BobbyAxelrod_0x",
     description: "Crypto researcher. On-chain analytics and alpha.",
@@ -249,7 +249,7 @@ const KOL_REGISTRY = [
     ethAddresses: [],
   },
   {
-    address: "",
+    address: null,
     name: "Venture Coinist",
     handle: "VentureCoinist",
     description: "Crypto fund manager. Market commentary and portfolio insights.",
@@ -257,7 +257,7 @@ const KOL_REGISTRY = [
     ethAddresses: [],
   },
   {
-    address: "",
+    address: null,
     name: "Pentoshi",
     handle: "0xPentoshi",
     description: "Crypto trader known for technical analysis and macro calls.",
@@ -265,7 +265,7 @@ const KOL_REGISTRY = [
     ethAddresses: [],
   },
   {
-    address: "",
+    address: null,
     name: "Crypto Cred",
     handle: "CryptoCred",
     description: "Crypto trading educator. Technical analysis courses and breakdowns.",
@@ -273,7 +273,7 @@ const KOL_REGISTRY = [
     ethAddresses: [],
   },
   {
-    address: "",
+    address: null,
     name: "Tyler Reynolds",
     handle: "tyler_reynolds",
     description: "Crypto and macro analyst. DeFi and institutional flows.",
@@ -281,7 +281,7 @@ const KOL_REGISTRY = [
     ethAddresses: [],
   },
   {
-    address: "",
+    address: null,
     name: "BitQuant",
     handle: "BitQuant_Hood",
     description: "Robinhood Chain quantitative trader. On-chain analytics.",
@@ -289,7 +289,7 @@ const KOL_REGISTRY = [
     ethAddresses: [],
   },
   {
-    address: "",
+    address: null,
     name: "Roshi",
     handle: "Roshi_Hood",
     description: "Robinhood Chain community leader. Meme coin analyst.",
@@ -297,7 +297,7 @@ const KOL_REGISTRY = [
     ethAddresses: [],
   },
   {
-    address: "",
+    address: null,
     name: "DeFi Alpha",
     handle: "DefiAlpha",
     description: "DeFi yield opportunities and protocol launches.",
@@ -305,7 +305,7 @@ const KOL_REGISTRY = [
     ethAddresses: [],
   },
   {
-    address: "",
+    address: null,
     name: "On-Chain Wizard",
     handle: "OnChainWiz",
     description: "On-chain data analyst. Wallet tracking and smart money flows.",
@@ -313,7 +313,7 @@ const KOL_REGISTRY = [
     ethAddresses: [],
   },
   {
-    address: "",
+    address: null,
     name: "Token Terminal",
     handle: "Tokenterminal",
     description: "Crypto financial data platform. Protocol revenue and valuation.",
@@ -321,7 +321,7 @@ const KOL_REGISTRY = [
     ethAddresses: [],
   },
   {
-    address: "",
+    address: null,
     name: "Messari",
     handle: "MessariCrypto",
     description: "Crypto research and data platform. Protocol deep dives.",
@@ -329,7 +329,7 @@ const KOL_REGISTRY = [
     ethAddresses: [],
   },
   {
-    address: "",
+    address: null,
     name: "Degen",
     handle: "deaborde",
     description: "Robinhood Chain degen. High-risk trades and moonshots.",
@@ -337,7 +337,7 @@ const KOL_REGISTRY = [
     ethAddresses: [],
   },
   {
-    address: "",
+    address: null,
     name: "Hood Trader",
     handle: "HoodTrader_",
     description: "Robinhood Chain active trader. Bonding curve snipes and launches.",
@@ -345,7 +345,7 @@ const KOL_REGISTRY = [
     ethAddresses: [],
   },
   {
-    address: "",
+    address: null,
     name: "Robinhood Charts",
     handle: "RHC_Charts",
     description: "Robinhood Chain technical analysis and chart patterns.",
@@ -353,7 +353,7 @@ const KOL_REGISTRY = [
     ethAddresses: [],
   },
   {
-    address: "",
+    address: null,
     name: "Moon Dev",
     handle: "MoonDev_Hood",
     description: "Robinhood Chain developer tools and tutorials.",
@@ -361,7 +361,7 @@ const KOL_REGISTRY = [
     ethAddresses: [],
   },
   {
-    address: "",
+    address: null,
     name: "Bonding Curve Pro",
     handle: "BondingCurvePro",
     description: "Bonding curve analytics and trading strategies.",
