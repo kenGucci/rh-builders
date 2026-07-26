@@ -96,7 +96,20 @@ function BuilderContent() {
   } | null>(null);
   const [devRewardsLoading, setDevRewardsLoading] = useState(false);
   const [detailData, setDetailData] = useState<{
-    tokenBalances: { address: string; name: string; symbol: string; balance: string; balanceUsd: string; price: number; icon: string | null; holdersCount: number }[];
+    tokenBalances: {
+      address: string; name: string; symbol: string; balance: string; balanceUsd: string;
+      price: number; icon: string | null; holdersCount: number; decimals: number;
+      dex: {
+        priceUsd: string; priceNative: string; marketCap: number; liquidityUsd: number;
+        volume24h: number; volume1h: number; priceChange24h: number; priceChange1h: number;
+        buys24h: number; sells24h: number; dex: string; pairAddress: string; url: string;
+      } | null;
+      creatorReward: {
+        totalClaimed: string; totalClaimedUsd: string; claimCount: number;
+        lastClaimDate: string | null; holderBalance: string; holderBalanceUsd: string;
+        destinationWallet: string | null;
+      } | null;
+    }[];
     balanceHistory: { timestamp: string; balance: string }[];
   } | null>(null);
 
@@ -485,7 +498,7 @@ function BuilderContent() {
           } : null}
         />
 
-        {/* Token Balances */}
+        {/* Token Holdings */}
         {detailData && detailData.tokenBalances.length > 0 && (
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl overflow-hidden">
             <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--border)]">
@@ -495,31 +508,132 @@ function BuilderContent() {
             </div>
             <div className="divide-y divide-[var(--border)]">
               {detailData.tokenBalances.slice(0, 10).map((token) => (
-                <a
-                  key={token.address}
-                  href={`https://robinhoodchain.blockscout.com/token/${token.address}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 px-4 py-2.5 hover:bg-[var(--bg-card-hover)] transition-colors"
-                >
-                  {token.icon ? (
-                    <img src={token.icon} alt={token.symbol} className="w-6 h-6 rounded-full border border-[var(--border)]" />
-                  ) : (
-                    <div className="w-6 h-6 rounded-full bg-[var(--accent)]/10 flex items-center justify-center text-[8px] font-bold text-[var(--accent)]">
-                      {token.symbol?.slice(0, 1) || "?"}
+                <div key={token.address} className="p-4 hover:bg-[var(--bg-card-hover)] transition-colors">
+                  {/* Token Header Row */}
+                  <div className="flex items-center gap-3 mb-3">
+                    {token.icon ? (
+                      <img src={token.icon} alt={token.symbol} className="w-8 h-8 rounded-full border border-[var(--border)]" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-[var(--accent)]/10 flex items-center justify-center text-xs font-bold text-[var(--accent)]">
+                        {token.symbol?.slice(0, 1) || "?"}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium truncate">{token.name}</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-muted)] font-mono">{token.symbol}</span>
+                        {token.dex && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">{token.dex.dex}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[10px] font-mono text-[var(--text-muted)] truncate">{token.address}</span>
+                        <button onClick={() => { navigator.clipboard.writeText(token.address); }} className="text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors flex-shrink-0">
+                          <Copy size={9} />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <div className="text-sm font-bold gradient-text">{token.balance} {token.symbol}</div>
+                      {Number(token.balanceUsd) > 0 && (
+                        <div className="text-[11px] text-[var(--text-muted)]">${Number(token.balanceUsd).toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* DexScreener Data */}
+                  {token.dex && (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2 mb-2">
+                      <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg px-2.5 py-1.5">
+                        <div className="text-[9px] text-[var(--text-muted)] uppercase tracking-wider">Price</div>
+                        <div className="text-xs font-mono font-medium mt-0.5">${Number(token.dex.priceUsd).toLocaleString(undefined, { maximumFractionDigits: 6 })}</div>
+                        {token.dex.priceChange24h !== 0 && (
+                          <div className={`text-[9px] font-mono ${token.dex.priceChange24h > 0 ? "text-green-400" : "text-red-400"}`}>
+                            {token.dex.priceChange24h > 0 ? "+" : ""}{token.dex.priceChange24h.toFixed(1)}%
+                          </div>
+                        )}
+                      </div>
+                      <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg px-2.5 py-1.5">
+                        <div className="text-[9px] text-[var(--text-muted)] uppercase tracking-wider">MCap</div>
+                        <div className="text-xs font-mono font-medium mt-0.5">
+                          {token.dex.marketCap >= 1e6 ? `$${(token.dex.marketCap / 1e6).toFixed(1)}M` : `$${token.dex.marketCap.toLocaleString()}`}
+                        </div>
+                      </div>
+                      <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg px-2.5 py-1.5">
+                        <div className="text-[9px] text-[var(--text-muted)] uppercase tracking-wider">Liquidity</div>
+                        <div className="text-xs font-mono font-medium mt-0.5">
+                          {token.dex.liquidityUsd >= 1e6 ? `$${(token.dex.liquidityUsd / 1e6).toFixed(1)}M` : `$${token.dex.liquidityUsd.toLocaleString()}`}
+                        </div>
+                      </div>
+                      <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg px-2.5 py-1.5">
+                        <div className="text-[9px] text-[var(--text-muted)] uppercase tracking-wider">Vol 24h</div>
+                        <div className="text-xs font-mono font-medium mt-0.5">
+                          {token.dex.volume24h >= 1e6 ? `$${(token.dex.volume24h / 1e6).toFixed(1)}M` : `$${token.dex.volume24h.toLocaleString()}`}
+                        </div>
+                      </div>
+                      <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg px-2.5 py-1.5">
+                        <div className="text-[9px] text-[var(--text-muted)] uppercase tracking-wider">Vol 1h</div>
+                        <div className="text-xs font-mono font-medium mt-0.5">
+                          {token.dex.volume1h >= 1e6 ? `$${(token.dex.volume1h / 1e6).toFixed(1)}M` : `$${token.dex.volume1h.toLocaleString()}`}
+                        </div>
+                      </div>
+                      <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg px-2.5 py-1.5">
+                        <div className="text-[9px] text-[var(--text-muted)] uppercase tracking-wider">Buys/Sells 24h</div>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <span className="text-[10px] font-mono text-green-400">{token.dex.buys24h}</span>
+                          <span className="text-[9px] text-[var(--text-muted)]">/</span>
+                          <span className="text-[10px] font-mono text-red-400">{token.dex.sells24h}</span>
+                        </div>
+                      </div>
                     </div>
                   )}
-                  <div className="min-w-0 flex-1">
-                    <div className="text-xs font-medium truncate">{token.name}</div>
-                    <div className="text-[10px] text-[var(--text-muted)]">{token.symbol}</div>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <div className="text-xs font-mono">{token.balance}</div>
-                    {Number(token.balanceUsd) > 0 && (
-                      <div className="text-[10px] text-[var(--text-muted)]">${Number(token.balanceUsd).toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
+
+                  {/* Creator Rewards Badge */}
+                  {token.creatorReward && (
+                    <div className="flex items-center gap-2 p-2 rounded-lg bg-green-500/5 border border-green-500/20">
+                      <CheckCircle size={12} className="text-green-400 flex-shrink-0" />
+                      <span className="text-[10px] text-green-400 font-medium">Creator</span>
+                      <span className="text-[10px] text-[var(--text-muted)]">·</span>
+                      <span className="text-[10px] font-mono text-green-400">{token.creatorReward.totalClaimed} claimed</span>
+                      {Number(token.creatorReward.totalClaimedUsd) > 0 && (
+                        <span className="text-[10px] text-[var(--text-muted)]">(${token.creatorReward.totalClaimedUsd})</span>
+                      )}
+                      <span className="text-[10px] text-[var(--text-muted)]">·</span>
+                      <span className="text-[10px] text-[var(--text-muted)]">{token.creatorReward.claimCount} claims</span>
+                      {token.creatorReward.lastClaimDate && (
+                        <span className="text-[10px] text-[var(--text-muted)]">· {timeAgo(token.creatorReward.lastClaimDate)}</span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Footer links */}
+                  <div className="flex items-center gap-3 mt-2">
+                    <a
+                      href={`https://robinhoodchain.blockscout.com/token/${token.address}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] text-[var(--accent)] hover:underline flex items-center gap-0.5"
+                    >
+                      Blockscout <ExternalLink size={8} />
+                    </a>
+                    {token.dex?.url && (
+                      <a
+                        href={token.dex.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10px] text-purple-400 hover:underline flex items-center gap-0.5"
+                      >
+                        DexScreener <ExternalLink size={8} />
+                      </a>
                     )}
+                    <a
+                      href={`/builder/${address}?ca=${token.address}`}
+                      className="text-[10px] text-[var(--accent)] hover:underline"
+                    >
+                      View details →
+                    </a>
                   </div>
-                </a>
+                </div>
               ))}
             </div>
           </div>
