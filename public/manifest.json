@@ -1,0 +1,28 @@
+{
+  "name": "GAMBO RH — Robinhood Chain Builder Dashboard",
+  "short_name": "GAMBO RH",
+  "description": "The definitive analytics dashboard for Robinhood Chain. Track builders, deployed projects, token launches, reward claims, and on-chain activity.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#06080a",
+  "theme_color": "#00c805",
+  "orientation": "any",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["finance", "utilities"],
+  "lang": "en",
+  "dir": "ltr"
+}
