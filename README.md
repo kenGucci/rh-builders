@@ -120,6 +120,10 @@ Open [http://localhost:3000](http://localhost:3000).
 | `PEXELS_API_KEY` | Pexels API key |
 | `X_RAPIDAPI_KEY` | RapidAPI key for X/Twitter data |
 
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for the full project roadmap — from completed milestones to upcoming features.
+
 ## License
 
 MIT
