@@ -53,22 +53,22 @@ export default function Home() {
 
   const fetchBuilders = useCallback(async () => {
     try {
-      const res = await fetch("/api/kol?category=all");
+      const res = await fetch("/api/top-builders?limit=8");
       if (!res.ok) throw new Error();
       const data = await res.json();
-      const kols = data.leaderboard || data.kols || [];
-      const builders: BuilderProfile[] = kols.slice(0, 8).map((k: Record<string, unknown>) => ({
-        address: (k.address as string) || "",
-        name: (k.name as string) || "Unknown",
-        handle: (k.handle as string) || null,
-        avatar: (k.avatar as string) || null,
-        description: (k.description as string) || "",
-        tags: (k.tags as string[]) || [],
-        txCount: (k.totalTxs as number) || 0,
-        tokenCount: (k.tokenCount as number) || 0,
-        balanceEth: (k.balanceEth as string) || "0",
+      const items = data.builders || [];
+      const profiles: BuilderProfile[] = items.map((b: Record<string, unknown>) => ({
+        address: (b.address as string) || "",
+        name: (b.name as string) || "Unknown",
+        handle: (b.handle as string) || null,
+        avatar: (b.avatar as string) || null,
+        description: (b.description as string) || "",
+        tags: (b.tags as string[]) || [],
+        txCount: (b.txCount as number) || 0,
+        tokenCount: (b.tokenCount as number) || 0,
+        balanceEth: (b.balanceEth as string) || "0",
       }));
-      setTopBuilders(builders);
+      setTopBuilders(profiles);
     } catch {}
   }, []);
 

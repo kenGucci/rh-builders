@@ -84,53 +84,114 @@ export async function fetchXProfile(handle: string): Promise<XProfileData | null
   const cached = xProfileCache.get(lower);
   if (cached && Date.now() - cached.ts < X_CACHE_TTL) return cached.data;
 
+  let displayName = handle;
+  let avatar: string | null = null;
+  let description = "";
+  let followers: number | null = null;
+  let bannerUrl: string | null = null;
+
+  // Tier 1: oembed (fast, but often returns minimal data)
   try {
     const res = await fetch(
       `https://publish.twitter.com/oembed?url=https://x.com/${handle}&omit_script=true&dnt=true`,
-      { signal: AbortSignal.timeout(10000) }
+      { signal: AbortSignal.timeout(8000) }
     );
 
-    if (!res.ok) return null;
-    const data = await res.json();
-    const html = data.html || "";
+    if (res.ok) {
+      const data = await res.json();
+      const html = data.html || "";
 
-    let displayName = handle;
-    if (data.author_name) {
-      displayName = data.author_name;
-    } else {
-      const titleMatch = html.match(/<title>([^<]+)<\/title>/);
-      if (titleMatch) {
-        const nameMatch = titleMatch[1].match(/^(.+?)\s*\(@/);
-        if (nameMatch) displayName = nameMatch[1].trim();
+      if (data.author_name) displayName = data.author_name;
+
+      const avatarMatch = html.match(/src="(https:\/\/pbs\.twimg\.com\/profile_images\/[^"]+)"/);
+      if (avatarMatch) avatar = avatarMatch[1].replace(/_normal(\.\w+)$/, "_400x400$1");
+
+      const descMatch =
+        html.match(/content="([^"]+)"[^>]*property="og:description"/) ||
+        html.match(/property="og:description"[^>]*content="([^"]+)"/);
+      if (descMatch) description = descMatch[1].substring(0, 200);
+
+      const followersMatch = html.match(/"followers_count":(\d+)/);
+      if (followersMatch) followers = parseInt(followersMatch[1]);
+
+      const bannerMatch = html.match(/https:\/\/pbs\.twimg\.com\/profile_banners\/\d+\/\d+\/1500x500/);
+      if (bannerMatch) bannerUrl = bannerMatch[0];
+    }
+  } catch {}
+
+  // Tier 2: Scrape the X profile page directly (gets richer meta tags)
+  if (!avatar || !description || followers === null) {
+    try {
+      const res = await fetch(`https://x.com/${handle}`, {
+        signal: AbortSignal.timeout(10000),
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.9",
+          "Cache-Control": "no-cache",
+        },
+        redirect: "follow",
+      });
+
+      if (res.ok) {
+        const html = await res.text();
+
+        if (!html.includes("This account doesn") && !html.includes("page not found") && !html.includes("suspended")) {
+          if (displayName === handle) {
+            const titleMatch = html.match(/<title>([^<]+)<\/title>/);
+            if (titleMatch) {
+              const nameMatch = titleMatch[1].match(/^(.+?)\s*\(@/);
+              if (nameMatch) displayName = nameMatch[1].trim();
+            }
+          }
+
+          if (!avatar) {
+            const avatarMatch = html.match(/https:\/\/pbs\.twimg\.com\/profile_images\/[^\s"'<>]+/);
+            if (avatarMatch) avatar = avatarMatch[0].replace(/_normal(\.\w+)$/, "_400x400$1").replace(/\?.+$/, "");
+          }
+
+          if (!description) {
+            const descMatch =
+              html.match(/content="([^"]+)"[^>]*property="og:description"/) ||
+              html.match(/property="og:description"[^>]*content="([^"]+)"/);
+            if (descMatch) description = descMatch[1].substring(0, 200);
+          }
+
+          if (followers === null) {
+            const followersMatch = html.match(/"followers_count":(\d+)/);
+            if (followersMatch) followers = parseInt(followersMatch[1]);
+          }
+
+          if (!bannerUrl) {
+            const bannerMatch = html.match(/https:\/\/pbs\.twimg\.com\/profile_banners\/\d+\/\d+\/1500x500/);
+            if (bannerMatch) bannerUrl = bannerMatch[0];
+          }
+        }
       }
-    }
+    } catch {}
+  }
 
-    let avatar: string | null = null;
-    const avatarMatch = html.match(/src="(https:\/\/pbs\.twimg\.com\/profile_images\/[^"]+)"/);
-    if (avatarMatch) {
-      avatar = avatarMatch[1].replace(/_normal(\.\w+)$/, "_400x400$1");
-    }
+  // Tier 3: unavatar.io for avatar if still missing
+  if (!avatar) {
+    try {
+      const unavatarRes = await fetch(`https://unavatar.io/twitter/${handle}`, {
+        signal: AbortSignal.timeout(6000),
+        redirect: "follow",
+      });
+      if (unavatarRes.ok && unavatarRes.url) {
+        avatar = unavatarRes.url;
+      }
+    } catch {}
+  }
 
-    let description = "";
-    const descMatch =
-      html.match(/content="([^"]+)"[^>]*property="og:description"/) ||
-      html.match(/property="og:description"[^>]*content="([^"]+)"/);
-    if (descMatch) description = descMatch[1].substring(0, 200);
-
-    let followers: number | null = null;
-    const followersMatch = html.match(/"followers_count":(\d+)/);
-    if (followersMatch) followers = parseInt(followersMatch[1]);
-
-    let bannerUrl: string | null = null;
-    const bannerMatch = html.match(/https:\/\/pbs\.twimg\.com\/profile_banners\/\d+\/\d+\/1500x500/);
-    if (bannerMatch) bannerUrl = bannerMatch[0];
-
-    const data_: XProfileData = { displayName, avatar, description, followers, bannerUrl };
-    xProfileCache.set(lower, { data: data_, ts: Date.now() });
-    return data_;
-  } catch {
+  // If we still have nothing at all, the profile doesn't exist
+  if (displayName === handle && !avatar && !description && followers === null) {
     return null;
   }
+
+  const result: XProfileData = { displayName, avatar, description, followers, bannerUrl };
+  xProfileCache.set(lower, { data: result, ts: Date.now() });
+  return result;
 }
 
 const blockscoutCache = new Map<string, { data: unknown; ts: number }>();

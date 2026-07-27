@@ -10,7 +10,6 @@ import {
   MapPin,
   ExternalLink,
   Clock,
-  ArrowRight,
   Loader2,
   X,
   Sparkles,

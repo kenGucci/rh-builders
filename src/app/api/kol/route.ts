@@ -387,6 +387,8 @@ export async function GET(request: NextRequest) {
   const address = request.nextUrl.searchParams.get("address");
   const category = request.nextUrl.searchParams.get("category") || "all";
   const q = request.nextUrl.searchParams.get("q");
+  const page = parseInt(request.nextUrl.searchParams.get("page") || "1");
+  const limit = Math.min(parseInt(request.nextUrl.searchParams.get("limit") || "12"), 50);
 
   const ethPrice = await fetchEthPrice();
 
@@ -435,8 +437,11 @@ export async function GET(request: NextRequest) {
       ? KOL_REGISTRY
       : KOL_REGISTRY.filter((k) => k.tags.some((t) => t.toLowerCase().includes(category.toLowerCase())));
 
+  const offset = (page - 1) * limit;
+  const paginated = filtered.slice(offset, offset + limit);
+
   const registryProfiles = await Promise.allSettled(
-    filtered.map((kol) => buildFullProfile({ ...kol, address: kol.address || "" }, ethPrice))
+    paginated.map((kol) => buildFullProfile({ ...kol, address: kol.address || "" }, ethPrice))
   );
 
   let profiles = registryProfiles
@@ -455,16 +460,19 @@ export async function GET(request: NextRequest) {
     })
     .map((kol, i) => ({
       ...kol,
-      rank: i + 1,
+      rank: offset + i + 1,
     }));
 
   return NextResponse.json({
     kols: profiles,
     trending,
-    leaderboard: leaderboard.slice(0, 50),
+    leaderboard,
     categories: [...new Set(KOL_REGISTRY.flatMap((k) => k.tags))],
     ethPrice,
     lastUpdated: new Date().toISOString(),
-    totalKols: profiles.length,
+    totalKols: filtered.length,
+    page,
+    limit,
+    totalPages: Math.ceil(filtered.length / limit),
   });
 }

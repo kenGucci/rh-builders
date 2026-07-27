@@ -3,9 +3,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Users, TrendingUp, Activity, Search, ArrowUpRight, ExternalLink,
-  Zap, Star, Clock, RefreshCw, Award, Shield, ChevronDown, ChevronUp,
+  Zap, Star, Clock, RefreshCw, Shield, ChevronDown, ChevronUp,
   BarChart3, DollarSign, Globe, Wallet, TrendingDown, X, Flame, Trophy,
-  Target, ArrowUp, ArrowDown, Minus,
+  ArrowUp, ArrowDown, Minus,
 } from "lucide-react";
 
 interface KOLActivity {

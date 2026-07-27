@@ -34,12 +34,25 @@
   --radius-sm: 12px;
   --radius-xs: 8px;
 
+  /* Semantic colors */
+  --green: #00c805;
+  --green-soft: rgba(0, 200, 5, 0.1);
+  --red: #ef4444;
+  --red-soft: rgba(239, 68, 68, 0.1);
+  --blue: #3b82f6;
+  --blue-soft: rgba(59, 130, 246, 0.1);
+  --yellow: #eab308;
+  --yellow-soft: rgba(234, 179, 8, 0.1);
+  --purple: #a855f7;
+  --purple-soft: rgba(168, 85, 247, 0.1);
+
   /* Depth layers */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.5);
   --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.6);
   --shadow-glow: 0 0 40px rgba(0, 200, 5, 0.08);
+  --shadow-glow-strong: 0 0 60px rgba(0, 200, 5, 0.15);
 }
 
 @media (prefers-color-scheme: light) {
@@ -576,4 +589,267 @@ input:focus, textarea:focus, select:focus, button:focus-visible {
     min-height: 44px;
     min-width: 44px;
   }
+}
+
+/* ══════════════════════════════════════
+   ENHANCED CARD SYSTEM
+   ══════════════════════════════════════ */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card:hover {
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: var(--shadow-md);
+}
+
+.card-accent {
+  background: var(--bg-card);
+  border: 1px solid rgba(0, 200, 5, 0.15);
+  border-radius: var(--radius);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card-accent:hover {
+  border-color: rgba(0, 200, 5, 0.3);
+  box-shadow: var(--shadow-glow);
+}
+
+/* ══════════════════════════════════════
+   ENHANCED BADGE SYSTEM
+   ══════════════════════════════════════ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.badge-green {
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.badge-red {
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+.badge-blue {
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+
+.badge-yellow {
+  background: var(--yellow-soft);
+  color: var(--yellow);
+}
+
+.badge-purple {
+  background: var(--purple-soft);
+  color: var(--purple);
+}
+
+/* ══════════════════════════════════════
+   ENHANCED STAT BLOCKS
+   ══════════════════════════════════════ */
+.stat-block {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  transition: all 0.15s ease;
+}
+
+.stat-block:hover {
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.stat-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  font-size: 16px;
+  font-weight: 700;
+  font-family: "SF Mono", "Fira Code", monospace;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+/* ══════════════════════════════════════
+   ENHANCED TABLE STYLES
+   ══════════════════════════════════════ */
+.data-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s ease;
+}
+
+.data-row:hover {
+  background: var(--bg-card-hover);
+}
+
+.data-row:last-child {
+  border-bottom: none;
+}
+
+/* ══════════════════════════════════════
+   ENHANCED INPUT STYLES
+   ══════════════════════════════════════ */
+.input-enhanced {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--text);
+  transition: all 0.2s ease;
+}
+
+.input-enhanced:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.input-enhanced::placeholder {
+  color: var(--text-muted);
+}
+
+/* ══════════════════════════════════════
+   ENHANCED BUTTON STYLES
+   ══════════════════════════════════════ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: var(--radius-xs);
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #000;
+}
+
+.btn-primary:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 0 20px var(--accent-glow);
+}
+
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+.btn-ghost:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* ══════════════════════════════════════
+   GRADIENT HEADER
+   ══════════════════════════════════════ */
+.gradient-header {
+  position: relative;
+  overflow: hidden;
+}
+
+.gradient-header::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 120px;
+  background: linear-gradient(180deg, var(--accent-soft) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+/* ══════════════════════════════════════
+   HOVER LIFT EFFECT
+   ══════════════════════════════════════ */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* ══════════════════════════════════════
+   DIVIDER
+   ══════════════════════════════════════ */
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 8px 0;
+}
+
+/* ══════════════════════════════════════
+   PROGRESS BAR
+   ══════════════════════════════════════ */
+.progress-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--gradient-to));
+  transition: width 0.3s ease;
+}
+
+/* ══════════════════════════════════════
+   SECTION HEADER
+   ══════════════════════════════════════ */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.section-badge {
+  font-size: 10px;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  padding: 2px 8px;
+  border-radius: 9999px;
 }

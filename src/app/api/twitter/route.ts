@@ -1,5 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 
+const profileCache = new Map<string, { data: Record<string, unknown>; ts: number }>();
+const CACHE_TTL = 300_000;
+
+function buildFallback(handle: string, source: "fallback" | "meta" | "unavatar" = "fallback") {
+  return {
+    handle,
+    profileUrl: `https://x.com/${handle}`,
+    displayName: handle,
+    avatarUrl: null,
+    description: null,
+    followers: null,
+    following: null,
+    bannerUrl: null,
+    joinDate: null,
+    location: null,
+    website: null,
+    verified: false,
+    tweetCount: null,
+    tweetText: null,
+    tweetUrl: null,
+    tweetDate: null,
+    tweetEngagement: null,
+    source,
+  };
+}
+
 export async function GET(request: NextRequest) {
   const handle = request.nextUrl.searchParams.get("handle");
   if (!handle) {
@@ -9,6 +35,12 @@ export async function GET(request: NextRequest) {
   const clean = handle.replace(/^@/, "").trim();
   if (!clean) {
     return NextResponse.json({ error: "Invalid handle" }, { status: 400 });
+  }
+
+  const lower = clean.toLowerCase();
+  const cached = profileCache.get(lower);
+  if (cached && Date.now() - cached.ts < CACHE_TTL) {
+    return NextResponse.json(cached.data);
   }
 
   const profileUrl = `https://x.com/${clean}`;
@@ -46,7 +78,7 @@ export async function GET(request: NextRequest) {
         tweetDate = dateMatch[1];
       }
 
-      return NextResponse.json({
+      const result = {
         handle: clean,
         profileUrl,
         displayName: data.author_name || clean,
@@ -64,18 +96,23 @@ export async function GET(request: NextRequest) {
         tweetUrl,
         tweetDate,
         tweetEngagement: null,
-        source: "oembed",
-      });
+        source: "oembed" as const,
+      };
+
+      profileCache.set(lower, { data: result, ts: Date.now() });
+      return NextResponse.json(result);
     }
   } catch {}
 
-  // Approach 2: Try fetching the profile page meta tags via a lightweight request
+  // Approach 2: Try fetching the profile page meta tags
   try {
     const res = await fetch(profileUrl, {
       signal: AbortSignal.timeout(10000),
       headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
-        Accept: "text/html",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Cache-Control": "no-cache",
       },
       redirect: "follow",
     });
@@ -84,26 +121,9 @@ export async function GET(request: NextRequest) {
       const html = await res.text();
 
       if (html.includes("This account doesn") || html.includes("page not found") || html.includes("suspended")) {
-        return NextResponse.json({
-          handle: clean,
-          profileUrl,
-          displayName: clean,
-          avatarUrl: null,
-          description: null,
-          followers: null,
-          following: null,
-          bannerUrl: null,
-          joinDate: null,
-          location: null,
-          website: null,
-          verified: false,
-          tweetCount: null,
-          tweetText: null,
-          tweetUrl: null,
-          tweetDate: null,
-          tweetEngagement: null,
-          source: "meta",
-        });
+        const result = buildFallback(clean, "meta");
+        profileCache.set(lower, { data: result, ts: Date.now() });
+        return NextResponse.json(result);
       }
 
       let displayName = clean;
@@ -149,13 +169,13 @@ export async function GET(request: NextRequest) {
       const websiteMatch = html.match(/"url":"(https?:\/\/[^"]+)"/);
       if (websiteMatch) website = websiteMatch[1];
 
-      const verified = html.includes("\"is_blue_verified\":true") || html.includes("verified=true");
+      const verified = html.includes("\"is_blue_verified\":true") || html.includes("verified=true") || html.includes("\"isVerified\":true");
 
       let tweetCount: number | null = null;
       const tweetMatch = html.match(/"statuses_count":(\d+)/);
       if (tweetMatch) tweetCount = parseInt(tweetMatch[1]);
 
-      return NextResponse.json({
+      const result = {
         handle: clean,
         profileUrl,
         displayName,
@@ -173,30 +193,31 @@ export async function GET(request: NextRequest) {
         tweetUrl: null,
         tweetDate: null,
         tweetEngagement: null,
-        source: "meta",
-      });
+        source: "meta" as const,
+      };
+
+      profileCache.set(lower, { data: result, ts: Date.now() });
+      return NextResponse.json(result);
     }
   } catch {}
 
-  // Fallback: return handle info with profile link
-  return NextResponse.json({
-    handle: clean,
-    profileUrl,
-    displayName: clean,
-    avatarUrl: null,
-    description: null,
-    followers: null,
-    following: null,
-    bannerUrl: null,
-    joinDate: null,
-    location: null,
-    website: null,
-    verified: false,
-    tweetCount: null,
-    tweetText: null,
-    tweetUrl: null,
-    tweetDate: null,
-    tweetEngagement: null,
-    source: "fallback",
-  });
+  // Approach 3: Try unavatar.io for avatar + social data
+  try {
+    const unavatarRes = await fetch(`https://unavatar.io/twitter/${clean}`, {
+      signal: AbortSignal.timeout(8000),
+      redirect: "follow",
+    });
+    if (unavatarRes.ok) {
+      const avatarUrl = unavatarRes.url || null;
+      const result = {
+        ...buildFallback(clean, "unavatar"),
+        avatarUrl,
+      };
+      profileCache.set(lower, { data: result, ts: Date.now() });
+      return NextResponse.json(result);
+    }
+  } catch {}
+
+  // Final fallback
+  return NextResponse.json(buildFallback(clean));
 }

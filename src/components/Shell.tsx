@@ -13,7 +13,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
       <Sidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
       <div className="flex-1 overflow-y-auto min-w-0">
         <header
-          className="sticky top-0 z-30 border-b border-[var(--border-subtle)] bg-[var(--bg)]/60 backdrop-blur-xl no-print"
+          className="sticky top-0 z-30 border-b border-[var(--border-subtle)] bg-[var(--bg)]/80 backdrop-blur-xl no-print"
           role="banner"
           aria-label="GAMBO RH application header"
         >

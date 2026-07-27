@@ -4,7 +4,14 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 
-const links = [
+interface NavItem {
+  href: string;
+  label: string;
+  icon: React.ReactNode;
+  section?: string;
+}
+
+const links: NavItem[] = [
   {
     href: "/",
     label: "Dashboard",
@@ -41,12 +48,46 @@ const links = [
     ),
   },
   {
-    href: "/market",
-    label: "Market",
+    href: "/dex-activity",
+    label: "Live Dex Activity",
+    section: "Trading",
     icon: (
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
         <polyline points="16 7 22 7 22 13" />
+      </svg>
+    ),
+  },
+  {
+    href: "/new-listings",
+    label: "New Listings",
+    icon: (
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" />
+        <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" />
+        <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0" />
+        <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" />
+      </svg>
+    ),
+  },
+  {
+    href: "/robinhood-tokens",
+    label: "RH Chain Tokens",
+    icon: (
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+        <polyline points="16 7 22 7 22 13" />
+      </svg>
+    ),
+  },
+  {
+    href: "/market",
+    label: "Market",
+    section: "Analytics",
+    icon: (
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="2" y="7" width="20" height="14" rx="2" />
+        <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
       </svg>
     ),
   },
@@ -113,6 +154,9 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
     onClose?.();
   };
 
+  // Group links by section
+  let currentSection = "";
+
   const sidebar = (
     <aside
       className="w-[220px] h-screen flex flex-col border-r border-[var(--border-subtle)] bg-[var(--bg)] flex-shrink-0 no-print"
@@ -134,32 +178,47 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 space-y-0.5 mt-3" aria-label="Navigation">
+      <nav className="flex-1 px-3 space-y-0.5 mt-3 overflow-y-auto" aria-label="Navigation">
         {links.map((link) => {
           const active =
             link.href === "/"
               ? pathname === "/"
               : pathname.startsWith(link.href);
+
+          const showSection = link.section && link.section !== currentSection;
+          if (link.section) currentSection = link.section;
+
           return (
-            <Link
-              key={link.href}
-              href={link.href}
-              onClick={(e) => { e.preventDefault(); navigateWithTransition(link.href); }}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 group ${
-                active
-                  ? "bg-[var(--accent)]/10 text-[var(--accent)]"
-                  : "text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]"
-              }`}
-              aria-current={active ? "page" : undefined}
-            >
-              <span className={`transition-transform duration-150 ${active ? "" : "group-hover:scale-105"}`}>
-                {link.icon}
-              </span>
-              {link.label}
-              {active && (
-                <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
+            <div key={link.href}>
+              {showSection && (
+                <div className="pt-4 pb-1.5 px-3">
+                  <span className="text-[9px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
+                    {link.section}
+                  </span>
+                </div>
               )}
-            </Link>
+              <Link
+                href={link.href}
+                onClick={(e) => { e.preventDefault(); navigateWithTransition(link.href); }}
+                className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 group relative ${
+                  active
+                    ? "bg-[var(--accent)]/10 text-[var(--accent)]"
+                    : "text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]"
+                }`}
+                aria-current={active ? "page" : undefined}
+              >
+                {active && (
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full bg-[var(--accent)]" />
+                )}
+                <span className={`transition-transform duration-150 ${active ? "" : "group-hover:scale-105"}`}>
+                  {link.icon}
+                </span>
+                {link.label}
+                {link.href === "/dex-activity" && (
+                  <span className="ml-auto w-1.5 h-1.5 rounded-full bg-green-400 live-blink" />
+                )}
+              </Link>
+            </div>
           );
         })}
       </nav>

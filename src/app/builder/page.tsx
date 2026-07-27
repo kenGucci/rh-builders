@@ -7,8 +7,8 @@ import AddressAvatar from "@/components/AddressAvatar";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   ArrowUpRight, Rocket, TrendingUp, Activity, ArrowUpDown, Clock,
-  Zap, RefreshCw, ExternalLink, DollarSign, Users, Flame, Layers,
-  Shield, Star, BarChart3, Code, ChevronRight, TrendingDown,
+  Zap, RefreshCw, DollarSign, Users, Flame, Layers,
+  Shield, BarChart3, Code, ChevronRight,
 } from "lucide-react";
 
 interface BuilderStat {
@@ -26,35 +26,6 @@ interface BuilderStat {
   tokenSymbol: string | null;
 }
 
-interface DexTx {
-  hash: string;
-  from: string;
-  fromName: string | null;
-  to: string | null;
-  toName: string | null;
-  toIsContract: boolean;
-  value: string;
-  timestamp: string;
-  block_number: number;
-  method: string | null;
-  status: string | null;
-  fee: string;
-  tokenSymbol: string | null;
-  tokenName: string | null;
-  tokenAddress: string | null;
-  tokenIcon: string | null;
-  tokenAmount: string | null;
-  type: "swap" | "transfer" | "contract" | "coin";
-}
-
-interface TopToken {
-  address_hash: string;
-  symbol: string;
-  name: string;
-  icon_url: string | null;
-  holders_count: number;
-}
-
 type SortKey = "name" | "balance" | "txCount" | "lastActive";
 
 interface ChainStats {
@@ -62,32 +33,6 @@ interface ChainStats {
   totalTransactions: number;
   totalTokens: number;
   txsToday: number;
-}
-
-interface DexToken {
-  name: string;
-  symbol: string;
-  address: string;
-  priceUsd: string;
-  marketCap: number;
-  fdv: number;
-  liquidityUsd: number;
-  volume24h: number;
-  volume6h: number;
-  volume1h: number;
-  priceChange24h: number;
-  priceChange1h: number;
-  priceChange6h: number;
-  buys24h: number;
-  sells24h: number;
-  buys1h: number;
-  sells1h: number;
-  dex: string;
-  pairAddress: string;
-  url: string;
-  imageUrl: string | null;
-  pairCreatedAt: number;
-  quoteSymbol: string;
 }
 
 function timeAgo(ts: string | null) {
@@ -126,33 +71,16 @@ function formatDeployed(n: number): string {
   return n.toLocaleString();
 }
 
-function DexTxIcon({ type }: { type: DexTx["type"] }) {
-  if (type === "swap") return <ArrowUpRight size={12} className="text-[var(--accent)]" />;
-  if (type === "transfer") return <DollarSign size={12} className="text-blue-400" />;
-  if (type === "contract") return <Code size={12} className="text-purple-400" />;
-  return <Zap size={12} className="text-orange-400" />;
-}
-
-function DexTxLabel({ type }: { type: DexTx["type"] }) {
-  if (type === "swap") return <span className="text-[var(--accent)] font-medium">Swap</span>;
-  if (type === "transfer") return <span className="text-blue-400 font-medium">Transfer</span>;
-  if (type === "contract") return <span className="text-purple-400 font-medium">Contract</span>;
-  return <span className="text-orange-400 font-medium">Coin</span>;
-}
-
 export default function BuildersPage() {
   const [filter, setFilter] = useState("");
   const [sortBy, setSortBy] = useState<SortKey>("txCount");
   const [statsMap, setStatsMap] = useState<Record<string, BuilderStat>>({});
   const [statsLoading, setStatsLoading] = useState(true);
-  const [dexTxs, setDexTxs] = useState<DexTx[]>([]);
-  const [topTokens, setTopTokens] = useState<TopToken[]>([]);
   const [liveBlock, setLiveBlock] = useState(0);
   const [liveLoading, setLiveLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [chainStats, setChainStats] = useState<ChainStats | null>(null);
-  const [dexTokens, setDexTokens] = useState<DexToken[]>([]);
-  const [dexLoading, setDexLoading] = useState(true);
+
 
   const allTags = useMemo(() => {
     const tags = new Set<string>();
@@ -182,33 +110,21 @@ export default function BuildersPage() {
     try {
       const res = await fetch("/api/live-activity");
       const data = await res.json();
-      setDexTxs(data.transactions || []);
-      setTopTokens(data.topTokens || []);
       setLiveBlock(data.block_number || 0);
     } catch {} finally {
       setLiveLoading(false);
     }
   }, []);
 
-  const fetchDex = useCallback(async () => {
-    try {
-      const res = await fetch("/api/dex-screener");
-      const data = await res.json();
-      setDexTokens(data.tokens || []);
-    } catch {} finally {
-      setDexLoading(false);
-    }
-  }, []);
+
 
   useEffect(() => {
     fetchStats();
     fetchLive();
-    fetchDex();
     const statsInterval = setInterval(fetchStats, 30000);
     const liveInterval = setInterval(fetchLive, 15000);
-    const dexInterval = setInterval(fetchDex, 60000);
-    return () => { clearInterval(statsInterval); clearInterval(liveInterval); clearInterval(dexInterval); };
-  }, [fetchStats, fetchLive, fetchDex]);
+    return () => { clearInterval(statsInterval); clearInterval(liveInterval); };
+  }, [fetchStats, fetchLive]);
 
   const enrichedBuilders = useMemo(() => {
     return builders.builders.map((b) => {
@@ -514,189 +430,6 @@ export default function BuildersPage() {
           No developers found matching &ldquo;{filter}&rdquo;
         </div>
       )}
-
-      {/* DexScreener: Robinhood Chain Tokens */}
-      {dexTokens.length > 0 && (
-        <section>
-          <div className="flex items-center gap-2 mb-3">
-            <TrendingUp size={14} className="text-[var(--accent)]" />
-            <h2 className="text-sm font-semibold">Robinhood Chain Tokens</h2>
-            <span className="text-[10px] text-[var(--text-muted)]">— from DexScreener · sorted by volume</span>
-            {dexLoading && <RefreshCw size={10} className="text-[var(--text-muted)] animate-spin" />}
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-            {dexTokens.slice(0, 12).map((t) => {
-              const isUp = t.priceChange24h >= 0;
-              const buyRatio = t.buys24h + t.sells24h > 0
-                ? Math.round((t.buys24h / (t.buys24h + t.sells24h)) * 100)
-                : 50;
-              return (
-                <a
-                  key={t.address}
-                  href={t.url || `https://dexscreener.com/robinhoodchain/${t.address}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3 hover:border-[var(--accent)]/30 transition-all group"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      {t.imageUrl ? (
-                        <img src={t.imageUrl} alt={t.symbol} className="w-6 h-6 rounded-full" />
-                      ) : (
-                        <div className="w-6 h-6 rounded-full bg-[var(--accent)]/10 flex items-center justify-center text-[8px] font-bold text-[var(--accent)]">
-                          {t.symbol?.slice(0, 1)}
-                        </div>
-                      )}
-                      <div>
-                        <div className="text-xs font-semibold truncate max-w-[100px] group-hover:text-[var(--accent)] transition-colors">{t.symbol}</div>
-                        <div className="text-[8px] text-[var(--text-muted)] truncate max-w-[100px]">{t.name}</div>
-                      </div>
-                    </div>
-                    <div className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${isUp ? "bg-green-500/10 text-green-400" : "bg-red-500/10 text-red-400"}`}>
-                      {isUp ? "+" : ""}{t.priceChange24h.toFixed(1)}%
-                    </div>
-                  </div>
-
-                  <div className="text-sm font-mono font-bold text-[var(--foreground)] mb-1.5">
-                    ${Number(t.priceUsd).toFixed(Number(t.priceUsd) < 0.01 ? 8 : Number(t.priceUsd) < 1 ? 6 : 2)}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[9px]">
-                    <div className="flex justify-between">
-                      <span className="text-[var(--text-muted)]">MCap</span>
-                      <span className="font-mono">${formatCompact(t.marketCap)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[var(--text-muted)]">Liq</span>
-                      <span className="font-mono">${formatCompact(t.liquidityUsd)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[var(--text-muted)]">Vol 24h</span>
-                      <span className="font-mono">${formatCompact(t.volume24h)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[var(--text-muted)]">Buys</span>
-                      <span className="font-mono text-green-400">{t.buys24h}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[var(--text-muted)]">Vol 1h</span>
-                      <span className="font-mono">${formatCompact(t.volume1h)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[var(--text-muted)]">Sells</span>
-                      <span className="font-mono text-red-400">{t.sells24h}</span>
-                    </div>
-                  </div>
-
-                  {/* Buy/Sell ratio bar */}
-                  <div className="mt-2 h-1 rounded-full bg-red-500/20 overflow-hidden">
-                    <div className="h-full rounded-full bg-green-500/60" style={{ width: `${buyRatio}%` }} />
-                  </div>
-                  <div className="flex justify-between text-[7px] text-[var(--text-muted)] mt-0.5">
-                    <span>Buy {buyRatio}%</span>
-                    <span>Sell {100 - buyRatio}%</span>
-                  </div>
-
-                  <div className="text-[7px] text-[var(--text-muted)] mt-1.5 flex items-center gap-1">
-                    <span className="text-[var(--accent)]">{t.dex}</span>
-                    <span>·</span>
-                    <span>{t.quoteSymbol} pair</span>
-                  </div>
-                </a>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {/* Live Dex Activity Feed */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-green-400 live-blink" />
-            <span className="text-sm font-medium">Live Dex Activity Feed</span>
-            <span className="text-[10px] text-[var(--text-muted)]">Block #{liveBlock.toLocaleString()}</span>
-          </div>
-          <button
-            onClick={fetchLive}
-            className="text-[10px] text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors flex items-center gap-1"
-          >
-            <RefreshCw size={10} className={liveLoading ? "animate-spin" : ""} />
-            Refresh
-          </button>
-        </div>
-        <div className="divide-y divide-[var(--border)]">
-          {liveLoading && dexTxs.length === 0 ? (
-            Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="px-4 py-3">
-                <div className="h-4 w-3/4 rounded animate-shimmer" style={{ background: "var(--bg-card-hover)" }} />
-              </div>
-            ))
-          ) : dexTxs.length === 0 ? (
-            <div className="px-4 py-6 text-center text-xs text-[var(--text-muted)]">
-              No live DEX activity available
-            </div>
-          ) : (
-            dexTxs.map((tx, i) => {
-              const val = formatValue(tx.value);
-              return (
-                <div
-                  key={tx.hash}
-                  className="px-4 py-2.5 flex items-center justify-between gap-3 hover:bg-[var(--bg-card-hover)] transition-colors fade-in"
-                  style={{ animationDelay: `${i * 40}ms`, animationFillMode: "both" }}
-                >
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <div className="flex-shrink-0">
-                      <DexTxIcon type={tx.type} />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <DexTxLabel type={tx.type} />
-                        {tx.tokenSymbol && (
-                          <a
-                            href={tx.tokenAddress ? `https://dexscreener.com/robinhood/${tx.tokenAddress}` : "#"}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[10px] text-[var(--accent)] hover:underline font-medium"
-                          >
-                            {tx.tokenSymbol}
-                          </a>
-                        )}
-                      </div>
-                      <div className="text-[10px] text-[var(--text-muted)] mt-0.5 flex items-center gap-1">
-                        <a
-                          href={`https://robinhoodchain.blockscout.com/tx/${tx.hash}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-mono hover:text-[var(--accent)] transition-colors"
-                        >
-                          {tx.hash.slice(0, 8)}...{tx.hash.slice(-4)}
-                        </a>
-                        <span>·</span>
-                        <span>{timeAgo(tx.timestamp)}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    {tx.tokenAmount && tx.tokenSymbol ? (
-                      <div className="text-xs font-mono text-[var(--foreground)]">
-                        {Number(tx.tokenAmount).toLocaleString(undefined, { maximumFractionDigits: 4 })} <span className="text-[var(--text-muted)]">{tx.tokenSymbol}</span>
-                      </div>
-                    ) : (
-                      <div className="text-xs font-mono text-[var(--accent)]">{val} ETH</div>
-                    )}
-                    <div className="text-[9px] text-[var(--text-muted)] flex items-center gap-1 justify-end">
-                      {tx.fromName || <span className="font-mono">{tx.from.slice(0, 6)}...{tx.from.slice(-3)}</span>}
-                      <span>→</span>
-                      {tx.toName || (tx.to ? <span className="font-mono">{tx.to.slice(0, 6)}...{tx.to.slice(-3)}</span> : "contract")}
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-      </div>
 
       {lastRefresh && (
         <div className="text-center text-[10px] text-[var(--text-muted)]">

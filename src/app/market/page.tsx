@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   TrendingUp, TrendingDown, RefreshCw, Search, ArrowUpRight, Activity,
   BarChart3, DollarSign, Zap, Clock, Flame, ArrowDownRight, X,
-  ChevronRight, Loader2, Wifi, WifiOff, Filter,
+  ChevronRight, Loader2, Wifi,
 } from "lucide-react";
 
 interface MarketQuote {
