@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { join } from "path";
-import { hashPassword, generateUserId, verifyPassword } from "./auth";
+import { verifyPassword } from "./auth";
 
 const DATA_DIR = join(process.cwd(), "data");
 const USERS_FILE = join(DATA_DIR, "users.json");
@@ -36,26 +36,6 @@ function loadUsers(): User[] {
 function saveUsers(users: User[]) {
   ensureDataDir();
   writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
-}
-
-export function createUser(email: string, password: string, name: string, provider: "email" | "x" = "email", xHandle?: string): User | null {
-  const users = loadUsers();
-  const exists = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
-  if (exists) return null;
-
-  const user: User = {
-    id: generateUserId(),
-    email: email.toLowerCase(),
-    name,
-    password: hashPassword(password),
-    provider,
-    xHandle,
-    createdAt: new Date().toISOString(),
-  };
-
-  users.push(user);
-  saveUsers(users);
-  return user;
 }
 
 export function authenticateUser(email: string, password: string): User | null {

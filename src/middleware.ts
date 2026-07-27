@@ -5,7 +5,7 @@ const RATE_LIMIT_WINDOW = 60_000;
 const RATE_LIMIT_MAX = 60;
 const API_RATE_LIMIT_MAX = 30;
 
-const PUBLIC_PATHS = ["/auth", "/api/auth/login", "/api/auth/signup", "/api/auth/x/login", "/api/auth/x/callback", "/api/auth/me", "/api/auth/otp/send", "/api/auth/otp/verify"];
+const PUBLIC_PATHS = ["/auth", "/api/auth/login", "/api/auth/x/login", "/api/auth/x/callback", "/api/auth/me"];
 
 function getRateLimitKey(request: NextRequest): string {
   const forwarded = request.headers.get("x-forwarded-for");

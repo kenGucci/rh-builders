@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { randomBytes } from "crypto";
 import { createToken } from "@/lib/auth";
 import { supabaseConfigured, getSupabase } from "@/lib/supabase";
-import { createUser, findUserByEmail } from "@/lib/users";
+import { findUserByEmail } from "@/lib/users";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -91,7 +90,6 @@ export async function GET(request: NextRequest) {
     const { data: xUser } = await userRes.json();
     const xUsername = xUser.username as string;
     const xName = xUser.name as string;
-    const xId = xUser.id as string;
     const email = `${xUsername}@x.generated`;
 
     let userId: string;
@@ -113,50 +111,22 @@ export async function GET(request: NextRequest) {
         .eq("x_handle", xUsername)
         .limit(1);
 
-      if (existingUsers && existingUsers.length > 0) {
-        const existing = existingUsers[0];
-        userId = existing.id;
-        userName = existing.name;
-        userEmail = existing.email;
-      } else {
-        const { data: newUser, error: createError } = await supabase
-          .from("users")
-          .insert({
-            email,
-            name: xName,
-            provider: "x",
-            x_handle: xUsername,
-            x_id: xId,
-          })
-          .select("id, email, name")
-          .single();
-
-        if (createError || !newUser) {
-          return NextResponse.redirect(
-            new URL("/auth?error=user_create_failed", request.url)
-          );
-        }
-
-        userId = newUser.id;
-        userName = newUser.name;
-        userEmail = newUser.email;
-      }
-    } else {
-      let localUser = findUserByEmail(email);
-      if (!localUser) {
-        const newUser = createUser(
-          email,
-          randomPassword(),
-          xName,
-          "x",
-          xUsername
+      if (!existingUsers || existingUsers.length === 0) {
+        return NextResponse.redirect(
+          new URL("/auth?error=account_not_found", request.url)
         );
-        if (!newUser) {
-          return NextResponse.redirect(
-            new URL("/auth?error=user_create_failed", request.url)
-          );
-        }
-        localUser = newUser;
+      }
+
+      const existing = existingUsers[0];
+      userId = existing.id;
+      userName = existing.name;
+      userEmail = existing.email;
+    } else {
+      const localUser = findUserByEmail(email);
+      if (!localUser) {
+        return NextResponse.redirect(
+          new URL("/auth?error=account_not_found", request.url)
+        );
       }
 
       userId = localUser.id;
@@ -199,8 +169,4 @@ export async function GET(request: NextRequest) {
       new URL("/auth?error=x_login_failed", request.url)
     );
   }
-}
-
-function randomPassword(): string {
-  return randomBytes(32).toString("hex");
 }
