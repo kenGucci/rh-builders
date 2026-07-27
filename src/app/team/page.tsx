@@ -67,7 +67,7 @@ export default function TeamPage() {
       <div>
         <h1 className="text-2xl font-bold">Team</h1>
         <p className="text-xs text-[var(--text-muted)] mt-1">
-          The people behind GAMBO RH
+          The people behind THE WALL
         </p>
       </div>
 
@@ -203,7 +203,7 @@ export default function TeamPage() {
             <h3 className="text-sm font-semibold mb-3">About</h3>
             <div className="space-y-3 text-sm text-[var(--text-muted)]">
               <p>
-                Built GAMBO RH to bring full transparency to the Robinhood Chain ecosystem.
+                Built THE WALL to bring full transparency to the Robinhood Chain ecosystem.
                 Real-time builder analytics, KOL tracking, and on-chain data — all open-source.
               </p>
               <div className="flex items-center gap-2">

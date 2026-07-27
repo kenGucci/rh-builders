@@ -15,7 +15,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
         <header
           className="sticky top-0 z-30 border-b border-[var(--border-subtle)] bg-[var(--bg)]/80 backdrop-blur-xl no-print"
           role="banner"
-          aria-label="GAMBO RH application header"
+          aria-label="THE WALL application header"
         >
           <div className="px-4 md:px-6 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">

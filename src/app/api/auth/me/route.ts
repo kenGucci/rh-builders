@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/lib/auth";
-import { supabaseConfigured, getSupabase } from "@/lib/supabase";
 import { findUserById, sanitizeUser } from "@/lib/users";
 
 export async function GET(request: NextRequest) {
@@ -18,31 +17,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (supabaseConfigured) {
-      const supabase = getSupabase();
-      if (supabase) {
-        const { data: userData, error: userError } = await supabase
-          .from("users")
-          .select("id, email, name, provider, x_handle, created_at")
-          .eq("id", payload.userId)
-          .single();
-
-        if (!userError && userData) {
-          return NextResponse.json({
-            user: {
-              id: userData.id,
-              email: userData.email,
-              name: userData.name,
-              provider: userData.provider,
-              xHandle: userData.x_handle,
-              createdAt: userData.created_at,
-            },
-          });
-        }
-      }
-    }
-
-    const user = findUserById(payload.userId);
+    const user = await findUserById(payload.userId);
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 401 });
     }

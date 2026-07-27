@@ -135,8 +135,12 @@ async function pollNewBlocks(): Promise<void> {
     }
 
     lastBlock = to;
+    consecutiveFailures = 0;
   } catch (err) {
-    console.error("[monitor] pollNewBlocks failed:", err);
+    consecutiveFailures++;
+    if (consecutiveFailures <= 3) {
+      console.error("[monitor] pollNewBlocks failed:", err);
+    }
   }
 }
 
@@ -171,19 +175,21 @@ async function refreshMetrics(): Promise<void> {
   }
 }
 
+let consecutiveFailures = 0;
+
 export function startMonitoring(): void {
   if (monitoring) return;
   monitoring = true;
 
-  pollNewBlocks();
+  pollNewBlocks().catch(() => {});
 
   monitorTimer = setInterval(() => {
-    pollNewBlocks();
-  }, 5000);
+    pollNewBlocks().catch(() => {});
+  }, 30000);
 
   setInterval(() => {
-    refreshMetrics();
-  }, 30000);
+    refreshMetrics().catch(() => {});
+  }, 60000);
 }
 
 export function getLatestBlock(): number {

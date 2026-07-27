@@ -301,7 +301,7 @@ export default function GlobalPage() {
           <a href="https://www.openstreetmap.org" target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline">OpenStreetMap</a>, and{" "}
           <a href="https://en.wikipedia.org" target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline">Wikipedia</a>
         </p>
-        <p className="mt-1">Global — Global search engine by GAMBO RH</p>
+        <p className="mt-1">Global — Global search engine by THE WALL</p>
       </footer>
     </div>
   );

@@ -132,7 +132,7 @@ export default function TransactionList({ address }: { address: string }) {
   }
 
   function reportScam(tx: Tx) {
-    const text = `⚠️ Scam Report on Robinhood Chain\n\nAddress: ${address}\nTransaction: https://robinhoodchain.blockscout.com/tx/${tx.hash}\n\n#RobinhoodChain #ScamAlert #GAMBORH`;
+    const text = `⚠️ Scam Report on Robinhood Chain\n\nAddress: ${address}\nTransaction: https://robinhoodchain.blockscout.com/tx/${tx.hash}\n\n#RobinhoodChain #ScamAlert #THEWALL`;
     window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
   }
 

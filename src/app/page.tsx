@@ -167,7 +167,7 @@ export default function Home() {
           {/* Title */}
           <h1 className="relative fade-in animate-delay-75">
             <span className="block text-6xl sm:text-7xl md:text-[5.5rem] lg:text-[7rem] font-black tracking-[-0.04em] leading-[0.95]">
-              <span className="gradient-text">GAMBO</span>
+              <span className="gradient-text">THE WALL</span>
               <span className="text-[var(--text)] ml-3 sm:ml-4">RH</span>
             </span>
           </h1>
@@ -358,7 +358,7 @@ export default function Home() {
               {
                 step: "01",
                 title: "Search Any Address",
-                text: "Enter a wallet address, ENS name, token contract address, or Twitter handle into our search bar. GAMBO RH instantly conducts a comprehensive scan across the entire Robinhood Chain using Blockscout, intelligently matching your input against verified on-chain records to deliver accurate and instant results.",
+                text: "Enter a wallet address, ENS name, token contract address, or Twitter handle into our search bar. THE WALL instantly conducts a comprehensive scan across the entire Robinhood Chain using Blockscout, intelligently matching your input against verified on-chain records to deliver accurate and instant results.",
               },
               {
                 step: "02",
@@ -386,7 +386,7 @@ export default function Home() {
             <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[var(--accent)] to-emerald-400 flex items-center justify-center">
               <span className="text-black font-black text-[8px]">G</span>
             </div>
-            <span className="text-sm font-bold">GAMBO RH</span>
+            <span className="text-sm font-bold">THE WALL</span>
           </div>
           <p className="text-xs text-[var(--text-muted)]">
             Powered by{" "}

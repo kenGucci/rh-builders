@@ -29,3 +29,4 @@ next-env.d.ts
 
 # data search history
 data/search-history/
+data/feedback.json

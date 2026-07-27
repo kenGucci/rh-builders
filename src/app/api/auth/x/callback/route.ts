@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createToken } from "@/lib/auth";
-import { supabaseConfigured, getSupabase } from "@/lib/supabase";
 import { findUserByEmail } from "@/lib/users";
 
 export async function GET(request: NextRequest) {
@@ -92,57 +91,21 @@ export async function GET(request: NextRequest) {
     const xName = xUser.name as string;
     const email = `${xUsername}@x.generated`;
 
-    let userId: string;
-    let userName: string;
-    let userEmail: string;
-
-    if (supabaseConfigured) {
-      const supabase = getSupabase();
-      if (!supabase) {
-        return NextResponse.redirect(
-          new URL("/auth?error=supabase_init_failed", request.url)
-        );
-      }
-
-      const { data: existingUsers } = await supabase
-        .from("users")
-        .select("id, email, name")
-        .eq("provider", "x")
-        .eq("x_handle", xUsername)
-        .limit(1);
-
-      if (!existingUsers || existingUsers.length === 0) {
-        return NextResponse.redirect(
-          new URL("/auth?error=account_not_found", request.url)
-        );
-      }
-
-      const existing = existingUsers[0];
-      userId = existing.id;
-      userName = existing.name;
-      userEmail = existing.email;
-    } else {
-      const localUser = findUserByEmail(email);
-      if (!localUser) {
-        return NextResponse.redirect(
-          new URL("/auth?error=account_not_found", request.url)
-        );
-      }
-
-      userId = localUser.id;
-      userName = localUser.name;
-      userEmail = localUser.email;
+    const localUser = await findUserByEmail(email);
+    if (!localUser) {
+      return NextResponse.redirect(
+        new URL("/auth?error=account_not_found", request.url)
+      );
     }
 
     const jwtToken = await createToken({
-      userId,
-      email: userEmail,
-      name: userName,
+      userId: localUser.id,
+      email: localUser.email,
+      name: localUser.name || xName,
       provider: "x",
     });
 
-    const searchParamsFromReq = new URL(request.url).searchParams;
-    const redirectTo = searchParamsFromReq.get("from") || "/";
+    const redirectTo = searchParams.get("from") || "/";
 
     const response = NextResponse.redirect(new URL(redirectTo, request.url));
 

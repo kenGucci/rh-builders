@@ -5,8 +5,8 @@ import { I18nProvider } from "@/lib/i18n";
 
 export const metadata: Metadata = {
   title: {
-    default: "GAMBO RH — Robinhood Chain Builder Dashboard",
-    template: "%s | GAMBO RH",
+    default: "THE WALL — Robinhood Chain Builder Dashboard",
+    template: "%s | THE WALL",
   },
   description:
     "The definitive builder analytics dashboard for Robinhood Chain (Chain ID 4663). Track deployed contracts, token launches, reward claims, on-chain activity, stock market data, and KOL trading patterns. Powered by Blockscout with real-time data.",
@@ -22,16 +22,16 @@ export const metadata: Metadata = {
     "Blockscout",
     "Web3",
   ],
-  authors: [{ name: "GAMBO RH" }],
-  creator: "GAMBO RH",
-  publisher: "GAMBO RH",
+  authors: [{ name: "THE WALL" }],
+  creator: "THE WALL",
+  publisher: "THE WALL",
   metadataBase: new URL("https://gamborh.xyz"),
   openGraph: {
     type: "website",
     locale: "en_US",
     url: "https://gamborh.xyz",
-    siteName: "GAMBO RH",
-    title: "GAMBO RH — Robinhood Chain Builder Dashboard",
+    siteName: "THE WALL",
+    title: "THE WALL — Robinhood Chain Builder Dashboard",
     description:
       "Track builders, deployed contracts, token launches, and reward claims on Robinhood Chain (Chain ID 4663). Real-time on-chain analytics powered by Blockscout.",
     images: [
@@ -39,13 +39,13 @@ export const metadata: Metadata = {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "GAMBO RH — Robinhood Chain Builder Dashboard",
+        alt: "THE WALL — Robinhood Chain Builder Dashboard",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "GAMBO RH — Robinhood Chain Builder Dashboard",
+    title: "THE WALL — Robinhood Chain Builder Dashboard",
     description:
       "Track builders, deployed contracts, token launches, and reward claims on Robinhood Chain (Chain ID 4663).",
     images: ["/og-image.png"],
@@ -105,7 +105,7 @@ export default function RootLayout({
               url: "https://gamborh.xyz",
               creator: {
                 "@type": "Organization",
-                name: "GAMBO RH",
+              name: "THE WALL",
               },
               offers: {
                 "@type": "Offer",

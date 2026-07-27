@@ -144,7 +144,7 @@ export default function TokenProfilePage() {
   return (
     <div className="max-w-4xl mx-auto space-y-5 fade-in">
       <Link
-        href="/robinhood-tokens"
+        href="/"
         className="inline-flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
       >
         <ArrowLeft size={14} />

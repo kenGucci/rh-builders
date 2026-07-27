@@ -19,12 +19,15 @@ interface BuilderStats {
   tokenSymbol: string | null;
 }
 
+let cache: { data: Record<string, BuilderStats>; timestamp: number } | null = null;
+const CACHE_TTL = 30000;
+
 async function fetchBuilderStats(address: string): Promise<BuilderStats | null> {
   try {
     const [addrRes, txRes, tokenRes] = await Promise.allSettled([
-      fetch(`${V2}/addresses/${address.toLowerCase()}`, { signal: AbortSignal.timeout(10000) }).then(r => r.json()),
-      fetch(`${V1}?module=account&action=txlist&address=${address}&page=1&offset=1000&sort=desc`, { signal: AbortSignal.timeout(10000) }).then(r => r.json()),
-      fetch(`${V1}?module=account&action=tokentx&address=${address}&page=1&offset=1000&sort=desc`, { signal: AbortSignal.timeout(10000) }).then(r => r.json()),
+      fetch(`${V2}/addresses/${address.toLowerCase()}`, { signal: AbortSignal.timeout(8000) }).then(r => r.json()),
+      fetch(`${V1}?module=account&action=txlist&address=${address}&page=1&offset=1000&sort=desc`, { signal: AbortSignal.timeout(8000) }).then(r => r.json()),
+      fetch(`${V1}?module=account&action=tokentx&address=${address}&page=1&offset=1000&sort=desc`, { signal: AbortSignal.timeout(8000) }).then(r => r.json()),
     ]);
 
     const addr = addrRes.status === "fulfilled" ? addrRes.value : {};
@@ -56,13 +59,16 @@ async function fetchBuilderStats(address: string): Promise<BuilderStats | null> 
       isVerified: addr.is_verified || false,
       tokenSymbol: addr.token?.symbol || null,
     };
-  } catch (err) {
-    console.error(`[builders-stats] Failed for ${address}:`, err);
+  } catch {
     return null;
   }
 }
 
 export async function GET() {
+  if (cache && Date.now() - cache.timestamp < CACHE_TTL) {
+    return NextResponse.json({ stats: cache.data });
+  }
+
   const validBuilders = builders.builders.filter((b) => b.address && /^0x[a-fA-F0-9]{40}$/.test(b.address));
   const results = await Promise.allSettled(
     validBuilders.map((b) => fetchBuilderStats(b.address))
@@ -74,6 +80,8 @@ export async function GET() {
       statsMap[r.value.address] = r.value;
     }
   }
+
+  cache = { data: statsMap, timestamp: Date.now() };
 
   return NextResponse.json({ stats: statsMap });
 }

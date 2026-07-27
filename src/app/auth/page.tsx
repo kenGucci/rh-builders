@@ -56,7 +56,7 @@ function AuthContent() {
         {/* Header */}
         <header className="text-center space-y-3">
           <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--accent)]/10 border border-[var(--accent)]/20">
-            <span className="text-xl font-bold gradient-text">GAMBO</span>
+            <span className="text-xl font-bold gradient-text">THE WALL</span>
             <span className="text-sm text-[var(--text-muted)]">RH</span>
           </div>
           <h1 className="text-2xl font-bold text-[var(--foreground)]">Sign In</h1>

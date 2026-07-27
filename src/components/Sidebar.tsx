@@ -48,39 +48,6 @@ const links: NavItem[] = [
     ),
   },
   {
-    href: "/dex-activity",
-    label: "Live Dex Activity",
-    section: "Trading",
-    icon: (
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
-        <polyline points="16 7 22 7 22 13" />
-      </svg>
-    ),
-  },
-  {
-    href: "/new-listings",
-    label: "New Listings",
-    icon: (
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" />
-        <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" />
-        <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0" />
-        <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" />
-      </svg>
-    ),
-  },
-  {
-    href: "/robinhood-tokens",
-    label: "RH Chain Tokens",
-    icon: (
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
-        <polyline points="16 7 22 7 22 13" />
-      </svg>
-    ),
-  },
-  {
     href: "/market",
     label: "Market",
     section: "Analytics",
@@ -167,12 +134,12 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
       <div className="px-5 py-5 flex items-center gap-3">
         <div className="relative">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--accent)] to-emerald-400 flex items-center justify-center shadow-[0_0_20px_rgba(0,200,5,0.12)]">
-            <span className="text-black font-black text-[11px] leading-none tracking-wider">G</span>
+            <span className="text-black font-black text-[11px] leading-none tracking-wider">W</span>
           </div>
           <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[var(--accent)] border-2 border-[var(--bg)] pulse-dot" />
         </div>
         <div>
-          <div className="font-bold text-[13px] leading-tight tracking-tight">GAMBO RH</div>
+          <div className="font-bold text-[13px] leading-tight tracking-tight">THE WALL</div>
           <div className="text-[10px] text-[var(--text-muted)] leading-tight mt-0.5">Robinhood Chain</div>
         </div>
       </div>
@@ -214,9 +181,7 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
                   {link.icon}
                 </span>
                 {link.label}
-                {link.href === "/dex-activity" && (
-                  <span className="ml-auto w-1.5 h-1.5 rounded-full bg-green-400 live-blink" />
-                )}
+
               </Link>
             </div>
           );
