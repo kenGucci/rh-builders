@@ -395,8 +395,10 @@ export async function GET(request: NextRequest) {
   if (address) {
     const kol = KOL_REGISTRY.find((k) => k.address && k.address.toLowerCase() === address.toLowerCase());
     if (!kol) {
-      const xProfile = await buildXOnlyProfile(address);
-      if (xProfile) return NextResponse.json({ kol: xProfile, ethPrice });
+      if (!address.startsWith("0x")) {
+        const xProfile = await buildXOnlyProfile(address);
+        if (xProfile) return NextResponse.json({ kol: xProfile, ethPrice });
+      }
       return NextResponse.json({ error: "KOL not found" }, { status: 404 });
     }
 

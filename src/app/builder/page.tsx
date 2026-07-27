@@ -133,6 +133,41 @@ export default function BuildersPage() {
     });
   }, [statsMap]);
 
+  const trendingBuilders = useMemo(() => {
+    return [...enrichedBuilders]
+      .filter((b) => b.stat && (b.stat.txCount > 0 || Number(b.stat.balance) > 0))
+      .sort((a, b) => {
+        const aTs = a.stat?.lastTxTimestamp ? new Date(a.stat.lastTxTimestamp).getTime() : 0;
+        const bTs = b.stat?.lastTxTimestamp ? new Date(b.stat.lastTxTimestamp).getTime() : 0;
+        if (bTs !== aTs) return bTs - aTs;
+        return (b.stat?.tokenCount || 0) - (a.stat?.tokenCount || 0);
+      })
+      .slice(0, 4);
+  }, [enrichedBuilders]);
+
+  const activeLaunchpadCount = useMemo(
+    () => enrichedBuilders.filter((b) => b.category === "Launchpad" && b.stat && b.stat.txCount > 0).length,
+    [enrichedBuilders]
+  );
+  const antiRugCount = useMemo(
+    () => enrichedBuilders.filter((b) => (b.tags || []).includes("anti-rug")).length,
+    [enrichedBuilders]
+  );
+  const analyticsCount = useMemo(
+    () => enrichedBuilders.filter((b) => (b.tags || []).includes("analytics")).length,
+    [enrichedBuilders]
+  );
+
+  const tagCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const b of builders.builders) {
+      for (const tag of b.tags || []) {
+        counts[tag] = (counts[tag] || 0) + 1;
+      }
+    }
+    return counts;
+  }, []);
+
   const filtered = useMemo(() => {
     const q = filter.toLowerCase();
     let list = q
@@ -208,41 +243,49 @@ export default function BuildersPage() {
         <div className="flex items-center gap-2 mb-3">
           <Flame size={14} className="text-orange-400" />
           <h2 className="text-sm font-semibold">Trending Launchpads</h2>
-          <span className="text-[10px] text-[var(--text-muted)]">— live on-chain data</span>
+          <span className="text-[10px] text-[var(--text-muted)]">— sorted by most recent activity</span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {enrichedBuilders.slice(0, 4).map((b) => (
-            <Link
-              key={b.address}
-              href={`/builder/${b.address.toLowerCase()}`}
-              className="group bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--accent)]/30 hover:shadow-[0_4px_20px_rgba(0,200,5,0.05)] transition-all"
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <AddressAvatar address={b.address} size={32} />
-                <div className="min-w-0 flex-1">
-                  <div className="text-xs font-semibold truncate group-hover:text-[var(--accent)] transition-colors">{b.name}</div>
-                  {b.twitter && (
-                    <div className="text-[9px] text-[var(--text-muted)] truncate">@{b.twitter}</div>
-                  )}
+          {statsLoading ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-28 rounded-xl animate-shimmer" style={{ background: "var(--surface)" }} />
+            ))
+          ) : trendingBuilders.length > 0 ? (
+            trendingBuilders.map((b) => (
+              <Link
+                key={b.address}
+                href={`/builder/${b.address.toLowerCase()}`}
+                className="group bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--accent)]/30 hover:shadow-[0_4px_20px_rgba(0,200,5,0.05)] transition-all"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <AddressAvatar address={b.address} size={32} />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs font-semibold truncate group-hover:text-[var(--accent)] transition-colors">{b.name}</div>
+                    {b.twitter && (
+                      <div className="text-[9px] text-[var(--text-muted)] truncate">@{b.twitter}</div>
+                    )}
+                  </div>
+                  <ChevronRight size={12} className="text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors flex-shrink-0" />
                 </div>
-                <ChevronRight size={12} className="text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors flex-shrink-0" />
-              </div>
-              {b.stat && (
-                <div className="flex items-center gap-2 text-[9px] text-[var(--text-muted)]">
-                  <span className="flex items-center gap-0.5"><Activity size={8} className="text-[var(--accent)]" />{b.stat.txCount.toLocaleString()} txs</span>
-                  <span className="flex items-center gap-0.5"><Zap size={8} className="text-yellow-400" />{b.stat.tokenCount} tokens</span>
-                  {Number(b.stat.balance) > 0 && (
-                    <span className="flex items-center gap-0.5"><DollarSign size={8} className="text-blue-400" />{b.stat.balanceFormatted} ETH</span>
-                  )}
-                </div>
-              )}
-              {b.stat?.lastTxTimestamp && (
-                <div className="text-[8px] text-[var(--text-muted)] mt-1.5 flex items-center gap-1">
-                  <Clock size={7} />Last active: {timeAgo(b.stat.lastTxTimestamp)}
-                </div>
-              )}
-            </Link>
-          ))}
+                {b.stat && (
+                  <div className="flex items-center gap-2 text-[9px] text-[var(--text-muted)]">
+                    <span className="flex items-center gap-0.5"><Activity size={8} className="text-[var(--accent)]" />{b.stat.txCount.toLocaleString()} txs</span>
+                    <span className="flex items-center gap-0.5"><Zap size={8} className="text-yellow-400" />{b.stat.tokenCount} tokens</span>
+                    {Number(b.stat.balance) > 0 && (
+                      <span className="flex items-center gap-0.5"><DollarSign size={8} className="text-blue-400" />{b.stat.balanceFormatted} ETH</span>
+                    )}
+                  </div>
+                )}
+                {b.stat?.lastTxTimestamp && (
+                  <div className="text-[8px] text-[var(--text-muted)] mt-1.5 flex items-center gap-1">
+                    <Clock size={7} />Last active: {timeAgo(b.stat.lastTxTimestamp)}
+                  </div>
+                )}
+              </Link>
+            ))
+          ) : (
+            <div className="col-span-full text-center py-6 text-[var(--text-muted)] text-xs">No active builders found on-chain</div>
+          )}
         </div>
       </section>
 
@@ -254,10 +297,34 @@ export default function BuildersPage() {
           <span className="text-[10px] text-[var(--text-muted)]">— what&apos;s live on Robinhood Chain</span>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <TechCard icon={<Rocket size={16} />} title="Token Launchpads" count={`${builders.builders.filter(b => b.category === "Launchpad").length} active`} desc="Bonding curves, fair-launch, instant deploy" color="accent" />
-          <TechCard icon={<Shield size={16} />} title="Anti-Rug Mechanisms" count="Built-in" desc="LP locking, renounced ownership, audits" color="green" />
-          <TechCard icon={<BarChart3 size={16} />} title="On-Chain Analytics" count="Live" desc="Holder distribution, tx tracking, rugs" color="blue" />
-          <TechCard icon={<Code size={16} />} title="ERC-20 Standards" count={`${totalTokens} deployed`} desc="Standard, proxy, gasless, meta-tx" color="purple" />
+          <TechCard
+            icon={<Rocket size={16} />}
+            title="Token Launchpads"
+            count={statsLoading ? "..." : `${activeLaunchpadCount} active`}
+            desc="Bonding curves, fair-launch, instant deploy"
+            color="accent"
+          />
+          <TechCard
+            icon={<Shield size={16} />}
+            title="Anti-Rug Mechanisms"
+            count={statsLoading ? "..." : `${antiRugCount} verified`}
+            desc="LP locking, renounced ownership, audits"
+            color="green"
+          />
+          <TechCard
+            icon={<BarChart3 size={16} />}
+            title="On-Chain Analytics"
+            count={statsLoading ? "..." : `${analyticsCount} tools`}
+            desc="Holder distribution, tx tracking, rugs"
+            color="blue"
+          />
+          <TechCard
+            icon={<Code size={16} />}
+            title="ERC-20 Standards"
+            count={statsLoading ? "..." : `${totalTokens} deployed`}
+            desc="Standard, proxy, gasless, meta-tx"
+            color="purple"
+          />
         </div>
       </section>
 
@@ -298,7 +365,7 @@ export default function BuildersPage() {
                 filter.toLowerCase() === tag.toLowerCase() ? "bg-[var(--accent)] text-black" : "bg-[var(--surface)] border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--accent)]/30"
               }`}
             >
-              {tag}
+              {tag} ({tagCounts[tag] || 0})
             </button>
           ))}
         </div>

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { v2Fetch } from "@/lib/blockscout";
 
 const V2 = "https://robinhoodchain.blockscout.com/api/v2";
 const DEXSCREENER_API = "https://api.dexscreener.com";
@@ -113,8 +114,6 @@ async function fetchCreatorRewards(address: string, tokenAddress: string) {
     return null;
   }
 }
-
-import { v2Fetch } from "@/lib/blockscout";
 
 export async function GET(request: NextRequest) {
   const address = request.nextUrl.searchParams.get("address");

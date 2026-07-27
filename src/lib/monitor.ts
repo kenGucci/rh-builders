@@ -1,7 +1,7 @@
 import { getBlockNumber, getBlock, getTxReceipt, fetchErc20Meta, KNOWN_TOPICS } from "./rpc";
 import {
   addToken,
-  updateTokenMetrics,
+  getAllTokens,
   pushHolderHistory,
   pushTransferHistory,
   type DetectedToken,
@@ -141,8 +141,6 @@ async function pollNewBlocks(): Promise<void> {
 }
 
 async function refreshMetrics(): Promise<void> {
-  const { getAllTokens, pushHolderHistory, pushTransferHistory } = await import("./token-store");
-
   const tokens = getAllTokens();
   for (const token of tokens.slice(0, 20)) {
     try {
@@ -195,5 +193,3 @@ export function getLatestBlock(): number {
 export function isMonitoring(): boolean {
   return monitoring;
 }
-
-startMonitoring();

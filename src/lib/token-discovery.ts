@@ -101,7 +101,6 @@ interface CacheEntry {
   ts: number;
 }
 
-const cache: CacheEntry | null = null;
 let cachePromise: Promise<CacheEntry> | null = null;
 const CACHE_TTL = 20_000;
 
@@ -207,8 +206,8 @@ async function discoverAll(): Promise<CacheEntry> {
 }
 
 export async function getRobinhoodTokens(): Promise<CacheEntry> {
-  // Return cached if fresh
-  if (cache && Date.now() - cache.ts < CACHE_TTL) return cache;
+  const cached = (globalThis as Record<string, unknown>).__rhTokenCache as CacheEntry | undefined;
+  if (cached && Date.now() - cached.ts < CACHE_TTL) return cached;
 
   // If a fetch is already in progress, wait for it
   if (cachePromise) return cachePromise;

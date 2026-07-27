@@ -27,9 +27,15 @@ interface TokenBalanceInfo {
   tokenName: string;
 }
 
+interface TotalRewardsInfo {
+  totalClaimedUsd: number;
+  tokenCount: number;
+  claimCount: number;
+}
+
 const POLL_INTERVAL = 30000;
 
-export default function StatsBar({ address, tokenBalance }: { address: string; tokenBalance?: TokenBalanceInfo | null }) {
+export default function StatsBar({ address, tokenBalance, totalRewards }: { address: string; tokenBalance?: TokenBalanceInfo | null; totalRewards?: TotalRewardsInfo | null }) {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -132,7 +138,7 @@ export default function StatsBar({ address, tokenBalance }: { address: string; t
       </div>
 
       {/* Stat cards */}
-      <div className={`grid gap-3 ${tokenBalance ? "grid-cols-2 md:grid-cols-5" : "grid-cols-2 md:grid-cols-4"}`} role="list" aria-label="Address statistics">
+      <div className={`grid gap-3 ${tokenBalance ? "grid-cols-2 md:grid-cols-5" : totalRewards && totalRewards.totalClaimedUsd > 0 ? "grid-cols-2 md:grid-cols-5" : "grid-cols-2 md:grid-cols-4"}`} role="list" aria-label="Address statistics">
         {tokenBalance ? (
           <StatCard
             label={`${tokenBalance.tokenName} Balance`}
@@ -143,6 +149,17 @@ export default function StatsBar({ address, tokenBalance }: { address: string; t
             flash={balanceFlash}
             source="ERC-20 Token"
             ariaLabel={`${tokenBalance.tokenName} balance: ${tokenBalance.holderBalance} ${tokenBalance.tokenSymbol}, worth ${tokenBalance.holderBalanceUsd} USD`}
+          />
+        ) : totalRewards && totalRewards.totalClaimedUsd > 0 ? (
+          <StatCard
+            label="Total Rewards"
+            value={`$${totalRewards.totalClaimedUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}`}
+            subValue={`${totalRewards.tokenCount} token${totalRewards.tokenCount !== 1 ? "s" : ""} · ${totalRewards.claimCount} claims`}
+            icon={<Coins size={14} aria-hidden="true" />}
+            accent
+            flash={balanceFlash}
+            source="Creator Rewards"
+            ariaLabel={`Total creator rewards: $${totalRewards.totalClaimedUsd} from ${totalRewards.tokenCount} tokens`}
           />
         ) : (
           <StatCard

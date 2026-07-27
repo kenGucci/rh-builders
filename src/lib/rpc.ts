@@ -86,8 +86,16 @@ export const KNOWN_TOPICS = {
   TRANSFER: TRANSFER_TOPIC,
 };
 
-export function isErc20(address: string): string | null {
-  return address;
+export async function isErc20(address: string): Promise<boolean> {
+  try {
+    const result = await ethCall(address, SIG_TOTAL_SUPPLY);
+    if (!result || result === "0x" || result === "0x0") return false;
+    const symbolResult = await ethCall(address, SIG_SYMBOL);
+    if (!symbolResult || symbolResult === "0x" || symbolResult === "0x0") return false;
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function fetchErc20Meta(address: string) {

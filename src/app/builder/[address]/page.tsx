@@ -188,6 +188,20 @@ function BuilderContent() {
 
   const creatorBuilder = creator?.creator_address ? findBuilder(creator.creator_address) : null;
 
+  const totalRewards = detailData?.tokenBalances?.length
+    ? detailData.tokenBalances.reduce(
+        (acc, t) => {
+          if (t.creatorReward) {
+            acc.totalClaimedUsd += Number(t.creatorReward.totalClaimedUsd) || 0;
+            acc.tokenCount += 1;
+            acc.claimCount += t.creatorReward.claimCount || 0;
+          }
+          return acc;
+        },
+        { totalClaimedUsd: 0, tokenCount: 0, claimCount: 0 }
+      )
+    : null;
+
   const copyAddress = () => {
     navigator.clipboard.writeText(address);
     setCopied(true);
@@ -496,6 +510,7 @@ function BuilderContent() {
             tokenIcon: tokenBalance?.tokenIcon || null,
             tokenName: tokenBalance?.tokenName || "Token",
           } : null}
+          totalRewards={!caParam && totalRewards && totalRewards.totalClaimedUsd > 0 ? totalRewards : null}
         />
 
         {/* Token Holdings */}
