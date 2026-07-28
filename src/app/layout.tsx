@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     template: "%s | THE WALL",
   },
   description:
-    "The definitive builder analytics dashboard for Robinhood Chain (Chain ID 4663). Track deployed contracts, token launches, reward claims, on-chain activity, stock market data, and KOL trading patterns. Powered by Blockscout with real-time data.",
+    "The definitive builder analytics dashboard for Robinhood Chain (Chain ID 4663). Track deployed contracts, token launches, reward claims, on-chain activity, and stock market data. Powered by Blockscout with real-time data.",
   keywords: [
     "Robinhood Chain",
     "Chain ID 4663",

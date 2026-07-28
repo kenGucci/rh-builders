@@ -1,7 +1,11 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useI18n, languages, type Language } from "@/lib/i18n";
+import {
+  MessageSquare, ThumbsUp, ThumbsDown, Users, Star,
+  RefreshCw, Search, Filter, ExternalLink, Clock, Globe,
+} from "lucide-react";
 
 const themes = [
   { name: "Green", accent: "#00c805", gradient: ["#00c805", "#00ff88"] },
@@ -13,6 +17,18 @@ const themes = [
   { name: "Cyan", accent: "#06b6d4", gradient: ["#06b6d4", "#22d3ee"] },
   { name: "Pink", accent: "#ec4899", gradient: ["#ec4899", "#f472b6"] },
 ];
+
+interface FeedbackEntry {
+  id: string; name: string; email: string; twitter: string; wallet: string;
+  role: "tester" | "user"; rating: "good" | "bad"; page: string;
+  message: string; browser: string; createdAt: string;
+}
+
+interface FeedbackStats {
+  total: number; good: number; bad: number; testers: number;
+  users: number; uniqueNames: number;
+  byPage: Record<string, { good: number; bad: number }>;
+}
 
 function hexToRgba(hex: string, alpha: number) {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -66,6 +82,42 @@ export default function SettingsPage() {
   const [isCustom, setIsCustom] = useState(false);
   const [langSearch, setLangSearch] = useState("");
   const [selectedRegion, setSelectedRegion] = useState("All Regions");
+  const [fbEntries, setFbEntries] = useState<FeedbackEntry[]>([]);
+  const [fbStats, setFbStats] = useState<FeedbackStats | null>(null);
+  const [fbLoading, setFbLoading] = useState(false);
+  const [fbFilter, setFbFilter] = useState<"all" | "good" | "bad" | "tester" | "user">("all");
+  const [fbSearch, setFbSearch] = useState("");
+  const [showFbForm, setShowFbForm] = useState(false);
+
+  const fetchFeedback = useCallback(async () => {
+    setFbLoading(true);
+    try {
+      const res = await fetch("/api/feedback");
+      const data = await res.json();
+      setFbEntries(data.entries || []);
+      setFbStats(data.stats || null);
+    } catch {} finally { setFbLoading(false); }
+  }, []);
+
+  useEffect(() => {
+    fetchFeedback();
+    const interval = setInterval(fetchFeedback, 30000);
+    return () => clearInterval(interval);
+  }, [fetchFeedback]);
+
+  const fbFiltered = useMemo(() => {
+    return fbEntries.filter((e) => {
+      if (fbFilter === "good") return e.rating === "good";
+      if (fbFilter === "bad") return e.rating === "bad";
+      if (fbFilter === "tester") return e.role === "tester";
+      if (fbFilter === "user") return e.role === "user";
+      return true;
+    }).filter((e) => {
+      if (!fbSearch) return true;
+      const q = fbSearch.toLowerCase();
+      return [e.name, e.email, e.twitter, e.message, e.page].some((f) => f?.toLowerCase().includes(q));
+    });
+  }, [fbEntries, fbFilter, fbSearch]);
 
   useEffect(() => {
     const navLang = navigator.language || "";
@@ -320,6 +372,206 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* Feedback Section */}
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2.5">
+            <MessageSquare size={18} className="text-[var(--accent)]" />
+            <div>
+              <h2 className="text-sm font-medium">Feedback</h2>
+              <p className="text-[10px] text-[var(--text-muted)]">Track what people think and what needs fixing.</p>
+            </div>
+          </div>
+          <button onClick={() => setShowFbForm(!showFbForm)}
+            className="px-3 py-1.5 rounded-lg bg-[var(--accent)] text-black text-xs font-semibold hover:shadow-[0_0_20px_var(--accent-glow)] transition-all">
+            {showFbForm ? "Close" : "+ Add Feedback"}
+          </button>
+        </div>
+
+        {showFbForm && <FeedbackForm onSubmit={() => { setShowFbForm(false); fetchFeedback(); }} />}
+
+        {fbStats && (
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+            <FbStat label="Total" value={fbStats.total} icon={<MessageSquare size={14} />} />
+            <FbStat label="Good" value={fbStats.good} icon={<ThumbsUp size={14} />} color="green" />
+            <FbStat label="Bad" value={fbStats.bad} icon={<ThumbsDown size={14} />} color="red" />
+            <FbStat label="Testers" value={fbStats.testers} icon={<Star size={14} />} color="yellow" />
+            <FbStat label="People" value={fbStats.uniqueNames} icon={<Users size={14} />} color="blue" />
+          </div>
+        )}
+
+        {fbStats && Object.keys(fbStats.byPage).length > 0 && (
+          <div className="mb-4 p-3 rounded-lg bg-[var(--bg-card)] border border-[var(--border)]">
+            <div className="flex items-center gap-2 mb-2">
+              <Globe size={12} className="text-[var(--accent)]" />
+              <span className="text-xs font-semibold">By Page</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {Object.entries(fbStats.byPage)
+                .sort((a, b) => (b[1].good + b[1].bad) - (a[1].good + a[1].bad))
+                .map(([page, counts]) => (
+                  <div key={page} className="bg-[var(--surface)] border border-[var(--border)] rounded-lg px-2.5 py-1.5">
+                    <div className="text-[10px] font-medium truncate">{page}</div>
+                    <div className="flex items-center gap-2 text-[8px] mt-0.5">
+                      <span className="text-green-400">{counts.good}g</span>
+                      <span className="text-red-400">{counts.bad}b</span>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center gap-1">
+            {(["all", "good", "bad", "tester", "user"] as const).map((f) => (
+              <button key={f} onClick={() => setFbFilter(f)}
+                className={`px-2 py-0.5 rounded text-[9px] transition-all capitalize ${
+                  fbFilter === f ? "bg-[var(--accent)] text-black font-medium" : "bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-muted)]"
+                }`}>{f}</button>
+            ))}
+          </div>
+          <div className="relative flex-1 max-w-xs">
+            <Search size={10} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+            <input value={fbSearch} onChange={(e) => setFbSearch(e.target.value)}
+              placeholder="Search..." className="w-full pl-7 pr-2 py-1 rounded-lg bg-[var(--bg-card)] border border-[var(--border)] text-[10px] text-[var(--foreground)] placeholder-[var(--text-muted)] focus:border-[var(--accent)]/50 transition-all" />
+          </div>
+          <button onClick={fetchFeedback} className="p-1 rounded-lg bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent)]">
+            <RefreshCw size={10} className={fbLoading ? "animate-spin" : ""} />
+          </button>
+        </div>
+
+        <div className="space-y-1.5 max-h-[400px] overflow-y-auto">
+          {fbLoading && fbEntries.length === 0 ? (
+            [1,2,3].map(i => <div key={i} className="h-16 rounded-xl animate-shimmer" style={{ background: "var(--bg-card)" }} />)
+          ) : fbFiltered.length === 0 ? (
+            <div className="text-center py-6 text-[10px] text-[var(--text-muted)]">{fbEntries.length === 0 ? "No feedback yet." : "No matches."}</div>
+          ) : fbFiltered.map((entry) => (
+            <div key={entry.id} className={`p-3 rounded-xl border ${entry.rating === "good" ? "border-green-500/20" : "border-red-500/20"}`}>
+              <div className="flex items-start gap-2">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
+                  entry.rating === "good" ? "bg-green-500/10 text-green-400" : "bg-red-500/10 text-red-400"
+                }`}>{entry.rating === "good" ? <ThumbsUp size={10} /> : <ThumbsDown size={10} />}</div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-semibold">{entry.name}</span>
+                    {entry.role === "tester" && <span className="text-[7px] px-1 rounded bg-yellow-500/10 text-yellow-400">Tester</span>}
+                    {entry.page && <span className="text-[7px] px-1 rounded bg-[var(--accent)]/10 text-[var(--accent)]">{entry.page}</span>}
+                  </div>
+                  {entry.message && <p className="text-[10px] text-[var(--text-secondary)] mt-1">{entry.message}</p>}
+                  <div className="flex items-center gap-2 mt-1 text-[8px] text-[var(--text-muted)]">
+                    <Clock size={7} />{timeAgo(entry.createdAt)}{entry.twitter && <> · @{entry.twitter}</>}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function timeAgo(ts: string) {
+  const diff = Date.now() - new Date(ts).getTime();
+  if (diff < 60000) return "just now";
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+  return `${Math.floor(diff / 86400000)}d ago`;
+}
+
+function FeedbackForm({ onSubmit }: { onSubmit: () => void }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [twitter, setTwitter] = useState("");
+  const [wallet, setWallet] = useState("");
+  const [role, setRole] = useState<"tester" | "user">("user");
+  const [rating, setRating] = useState<"good" | "bad" | "">("");
+  const [page, setPage] = useState("");
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name || !rating) { setError("Name and rating required"); return; }
+    setLoading(true); setError("");
+    try {
+      const res = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name, email, twitter, wallet, role, rating,
+          page: page || "general", message,
+          browser: typeof navigator !== "undefined" ? navigator.userAgent : "",
+        }),
+      });
+      if (!res.ok) { setError("Failed to submit"); return; }
+      onSubmit();
+    } catch { setError("Network error"); } finally { setLoading(false); }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-4 space-y-3 mb-4 fade-in">
+      <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--accent)]">
+        <MessageSquare size={12} /> Submit Feedback
+      </div>
+      {error && <div className="p-2 rounded-lg bg-red-500/10 text-[10px] text-red-400">{error}</div>}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <input value={name} onChange={(e) => setName(e.target.value)} required placeholder="Name *"
+          className="px-3 py-1.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[11px] text-[var(--foreground)] focus:border-[var(--accent)]/50 transition-all" />
+        <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="Email"
+          className="px-3 py-1.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[11px] text-[var(--foreground)] focus:border-[var(--accent)]/50 transition-all" />
+        <input value={twitter} onChange={(e) => setTwitter(e.target.value)} placeholder="X / Twitter"
+          className="px-3 py-1.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[11px] text-[var(--foreground)] focus:border-[var(--accent)]/50 transition-all" />
+        <input value={wallet} onChange={(e) => setWallet(e.target.value)} placeholder="Wallet"
+          className="px-3 py-1.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[11px] text-[var(--foreground)] font-mono focus:border-[var(--accent)]/50 transition-all" />
+      </div>
+      <div className="flex gap-2">
+        <select value={role} onChange={(e) => setRole(e.target.value as "tester" | "user")}
+          className="px-3 py-1.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[11px] text-[var(--foreground)] focus:border-[var(--accent)]/50">
+          <option value="user">User</option>
+          <option value="tester">Tester</option>
+        </select>
+        <div className="flex gap-1">
+          <button type="button" onClick={() => setRating("good")}
+            className={`px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all ${rating === "good" ? "bg-green-500/20 border border-green-500/40 text-green-400" : "bg-[var(--surface)] border border-[var(--border)] text-[var(--text-muted)]"}`}>
+            <ThumbsUp size={10} className="inline" /> Good
+          </button>
+          <button type="button" onClick={() => setRating("bad")}
+            className={`px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all ${rating === "bad" ? "bg-red-500/20 border border-red-500/40 text-red-400" : "bg-[var(--surface)] border border-[var(--border)] text-[var(--text-muted)]"}`}>
+            <ThumbsDown size={10} className="inline" /> Bad
+          </button>
+        </div>
+        <input value={page} onChange={(e) => setPage(e.target.value)} placeholder="Page"
+          className="flex-1 px-3 py-1.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[11px] text-[var(--foreground)] focus:border-[var(--accent)]/50 transition-all" />
+      </div>
+      <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={2} placeholder="What did you think?"
+        className="w-full px-3 py-1.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[11px] text-[var(--foreground)] focus:border-[var(--accent)]/50 transition-all resize-none" />
+      <button type="submit" disabled={!name || !rating || loading}
+        className="w-full py-2 rounded-lg bg-[var(--accent)] text-black text-xs font-semibold hover:shadow-[0_0_20px_var(--accent-glow)] transition-all disabled:opacity-50">
+        {loading ? "Submitting..." : "Submit Feedback"}
+      </button>
+    </form>
+  );
+}
+
+function FbStat({ label, value, icon, color }: { label: string; value: number; icon: React.ReactNode; color?: string }) {
+  const colorMap: Record<string, string> = {
+    green: "text-green-400 border-green-400/20",
+    red: "text-red-400 border-red-400/20",
+    yellow: "text-yellow-400 border-yellow-400/20",
+    blue: "text-blue-400 border-blue-400/20",
+  };
+  const c = colorMap[color || ""] || "text-[var(--accent)] border-[var(--accent)]/20";
+  return (
+    <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-2.5 text-center">
+      <div className={`flex items-center justify-center gap-1 ${c} mb-0.5`}>
+        {icon}
+        <span className="text-[8px] uppercase tracking-wider">{label}</span>
+      </div>
+      <div className="text-sm font-bold gradient-text">{value}</div>
     </div>
   );
 }

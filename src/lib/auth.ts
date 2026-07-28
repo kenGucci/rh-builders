@@ -13,7 +13,7 @@ export interface SessionPayload {
   userId: string;
   email: string;
   name: string;
-  provider: "email" | "x";
+  provider: "email";
 }
 
 export async function createToken(payload: SessionPayload): Promise<string> {

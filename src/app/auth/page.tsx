@@ -61,7 +61,7 @@ function AuthContent() {
           </div>
           <h1 className="text-2xl font-bold text-[var(--foreground)]">Sign In</h1>
           <p className="text-sm text-[var(--text-muted)] max-w-sm mx-auto leading-relaxed">
-            Sign in with your email and password, or continue with X.
+            Sign in with your email and password.
           </p>
         </header>
 
@@ -112,30 +112,13 @@ function AuthContent() {
           </button>
         </form>
 
-        <div className="relative flex items-center" role="separator">
-          <div className="flex-1 border-t border-[var(--border)]" />
-          <span className="px-3 text-xs text-[var(--text-muted)]">or</span>
-          <div className="flex-1 border-t border-[var(--border)]" />
-        </div>
-
-        {/* X Login */}
-        <a
-          href="/api/auth/x/login"
-          className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl bg-[#000] border border-white/10 text-xs text-white/70 hover:text-white hover:border-white/30 transition-all"
-        >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-          </svg>
-          Continue with X (Twitter)
-        </a>
-
         {/* Footer */}
         <footer className="text-center space-y-1" role="contentinfo">
           <p className="text-xs text-[var(--text-muted)]">
             By signing in, you agree to our Terms of Service and Privacy Policy
           </p>
           <p className="text-[11px] opacity-40">
-            Secured with PBKDF2 hashing, JWT encryption, and OAuth 2.0 PKCE. Data never leaves the server.
+            Secured with PBKDF2 hashing and JWT encryption. Data never leaves the server.
           </p>
         </footer>
       </main>

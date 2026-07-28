@@ -204,7 +204,7 @@ export default function TeamPage() {
             <div className="space-y-3 text-sm text-[var(--text-muted)]">
               <p>
                 Built THE WALL to bring full transparency to the Robinhood Chain ecosystem.
-                Real-time builder analytics, KOL tracking, and on-chain data — all open-source.
+                Real-time builder analytics and on-chain data — all open-source.
               </p>
               <div className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />

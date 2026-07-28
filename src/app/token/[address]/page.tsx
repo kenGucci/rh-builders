@@ -5,9 +5,9 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft, ExternalLink, Globe, Bird, MessageCircle,
-  Send, RefreshCw, TrendingUp, TrendingDown, Activity,
-  Droplets, BarChart3, Users, Clock, Layers, Copy, Check,
-  Shield, Zap, ChevronDown,
+  Send, RefreshCw, TrendingUp, Activity,
+  Droplets, BarChart3, Clock, Layers, Copy, Check,
+  Shield, Zap,
 } from "lucide-react";
 
 interface TokenPair {

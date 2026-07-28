@@ -7,8 +7,6 @@ export interface User {
   name?: string;
   avatar_url?: string;
   provider?: string;
-  x_username?: string;
-  x_avatar_url?: string;
   role?: string;
   created_at?: string;
   updated_at?: string;
@@ -67,8 +65,6 @@ export async function upsertUser(user: {
   name?: string;
   avatar_url?: string;
   provider?: string;
-  x_username?: string;
-  x_avatar_url?: string;
   role?: string;
 }): Promise<User | null> {
   const supabase = getSupabaseServer();
@@ -83,8 +79,6 @@ export async function upsertUser(user: {
         name: user.name,
         avatar_url: user.avatar_url,
         provider: user.provider,
-        x_username: user.x_username,
-        x_avatar_url: user.x_avatar_url,
         role: user.role,
         updated_at: new Date().toISOString(),
       },
@@ -108,7 +102,7 @@ export async function linkWallet(userId: string, walletAddress: string): Promise
 
   const { data, error } = await supabase
     .from("users")
-    .update({ x_username: walletAddress.toLowerCase(), updated_at: new Date().toISOString() })
+    .update({ walletAddress: walletAddress.toLowerCase(), updated_at: new Date().toISOString() })
     .eq("id", userId)
     .select()
     .single();

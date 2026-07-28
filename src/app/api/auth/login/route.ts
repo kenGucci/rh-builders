@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       email: user.email,
       name: user.name || user.email.split("@")[0],
-      provider: (user.provider as "email" | "x") || "email",
+      provider: "email",
     });
 
     const response = NextResponse.json({

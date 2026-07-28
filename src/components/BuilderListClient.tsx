@@ -6,8 +6,8 @@ import AddressAvatar from "@/components/AddressAvatar";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   ArrowUpRight, Activity, ArrowUpDown, Clock,
-  Zap, RefreshCw, DollarSign, Flame, Layers,
-  Shield, BarChart3, Code, ChevronRight, Rocket,
+  RefreshCw, DollarSign, Flame, Layers,
+  Shield, BarChart3, Code, Rocket,
   TrendingUp, Users,
 } from "lucide-react";
 
@@ -191,13 +191,12 @@ export default function BuilderListClient({ builders }: { builders: Builder[] })
 
   return (
     <div className="space-y-6 fade-in">
-      {/* Aggregate stats */}
-      {!statsLoading && (
+      {chainStats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <AggregateCard label="Total Addresses" value={chainStats?.totalAddresses ? formatDeployed(chainStats.totalAddresses) : "—"} icon={<Users size={14} />} />
-          <AggregateCard label="Total Transactions" value={chainStats?.totalTransactions ? formatDeployed(chainStats.totalTransactions) : "—"} icon={<TrendingUp size={14} />} />
-          <AggregateCard label="ERC-20 Tokens" value={chainStats?.totalTokens ? formatDeployed(chainStats.totalTokens) : "—"} icon={<Activity size={14} />} />
-          <AggregateCard label="Network Block" value={`#${liveBlock.toLocaleString()}`} icon={<Clock size={14} />} live />
+          <AggregateCard label="Total Addresses" value={formatDeployed(chainStats.totalAddresses)} icon={<Users size={14} />} />
+          <AggregateCard label="Total Transactions" value={formatDeployed(chainStats.totalTransactions)} icon={<TrendingUp size={14} />} />
+          <AggregateCard label="ERC-20 Tokens" value={formatDeployed(chainStats.totalTokens)} icon={<Activity size={14} />} />
+          <AggregateCard label="Network Block" value={liveBlock > 0 ? `#${liveBlock.toLocaleString()}` : "—"} icon={<Clock size={14} />} live />
         </div>
       )}
 
@@ -444,47 +443,29 @@ export default function BuilderListClient({ builders }: { builders: Builder[] })
                 <div className="flex items-center gap-3 mt-2 text-[11px]">
                   {b.stat ? (
                     <>
-                      <span className="text-[var(--text-muted)] flex items-center gap-1">
-                        <TrendingUp size={10} className="text-[var(--accent)]" />
-                        {b.stat.balanceFormatted} ETH
-                      </span>
-                      <span className="text-[var(--text-muted)] flex items-center gap-1">
-                        <Activity size={10} className="text-[var(--accent)]" />
-                        {b.stat.txCount.toLocaleString()} txs
-                      </span>
-                      <span className="text-[var(--text-muted)] flex items-center gap-1">
-                        <Zap size={10} className="text-[var(--accent)]" />
-                        {b.stat.tokenCount} tokens
-                      </span>
+                      {Number(b.stat.balance) > 0 && (
+                        <span className="text-[var(--text-muted)] flex items-center gap-1">
+                          <DollarSign size={10} className="text-blue-400" />
+                          {b.stat.balanceFormatted} ETH
+                        </span>
+                      )}
+                      {b.stat.txCount > 0 && (
+                        <span className="text-[var(--text-muted)] flex items-center gap-1">
+                          <Activity size={10} className="text-purple-400" />
+                          {b.stat.txCount.toLocaleString()} txs
+                        </span>
+                      )}
+                      {b.stat.tokenCount > 0 && (
+                        <span className="text-[var(--text-muted)] flex items-center gap-1">
+                          <Rocket size={10} className="text-green-400" />
+                          {b.stat.tokenCount} tokens
+                        </span>
+                      )}
                     </>
                   ) : statsLoading ? (
-                    <>
-                      <span className="h-3 w-12 rounded animate-shimmer inline-block" style={{ background: "var(--bg-card-hover)" }} />
-                      <span className="h-3 w-10 rounded animate-shimmer inline-block" style={{ background: "var(--bg-card-hover)" }} />
-                    </>
+                    <span className="h-3 w-10 rounded animate-shimmer inline-block" style={{ background: "var(--bg-card-hover)" }} />
                   ) : null}
                 </div>
-
-                {b.stat && (b.stat.txCount > 0 || Number(b.stat.balance) > 0) && (
-                  <div className="flex items-center gap-3 mt-1.5 text-[10px]">
-                    <span className="text-purple-400 flex items-center gap-1">
-                      <Activity size={9} />
-                      {b.stat.txCount.toLocaleString()} txs
-                    </span>
-                    {b.stat.tokenCount > 0 && (
-                      <span className="text-green-400 flex items-center gap-1">
-                        <Rocket size={9} />
-                        {b.stat.tokenCount} tokens
-                      </span>
-                    )}
-                    {Number(b.stat.balance) > 0 && (
-                      <span className="text-blue-400 flex items-center gap-1">
-                        <DollarSign size={9} />
-                        {b.stat.balanceFormatted} ETH
-                      </span>
-                    )}
-                  </div>
-                )}
 
                 {b.stat?.lastTxTimestamp && (
                   <div className="text-[10px] text-[var(--text-muted)] mt-1.5 flex items-center gap-1">

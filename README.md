@@ -116,7 +116,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | `SUPABASE_ANON_KEY` | Supabase anonymous key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key |
 | `JWT_SECRET` | JWT signing secret |
-| `X_CLIENT_SECRET` | X/Twitter OAuth client secret |
+
 | `PEXELS_API_KEY` | Pexels API key |
 | `X_RAPIDAPI_KEY` | RapidAPI key for X/Twitter data |
 

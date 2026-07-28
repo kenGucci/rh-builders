@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   TrendingUp, TrendingDown, RefreshCw, Search, ArrowUpRight, Activity,
-  BarChart3, DollarSign, Zap, Clock, Flame, ArrowDownRight, X,
+  BarChart3, DollarSign, Zap, Clock, Flame, X,
   ChevronRight, Loader2, Wifi, Shield, Wallet, Globe, Lock, Layers,
   ChevronDown, ExternalLink, Info, CircleDollarSign,
 } from "lucide-react";
@@ -50,6 +50,12 @@ interface SearchResult {
   name: string;
   type: string;
   exchange: string;
+}
+
+interface LiveTxn {
+  name: string; symbol: string; address: string; priceUsd: string;
+  volume24h: number; priceChange24h: number; buys1h: number; sells1h: number;
+  imageUrl: string | null; url: string; dex: string;
 }
 
 interface MarketSummary {
@@ -554,7 +560,9 @@ export default function MarketPage() {
   const [searching, setSearching] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [detailSymbol, setDetailSymbol] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"tokens" | "watchlist" | "gainers" | "losers" | "movers">("tokens");
+  const [activeTab, setActiveTab] = useState<"board" | "txns" | "tokens" | "watchlist" | "gainers" | "losers" | "movers">("board");
+  const [liveTxns, setLiveTxns] = useState<LiveTxn[]>([]);
+  const [txnsLoading, setTxnsLoading] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -604,9 +612,19 @@ export default function MarketPage() {
     } catch {}
   }, []);
 
+  const fetchTxns = useCallback(async () => {
+    setTxnsLoading(true);
+    try {
+      const res = await fetch("/api/live-activity");
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      if (data.recentActivity) setLiveTxns(data.recentActivity.slice(0, 20));
+    } catch {} finally { setTxnsLoading(false); }
+  }, []);
+
   const fetchAll = useCallback(async () => {
-    await Promise.all([fetchStockTokens(), fetchWatchlist(), fetchMovers()]);
-  }, [fetchStockTokens, fetchWatchlist, fetchMovers]);
+    await Promise.all([fetchStockTokens(), fetchWatchlist(), fetchMovers(), fetchTxns()]);
+  }, [fetchStockTokens, fetchWatchlist, fetchMovers, fetchTxns]);
 
   useEffect(() => {
     setLoading(true);
@@ -665,6 +683,8 @@ export default function MarketPage() {
   }, [stockTokens]);
 
   const tabs = [
+    { id: "board" as const, label: "Live Board", icon: BarChart3, count: 0, color: "text-[var(--accent)]" },
+    { id: "txns" as const, label: "Transactions", icon: Activity, count: liveTxns.length, color: "text-blue-400" },
     { id: "tokens" as const, label: "Stock Tokens", icon: CircleDollarSign, count: stockTokens.length, color: "text-[var(--accent)]" },
     { id: "watchlist" as const, label: "Watchlist", icon: Activity, count: filteredQuotes.length },
     { id: "gainers" as const, label: "Gainers", icon: TrendingUp, count: gainers.length, color: "text-green-400" },
@@ -847,6 +867,16 @@ export default function MarketPage() {
           </button>
         ))}
       </div>
+
+      {/* Live Board */}
+      {activeTab === "board" && !loading && (
+        <LiveBoard quotes={quotes} onSelect={setDetailSymbol} />
+      )}
+
+      {/* Transactions Feed */}
+      {activeTab === "txns" && (
+        <TxnsFeed txns={liveTxns} loading={txnsLoading} />
+      )}
 
       {/* Stock Tokens Filter */}
       {activeTab === "tokens" && (
@@ -1081,4 +1111,107 @@ function isCryptoSymbol(symbol: string): boolean {
   if (upper.endsWith("-USD")) return true;
   const cryptos = ["BTC", "ETH", "SOL", "DOGE", "XRP", "ADA", "AVAX", "DOT", "LINK", "MATIC", "SHIB", "LTC", "ATOM", "UNI", "FIL", "APT", "ARB", "OP", "NEAR", "SUI", "PEPE", "WIF", "BONK", "FLOKI", "HBAR", "VET", "ALGO"];
   return cryptos.includes(upper);
+}
+
+function LiveBoard({ quotes, onSelect }: { quotes: MarketQuote[]; onSelect: (s: string) => void }) {
+  if (quotes.length === 0) return (
+    <div className="text-center py-12 text-sm text-[var(--text-muted)]">No assets loaded. Check your connection.</div>
+  );
+
+  const sorted = [...quotes].sort((a, b) => Math.abs(b.changePercent) - Math.abs(a.changePercent));
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+      {sorted.map((q) => {
+        const positive = q.changePercent >= 0;
+        return (
+          <button
+            key={q.symbol}
+            onClick={() => onSelect(q.symbol)}
+            className="text-left bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3 hover:border-[var(--accent)]/30 hover:shadow-[0_0_20px_var(--accent-glow)] transition-all group"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold truncate">{q.symbol}</span>
+                  <span className={`text-[7px] px-1 py-0.5 rounded font-medium shrink-0 ${
+                    q.category === "crypto" ? "bg-purple-500/10 text-purple-400" : "bg-blue-500/10 text-blue-400"
+                  }`}>
+                    {q.category === "crypto" ? "C" : "S"}
+                  </span>
+                </div>
+                <div className="text-[9px] text-[var(--text-muted)] truncate">{q.name}</div>
+              </div>
+              <MiniSparkline data={q.sparkline} positive={positive} />
+            </div>
+            <div className="flex items-baseline gap-2 mb-1.5">
+              <span className="text-base font-bold">{formatPrice(q.price)}</span>
+              <span className={`text-[10px] font-semibold flex items-center gap-0.5 ${positive ? "text-green-400" : "text-red-400"}`}>
+                {positive ? <TrendingUp size={9} /> : <TrendingDown size={9} />}
+                {positive ? "+" : ""}{q.changePercent.toFixed(2)}%
+              </span>
+            </div>
+            <div className="flex justify-between text-[9px] text-[var(--text-muted)]">
+              <span>Vol {formatVolume(q.volume)}</span>
+              <span>MCap {formatMarketCap(q.marketCap)}</span>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function TxnsFeed({ txns, loading }: { txns: LiveTxn[]; loading: boolean }) {
+  if (loading && txns.length === 0) return (
+    <div className="space-y-2">
+      {[1,2,3,4,5].map(i => <div key={i} className="h-16 rounded-xl animate-shimmer" style={{ background: "var(--surface)" }} />)}
+    </div>
+  );
+
+  if (txns.length === 0) return (
+    <div className="text-center py-12 text-sm text-[var(--text-muted)]">No recent transactions available.</div>
+  );
+
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center gap-2 text-[10px] text-[var(--text-muted)] px-3 pb-1.5 border-b border-[var(--border)]">
+        <span className="flex-[2]">Token</span>
+        <span className="flex-1 text-right">Price</span>
+        <span className="flex-1 text-right">Change</span>
+        <span className="flex-1 text-right">Buys</span>
+        <span className="flex-1 text-right">Sells</span>
+      </div>
+      {txns.map((tx, i) => {
+        const positive = tx.priceChange24h >= 0;
+        return (
+          <a
+            key={`${tx.address}-${i}`}
+            href={tx.url || `https://dexscreener.com/robinhood/${tx.address}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-[var(--bg-card-hover)] transition-colors group"
+          >
+            <div className="flex items-center gap-2 flex-[2] min-w-0">
+              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[var(--accent)]/20 to-[var(--accent)]/5 flex items-center justify-center text-[7px] font-bold text-[var(--accent)] shrink-0">
+                {tx.symbol.slice(0, 2)}
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-semibold truncate">{tx.symbol}</div>
+                <div className="text-[9px] text-[var(--text-muted)] truncate">{tx.name}</div>
+              </div>
+            </div>
+            <div className="flex-1 text-right text-[10px] font-mono font-medium">
+              ${Number(tx.priceUsd) < 0.01 ? Number(tx.priceUsd).toExponential(2) : Number(tx.priceUsd).toFixed(4)}
+            </div>
+            <div className={`flex-1 text-right text-[10px] font-semibold ${positive ? "text-green-400" : "text-red-400"}`}>
+              {positive ? "+" : ""}{tx.priceChange24h.toFixed(1)}%
+            </div>
+            <div className="flex-1 text-right text-[10px] text-green-400 font-medium">{tx.buys1h}</div>
+            <div className="flex-1 text-right text-[10px] text-red-400 font-medium">{tx.sells1h}</div>
+          </a>
+        );
+      })}
+    </div>
+  );
 }
