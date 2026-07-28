@@ -1,4 +1,4 @@
-# GAMBO RH
+# THE WALL RH
 
 > Real-time builder analytics dashboard for [Robinhood Chain](https://robinhoodchain.blockscout.com) (Chain ID 4663)
 
@@ -9,35 +9,35 @@
 
 ---
 
-## What is GAMBO RH?
+## What is THE WALL RH?
 
-GAMBO RH is a full-stack on-chain analytics platform for **Robinhood Chain**. It tracks builders, tokens, KOLs, market data, and live DEX activity — all in one dark-mode dashboard with a polished UI.
+THE WALL RH is a full-stack on-chain analytics platform for **Robinhood Chain**. It tracks builders, tokens, KOLs, market data, and live DEX activity — all in one dark-mode dashboard with a polishe[...] 
 
 ## Pages
 
 ### Dashboard (`/`)
-The landing page with a hero section, live network stats (transactions, blocks, addresses, block time), sparkline charts, top builder cards, and latest crypto news. Includes a global search bar that resolves wallet addresses, ENS names, token contracts, and X/Twitter handles.
+The landing page with a hero section, live network stats (transactions, blocks, addresses, block time), sparkline charts, top builder cards, and latest crypto news. Includes a global search bar th[...]
 
 ### Global Search (`/global`)
-A multi-category search engine powered by DuckDuckGo, YouTube, OpenStreetMap, and Wikipedia. Supports web, news, images, videos, and maps results with full-text search history saved in localStorage.
+A multi-category search engine powered by DuckDuckGo, YouTube, OpenStreetMap, and Wikipedia. Supports web, news, images, videos, and maps results with full-text search history saved in localStorag[...]
 
 ### Builders (`/builder`)
-Browse all builders on Robinhood Chain with aggregate stats (total addresses, transactions, ERC-20 tokens, network block). Shows trending launchpads, deployed tech overview, DexScreener token grid, and a live DEX activity feed. Supports sorting (most active, richest, recently active, A-Z) and tag filtering.
+Browse all builders on Robinhood Chain with aggregate stats (total addresses, transactions, ERC-20 tokens, network block). Shows trending launchpads, deployed tech overview, DexScreener token grid[...]
 
 ### Builder Profile (`/builder/[address]`)
-Deep-dive into any address: ETH/token balance, transaction count, token holdings table, balance history chart, X/Twitter profile card, contract deployer info, and developer rewards panel with claim history and previous token launches.
+Deep-dive into any address: ETH/token balance, transaction count, token holdings table, balance history chart, X/Twitter profile card, contract deployer info, and developer rewards panel with clai[...]
 
 ### Market (`/market`)
-Live stock and crypto market data powered by Financial Modeling Prep. Watchlist, gainers, losers, and top movers with sparkline charts, market state badges (open/pre/after/closed), and detail modals. Auto-refreshes every 10 seconds.
+Live stock and crypto market data powered by Financial Modeling Prep. Watchlist, gainers, losers, and top movers with sparkline charts, market state badges (open/pre/after/closed), and detail moda[...]
 
 ### KOL Hub (`/kol`)
-Top 50 ranked Key Opinion Leaders leaderboard with podium display for top 3, PnL badges, follower counts, on-chain activity stats. Expandable detail panels with X profile, transaction history, and token interaction data. Supports category filtering and search.
+Top 50 ranked Key Opinion Leaders leaderboard with podium display for top 3, PnL badges, follower counts, on-chain activity stats. Expandable detail panels with X profile, transaction history, and[...]
 
 ### Team (`/team`)
 Team profile page pulling live X/Twitter data for @suggestionii with banner, avatar, bio, follower stats, and social links.
 
 ### Settings (`/settings`)
-Language and theme configuration. Supports 82 languages with 12 fully translated (EN, ZH, ES, FR, DE, PT, AR, HI, JA, KO, RU, VI). 8 preset accent colors plus a custom hex color picker with live preview.
+Language and theme configuration. Supports 82 languages with 12 fully translated (EN, ZH, ES, FR, DE, PT, AR, HI, JA, KO, RU, VI). 8 preset accent colors plus a custom hex color picker with live p[...]
 
 ### Auth (`/auth`)
 Authentication via three methods: OTP email verification (6-digit code with auto-submit), password login, or X/Twitter OAuth 2.0. Secured with PBKDF2 hashing, JWT tokens, and OAuth PKCE.
