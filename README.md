@@ -11,7 +11,7 @@
 
 ## What is THE WALL RH?
 
-THE WALL RH is a full-stack on-chain analytics platform for **Robinhood Chain**. It tracks builders, tokens, KOLs, market data, and live DEX activity — all in one dark-mode dashboard with a polishe[...] 
+THE WALL RH is a full-stack on-chain analytics platform for **Robinhood Chain**. It tracks builders, tokens, KOLs, market data, and live DEX activity — all in one dark-mode dashboard with a polished UI.
 
 ## Pages
 

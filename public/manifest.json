@@ -1,6 +1,6 @@
 {
-  "name": "GAMBO RH — Robinhood Chain Builder Dashboard",
-  "short_name": "GAMBO RH",
+  "name": "THE WALL RH — Robinhood Chain Builder Dashboard",
+  "short_name": "THE WALL RH",
   "description": "The definitive analytics dashboard for Robinhood Chain. Track builders, deployed projects, token launches, reward claims, and on-chain activity.",
   "start_url": "/",
   "display": "standalone",

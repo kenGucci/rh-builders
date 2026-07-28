@@ -25,11 +25,11 @@ export const metadata: Metadata = {
   authors: [{ name: "THE WALL" }],
   creator: "THE WALL",
   publisher: "THE WALL",
-  metadataBase: new URL("https://gamborh.xyz"),
+  metadataBase: new URL("https://thewall.com"),
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://gamborh.xyz",
+    url: "https://thewall.com",
     siteName: "THE WALL",
     title: "THE WALL — Robinhood Chain Builder Dashboard",
     description:
@@ -97,12 +97,12 @@ export default function RootLayout({
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "WebApplication",
-              name: "GAMBO RH",
+              name: "THE WALL RH",
               applicationCategory: "FinanceApplication",
               operatingSystem: "Web",
               description:
                 "Builder analytics dashboard for Robinhood Chain (Chain ID 4663). Track deployed contracts, token launches, and reward claims.",
-              url: "https://gamborh.xyz",
+              url: "https://thewall.com",
               creator: {
                 "@type": "Organization",
               name: "THE WALL",

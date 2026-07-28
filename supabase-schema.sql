@@ -1,5 +1,5 @@
 -- ============================================================
--- GAMBO RH — Supabase Schema
+-- THE WALL RH — Supabase Schema
 -- Run this in the Supabase SQL Editor to set up tables
 -- ============================================================
 
@@ -46,19 +46,44 @@ CREATE TABLE IF NOT EXISTS feedback (
 
 CREATE INDEX IF NOT EXISTS idx_feedback_created_at ON feedback (created_at DESC);
 
--- Row Level Security (RLS) — disabled for now since we use service role
+-- ============================================================
+-- Row Level Security (RLS)
+-- ============================================================
+-- Enable RLS on all tables
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE feedback ENABLE ROW LEVEL SECURITY;
 
--- Allow anon read access (optional — remove if you want strict RLS)
-CREATE POLICY "Allow anon read users" ON users FOR SELECT USING (true);
-CREATE POLICY "Allow anon insert users" ON users FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow anon update users" ON users FOR UPDATE USING (true);
+-- IMPORTANT: Drop the old permissive policies first
+DROP POLICY IF EXISTS "Allow anon read users" ON users;
+DROP POLICY IF EXISTS "Allow anon insert users" ON users;
+DROP POLICY IF EXISTS "Allow anon update users" ON users;
+DROP POLICY IF EXISTS "Allow anon read sessions" ON sessions;
+DROP POLICY IF EXISTS "Allow anon insert sessions" ON sessions;
+DROP POLICY IF EXISTS "Allow anon delete sessions" ON sessions;
+DROP POLICY IF EXISTS "Allow anon read feedback" ON feedback;
+DROP POLICY IF EXISTS "Allow anon insert feedback" ON feedback;
 
-CREATE POLICY "Allow anon read sessions" ON sessions FOR SELECT USING (true);
-CREATE POLICY "Allow anon insert sessions" ON sessions FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow anon delete sessions" ON sessions FOR DELETE USING (true);
+-- ============================================================
+-- New restrictive policies
+-- ============================================================
 
-CREATE POLICY "Allow anon read feedback" ON feedback FOR SELECT USING (true);
-CREATE POLICY "Allow anon insert feedback" ON feedback FOR INSERT WITH CHECK (true);
+-- Users: NO anon access (server uses service_role key which bypasses RLS)
+-- All user operations must go through server-side code with service_role
+
+-- Sessions: NO anon access (server uses service_role key which bypasses RLS)
+
+-- Feedback: Allow anon INSERT only (public form submissions)
+-- No SELECT/UPDATE/DELETE for anon — only service_role can read/manage
+CREATE POLICY "Allow anon insert feedback" ON feedback
+  FOR INSERT
+  WITH CHECK (true);
+
+-- ============================================================
+-- How to apply:
+-- 1. Go to Supabase Dashboard > SQL Editor
+-- 2. Paste this entire file
+-- 3. Click "Run"
+-- 4. IMPORTANT: Also set the SUPABASE_SERVICE_ROLE_KEY env var
+--    (Dashboard > Settings > API > service_role key)
+-- ============================================================

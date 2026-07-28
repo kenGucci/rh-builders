@@ -82,7 +82,7 @@ export default function ThemeSwitcher({ compact }: { compact?: boolean }) {
   const [colorMode, setColorMode] = useState<"dark" | "light">("dark");
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem("gambo_theme");
+    const savedTheme = localStorage.getItem("thewallrh_theme");
     if (savedTheme) {
       const found = themes.find((t) => t.name === savedTheme);
       if (found) {
@@ -90,7 +90,7 @@ export default function ThemeSwitcher({ compact }: { compact?: boolean }) {
         applyTheme(found.accent, found.gradient);
       }
     }
-    const savedMode = localStorage.getItem("gambo_color_mode") as "dark" | "light" | null;
+    const savedMode = localStorage.getItem("thewallrh_color_mode") as "dark" | "light" | null;
     if (savedMode) {
       setColorMode(savedMode);
       applyColorMode(savedMode);
@@ -100,7 +100,7 @@ export default function ThemeSwitcher({ compact }: { compact?: boolean }) {
   const select = (theme: (typeof themes)[number]) => {
     setCurrent(theme.name);
     applyTheme(theme.accent, theme.gradient);
-    localStorage.setItem("gambo_theme", theme.name);
+    localStorage.setItem("thewallrh_theme", theme.name);
     setOpen(false);
   };
 
@@ -108,7 +108,7 @@ export default function ThemeSwitcher({ compact }: { compact?: boolean }) {
     const next = colorMode === "dark" ? "light" : "dark";
     setColorMode(next);
     applyColorMode(next);
-    localStorage.setItem("gambo_color_mode", next);
+    localStorage.setItem("thewallrh_color_mode", next);
     // Re-apply accent theme after mode change
     const found = themes.find((t) => t.name === current);
     if (found) {

@@ -1,14 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { v2Fetch } from "@/lib/blockscout";
 
-const V2 = "https://robinhoodchain.blockscout.com/api/v2";
 const DEXSCREENER_API = "https://api.dexscreener.com";
-
-async function apiFetch(url: string) {
-  const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
-  return res.json();
-}
 
 async function fetchDexData(tokenAddress: string) {
   try {
@@ -38,18 +31,19 @@ async function fetchDexData(tokenAddress: string) {
       pairAddress: pair.pairAddress || "",
       url: pair.url || "",
     };
-  } catch {
+  } catch (err) {
+    console.error("[builder-detail] fetchDexData failed:", tokenAddress, err);
     return null;
   }
 }
 
 async function fetchCreatorRewards(address: string, tokenAddress: string) {
   try {
-    const addrData = await apiFetch(`${V2}/addresses/${tokenAddress.toLowerCase()}`) as Record<string, unknown>;
+    const addrData = await v2Fetch(`/addresses/${tokenAddress.toLowerCase()}`) as Record<string, unknown>;
     const creatorAddress = addrData.creator_address_hash as string | null;
     if (!creatorAddress || creatorAddress.toLowerCase() !== address.toLowerCase()) return null;
 
-    const tData = await apiFetch(`${V2}/tokens/${tokenAddress.toLowerCase()}`) as Record<string, unknown>;
+    const tData = await v2Fetch(`/tokens/${tokenAddress.toLowerCase()}`) as Record<string, unknown>;
     const tokenPrice = parseFloat((tData.exchange_rate as string) || "0");
     const decimals = Number(tData.decimals || 18);
 
@@ -90,7 +84,7 @@ async function fetchCreatorRewards(address: string, tokenAddress: string) {
       }
     }
 
-    const divisor = BigInt(10 ** decimals);
+    const divisor = BigInt(10) ** BigInt(decimals);
     const totalClaimed = Number(totalClaimedRaw / divisor).toFixed(4);
     const totalClaimedUsd = (Number(totalClaimed) * tokenPrice).toFixed(2);
     const holderBalance = Number(holderBalanceRaw / divisor).toFixed(4);
@@ -110,7 +104,8 @@ async function fetchCreatorRewards(address: string, tokenAddress: string) {
       tokenIcon: (tData.icon_url as string) || null,
       tokenPrice,
     };
-  } catch {
+  } catch (err) {
+    console.error("[builder-detail] fetchCreatorRewards failed:", err);
     return null;
   }
 }
@@ -124,16 +119,16 @@ export async function GET(request: NextRequest) {
   const addrLower = address.toLowerCase();
 
   const [addressRes, tokensRes, txsRes, historyRes] = await Promise.allSettled([
-    apiFetch(`${V2}/addresses/${addrLower}`),
-    apiFetch(`${V2}/addresses/${addrLower}/tokens?limit=20`),
-    apiFetch(`${V2}/addresses/${addrLower}/transactions?limit=10`),
-    apiFetch(`${V2}/addresses/${addrLower}/coin-balance-history?limit=30`),
+    v2Fetch(`/addresses/${addrLower}`),
+    v2Fetch(`/addresses/${addrLower}/tokens?limit=20`),
+    v2Fetch(`/addresses/${addrLower}/transactions?limit=10`),
+    v2Fetch(`/addresses/${addrLower}/coin-balance-history?limit=30`),
   ]);
 
-  const addressData = addressRes.status === "fulfilled" ? addressRes.value : null;
-  const tokensData = tokensRes.status === "fulfilled" ? tokensRes.value : null;
-  const txsData = txsRes.status === "fulfilled" ? txsRes.value : null;
-  const historyData = historyRes.status === "fulfilled" ? historyRes.value : null;
+  const addressData = addressRes.status === "fulfilled" ? addressRes.value as Record<string, unknown> : null;
+  const tokensData = tokensRes.status === "fulfilled" ? tokensRes.value as Record<string, unknown> : null;
+  const txsData = txsRes.status === "fulfilled" ? txsRes.value as Record<string, unknown> : null;
+  const historyData = historyRes.status === "fulfilled" ? historyRes.value as Record<string, unknown> : null;
 
   if (!addressData) {
     return NextResponse.json({ error: "Failed to fetch address info" }, { status: 502 });
@@ -144,13 +139,13 @@ export async function GET(request: NextRequest) {
     price: string; icon: string | null; holdersCount: number; decimals: number;
   }
 
-  const rawTokenBalances: RawToken[] = Array.isArray(tokensData?.items)
-    ? tokensData.items.map((t: Record<string, unknown>) => {
+  const rawTokenBalances: RawToken[] = Array.isArray((tokensData as Record<string, unknown>)?.items)
+    ? ((tokensData as Record<string, unknown>).items as Record<string, unknown>[]).map((t: Record<string, unknown>) => {
         const token = t.token as Record<string, unknown> | undefined;
         const value = t.value as string | undefined;
         const tokenDecimals = Number(token?.decimals ?? 18);
         const raw = BigInt(value ?? "0");
-        const divisor = BigInt("1" + "0".repeat(tokenDecimals));
+        const divisor = BigInt(10) ** BigInt(tokenDecimals);
         const balance = (Number(raw) / Number(divisor)).toString();
         const price = Number(token?.exchange_rate ?? 0);
         const balanceUsd = (Number(balance) * price).toFixed(2);
@@ -211,8 +206,8 @@ export async function GET(request: NextRequest) {
     };
   });
 
-  const recentTransactions = Array.isArray(txsData?.items)
-    ? txsData.items.map((tx: Record<string, unknown>) => ({
+  const recentTransactions = Array.isArray((txsData as Record<string, unknown>)?.items)
+    ? ((txsData as Record<string, unknown>).items as Record<string, unknown>[]).map((tx: Record<string, unknown>) => ({
         hash: (tx.hash as string) ?? "",
         from: (tx.from as Record<string, unknown>)?.hash as string ?? "",
         to: (tx.to as Record<string, unknown>)?.hash as string ?? "",
@@ -224,24 +219,24 @@ export async function GET(request: NextRequest) {
       }))
     : [];
 
-  const balanceHistory = Array.isArray(historyData?.items)
-    ? historyData.items.map((h: Record<string, unknown>) => ({
+  const balanceHistory = Array.isArray((historyData as Record<string, unknown>)?.items)
+    ? ((historyData as Record<string, unknown>).items as Record<string, unknown>[]).map((h: Record<string, unknown>) => ({
         timestamp: (h.timestamp as string) ?? "",
         balance: (h.value as string) ?? "0",
       }))
     : [];
 
   return NextResponse.json({
-    address: addressData.hash ?? address,
-    isContract: addressData.is_contract ?? false,
-    name: addressData.name ?? null,
-    ethBalance: addressData.coin_balance ?? "0",
+    address: (addressData.hash as string) ?? address,
+    isContract: Boolean(addressData.is_contract),
+    name: (addressData.name as string) ?? null,
+    ethBalance: String(addressData.coin_balance ?? "0"),
     ethBalanceUsd: addressData.coin_balance ? (Number(addressData.coin_balance) * Number(addressData.coin_price ?? 0)).toFixed(2) : "0",
-    txCount: addressData.tx_count ?? 0,
+    txCount: Number(addressData.tx_count ?? 0),
     tokenBalances,
     recentTransactions,
     balanceHistory,
-    coinPrice: (addressData.coin_price as string) ?? "0",
-    exchangeRate: (addressData.exchange_rate as string) ?? "0",
+    coinPrice: String(addressData.coin_price ?? "0"),
+    exchangeRate: String(addressData.exchange_rate ?? "0"),
   });
 }

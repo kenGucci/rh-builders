@@ -118,10 +118,10 @@ export default function BuilderProfileClient() {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch(`https://robinhoodchain.blockscout.com/api/v2/addresses/${address}`, { signal: controller.signal })
+    fetch(`/api/address?address=${address}`, { signal: controller.signal })
       .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
       .then(setData)
-      .catch(() => {});
+      .catch((err) => { if (err.name !== "AbortError") console.error("[profile] Address fetch failed:", err); });
     return () => controller.abort();
   }, [address]);
 

@@ -355,7 +355,7 @@ async function searchMaps(query: string): Promise<SearchResult[]> {
       {
         signal: AbortSignal.timeout(8000),
         headers: {
-          "User-Agent": "GAMBO-RH-Globa/1.0 (https://gamborh.xyz)",
+          "User-Agent": "THE-WALL-RH-Global/1.0 (https://thewall.com)",
         },
       }
     );
@@ -399,7 +399,7 @@ async function searchMaps(query: string): Promise<SearchResult[]> {
         {
           signal: AbortSignal.timeout(8000),
           headers: {
-            "User-Agent": "GAMBO-RH-Globa/1.0",
+            "User-Agent": "THE-WALL-RH-Global/1.0",
           },
         }
       );

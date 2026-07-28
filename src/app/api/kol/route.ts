@@ -2,16 +2,28 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   buildFullProfile,
   buildXOnlyProfile,
+  fetchAddressBalance,
+  fetchXProfile,
   type KOLProfile,
 } from "@/lib/kol-service";
 
-const KOL_REGISTRY = [
+interface KOLRegistryEntry {
+  address: string | null;
+  name: string;
+  handle: string;
+  description: string;
+  tags: string[];
+  ethAddresses: string[];
+}
+
+const KOL_REGISTRY: KOLRegistryEntry[] = [
+  // ─── Robinhood Chain Builders (on-chain) ───
   {
     address: "0xc6911796042b15d7Fa4F6CDe69e245DdCd3d9c31",
     name: "Virtuals Protocol",
     handle: "virtuals_io",
     description: "Decentralized AI agent protocol — largest AI-agent ecosystem on Robinhood Chain.",
-    tags: ["AI", "Protocol", "Ecosystem"],
+    tags: ["AI", "Protocol", "Robinhood"],
     ethAddresses: [],
   },
   {
@@ -19,7 +31,7 @@ const KOL_REGISTRY = [
     name: "Cash Cat",
     handle: "CashCat_Hood",
     description: "First breakout memecoin on Robinhood Chain that hit $105M market cap.",
-    tags: ["Meme", "Culture", "Breakout"],
+    tags: ["Meme", "Culture", "Robinhood"],
     ethAddresses: [],
   },
   {
@@ -27,47 +39,15 @@ const KOL_REGISTRY = [
     name: "GitHood",
     handle: "githood_app",
     description: "GitHub-verified fair-launch token platform — accountability in token launches.",
-    tags: ["Launchpad", "Fair-Launch", "GitHub"],
+    tags: ["Launchpad", "GitHub", "Robinhood"],
     ethAddresses: [],
   },
   {
     address: "0x0Fa32B2683C09AbCE9654b60d10001AEA60D5866",
     name: "Active Trader",
-    handle: null,
+    handle: "",
     description: "High-volume trading wallet — top-ranked most active address on Robinhood Chain.",
-    tags: ["Trader", "High-Volume", "Market"],
-    ethAddresses: [],
-  },
-  {
-    address: "0x5149585A85373082899E9EdAA3d9914fBC53E3CB",
-    name: "Token Approver",
-    handle: null,
-    description: "Active DeFi utility wallet — manages token approvals across multiple protocols.",
-    tags: ["DeFi", "Approvals", "Active"],
-    ethAddresses: [],
-  },
-  {
-    address: "0x62C27fAB6dFeE71152350c21D21bD1B70966E103",
-    name: "ETH Sender",
-    handle: null,
-    description: "High-frequency ETH transfer wallet — likely a liquidity router or trading hot wallet.",
-    tags: ["Trader", "ETH", "Liquidity"],
-    ethAddresses: [],
-  },
-  {
-    address: "0x81de990be508b95540b3c519417e7c0755b42977",
-    name: "The Greenwood Factory",
-    handle: "Greenwood_Hood",
-    description: "Community-driven token launch factory — simplified ERC-20 deployment with anti-rug.",
-    tags: ["Launchpad", "Factory", "Community"],
-    ethAddresses: [],
-  },
-  {
-    address: "0x1b27fF6e68A2fd6490543b17C996c109E64eb432",
-    name: "Nock Terminal",
-    handle: "nockterminal",
-    description: "Professional trading terminal for Robinhood Chain — real-time order flow and charting.",
-    tags: ["Trading", "Terminal", "Analytics"],
+    tags: ["Trader", "High-Volume", "Robinhood"],
     ethAddresses: [],
   },
   {
@@ -75,7 +55,7 @@ const KOL_REGISTRY = [
     name: "GITHUBOOD.FUN",
     handle: "githubood_fun",
     description: "GitHub-verified token launchpad — code-commit history meets on-chain reputation.",
-    tags: ["Launchpad", "GitHub", "Verified"],
+    tags: ["Launchpad", "GitHub", "Robinhood"],
     ethAddresses: [],
   },
   {
@@ -83,15 +63,31 @@ const KOL_REGISTRY = [
     name: "LaunchHood",
     handle: "LaunchHood",
     description: "Permissionless token launchpad with bonding curves and anti-rug mechanisms.",
-    tags: ["Launchpad", "Bonding-Curve", "Anti-Rug"],
+    tags: ["Launchpad", "Bonding-Curve", "Robinhood"],
+    ethAddresses: [],
+  },
+  {
+    address: "0x81de990be508b95540b3c519417e7c0755b42977",
+    name: "Greenwood Factory",
+    handle: "Greenwood_Hood",
+    description: "Community-driven token launch factory — simplified ERC-20 deployment with anti-rug.",
+    tags: ["Launchpad", "Factory", "Robinhood"],
+    ethAddresses: [],
+  },
+  {
+    address: "0x1b27fF6e68A2fd6490543b17C996c109E64eb432",
+    name: "Nock Terminal",
+    handle: "nockterminal",
+    description: "Professional trading terminal for Robinhood Chain — real-time order flow and charting.",
+    tags: ["Tool", "Terminal", "Robinhood"],
     ethAddresses: [],
   },
   {
     address: "0x00C1a8025a5FDdf5046965Dc94e1dB845853A7D1",
-    name: "Zardoz Instant Factory",
+    name: "Zardoz Factory",
     handle: "ZardozHood",
     description: "Instant-deployment token factory — zero-config ERC-20 launches.",
-    tags: ["Launchpad", "Instant", "Factory"],
+    tags: ["Launchpad", "Factory", "Robinhood"],
     ethAddresses: [],
   },
   {
@@ -99,15 +95,32 @@ const KOL_REGISTRY = [
     name: "DYOR Fun",
     handle: "DYORFun",
     description: "Community-powered launchpad with on-chain analytics and rug-pull detection.",
-    tags: ["Launchpad", "Analytics", "Community"],
+    tags: ["Launchpad", "Analytics", "Robinhood"],
     ethAddresses: [],
   },
-  // Real crypto KOLs — on-chain + X
+  {
+    address: "0x5149585A85373082899E9EdAA3d9914fBC53E3CB",
+    name: "Token Approver",
+    handle: "",
+    description: "Active DeFi utility wallet — manages token approvals across multiple protocols.",
+    tags: ["DeFi", "Utility", "Robinhood"],
+    ethAddresses: [],
+  },
+  {
+    address: "0x62C27fAB6dFeE71152350c21D21bD1B70966E103",
+    name: "ETH Sender",
+    handle: "",
+    description: "High-frequency ETH transfer wallet — likely a liquidity router or trading hot wallet.",
+    tags: ["Trader", "Liquidity", "Robinhood"],
+    ethAddresses: [],
+  },
+
+  // ─── Real Crypto KOLs (on-chain + X) ───
   {
     address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
     name: "Vitalik Buterin",
     handle: "VitalikButerin",
-    description: "Ethereum co-founder. Known for balance, research, and protocol design.",
+    description: "Ethereum co-founder. Known for balance sheet research and protocol design.",
     tags: ["Ethereum", "Founder", "OG"],
     ethAddresses: ["0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"],
   },
@@ -161,14 +174,6 @@ const KOL_REGISTRY = [
   },
   {
     address: null,
-    name: "Crypto Banter",
-    handle: "CryptoBanter",
-    description: "Crypto trading live shows and real-time analysis.",
-    tags: ["Trading", "Live", "Community"],
-    ethAddresses: [],
-  },
-  {
-    address: null,
     name: "Alex Becker",
     handle: "AlexBeckerWSB",
     description: "Crypto and gaming investor. NFT bull. CEO of Neo Tokyo.",
@@ -180,7 +185,7 @@ const KOL_REGISTRY = [
     name: "Elliot Trades",
     handle: "ElliotTrades",
     description: "Crypto trader and content creator. Superfarm founder.",
-    tags: ["Trader", "NFT", "DeFi"],
+    tags: ["Builder", "NFT", "DeFi"],
     ethAddresses: [],
   },
   {
@@ -207,7 +212,6 @@ const KOL_REGISTRY = [
     tags: ["DeFi", "Education", "Podcast"],
     ethAddresses: [],
   },
-  // Additional real crypto KOLs (15 more to reach 50)
   {
     address: null,
     name: "Kelvin Koh",
@@ -242,22 +246,6 @@ const KOL_REGISTRY = [
   },
   {
     address: null,
-    name: "Bobby Axelrod",
-    handle: "BobbyAxelrod_0x",
-    description: "Crypto researcher. On-chain analytics and alpha.",
-    tags: ["Researcher", "Analytics", "Alpha"],
-    ethAddresses: [],
-  },
-  {
-    address: null,
-    name: "Venture Coinist",
-    handle: "VentureCoinist",
-    description: "Crypto fund manager. Market commentary and portfolio insights.",
-    tags: ["Fund", "Commentary", "Portfolio"],
-    ethAddresses: [],
-  },
-  {
-    address: null,
     name: "Pentoshi",
     handle: "0xPentoshi",
     description: "Crypto trader known for technical analysis and macro calls.",
@@ -274,6 +262,22 @@ const KOL_REGISTRY = [
   },
   {
     address: null,
+    name: "Venture Coinist",
+    handle: "VentureCoinist",
+    description: "Crypto fund manager. Market commentary and portfolio insights.",
+    tags: ["Investor", "Fund", "Portfolio"],
+    ethAddresses: [],
+  },
+  {
+    address: null,
+    name: "Bobby Axelrod",
+    handle: "BobbyAxelrod_0x",
+    description: "Crypto researcher. On-chain analytics and alpha.",
+    tags: ["Researcher", "Analytics", "Alpha"],
+    ethAddresses: [],
+  },
+  {
+    address: null,
     name: "Tyler Reynolds",
     handle: "tyler_reynolds",
     description: "Crypto and macro analyst. DeFi and institutional flows.",
@@ -282,18 +286,50 @@ const KOL_REGISTRY = [
   },
   {
     address: null,
-    name: "BitQuant",
-    handle: "BitQuant_Hood",
-    description: "Robinhood Chain quantitative trader. On-chain analytics.",
-    tags: ["Quant", "Robinhood", "Analytics"],
+    name: "suggestionii",
+    handle: "suggestionii",
+    description: "Built THE WALL RH to bring full transparency to the Robinhood Chain ecosystem.",
+    tags: ["Builder", "Robinhood", "Creator"],
     ethAddresses: [],
   },
   {
     address: null,
-    name: "Roshi",
-    handle: "Roshi_Hood",
-    description: "Robinhood Chain community leader. Meme coin analyst.",
-    tags: ["Robinhood", "Community", "Meme"],
+    name: "Crypto Banter",
+    handle: "CryptoBanter",
+    description: "Crypto trading live shows and real-time analysis.",
+    tags: ["Trading", "Live", "Community"],
+    ethAddresses: [],
+  },
+  {
+    address: null,
+    name: "Token Terminal",
+    handle: "Tokenterminal",
+    description: "Crypto financial data platform. Protocol revenue and valuation.",
+    tags: ["Data", "Fundamentals", "Tool"],
+    ethAddresses: [],
+  },
+  {
+    address: null,
+    name: "Messari",
+    handle: "MessariCrypto",
+    description: "Crypto research and data platform. Protocol deep dives.",
+    tags: ["Research", "Data", "Tool"],
+    ethAddresses: [],
+  },
+  {
+    address: null,
+    name: "Moon Dev",
+    handle: "MoonDev_Hood",
+    description: "Robinhood Chain developer tools and tutorials.",
+    tags: ["Dev", "Robinhood", "Tools"],
+    ethAddresses: [],
+  },
+  {
+    address: null,
+    name: "Hood Trader",
+    handle: "HoodTrader_",
+    description: "Robinhood Chain active trader. Bonding curve snipes and launches.",
+    tags: ["Trader", "Robinhood", "Sniper"],
     ethAddresses: [],
   },
   {
@@ -314,61 +350,17 @@ const KOL_REGISTRY = [
   },
   {
     address: null,
-    name: "Token Terminal",
-    handle: "Tokenterminal",
-    description: "Crypto financial data platform. Protocol revenue and valuation.",
-    tags: ["Data", "Fundamentals", "Revenue"],
-    ethAddresses: [],
-  },
-  {
-    address: null,
-    name: "Messari",
-    handle: "MessariCrypto",
-    description: "Crypto research and data platform. Protocol deep dives.",
-    tags: ["Research", "Data", "Reports"],
-    ethAddresses: [],
-  },
-  {
-    address: null,
-    name: "Degen",
-    handle: "deaborde",
-    description: "Robinhood Chain degen. High-risk trades and moonshots.",
-    tags: ["Degen", "Robinhood", "Meme"],
-    ethAddresses: [],
-  },
-  {
-    address: null,
-    name: "Hood Trader",
-    handle: "HoodTrader_",
-    description: "Robinhood Chain active trader. Bonding curve snipes and launches.",
-    tags: ["Trader", "Robinhood", "Sniper"],
-    ethAddresses: [],
-  },
-  {
-    address: null,
     name: "Robinhood Charts",
     handle: "RHC_Charts",
     description: "Robinhood Chain technical analysis and chart patterns.",
     tags: ["TA", "Robinhood", "Charts"],
     ethAddresses: [],
   },
-  {
-    address: null,
-    name: "Moon Dev",
-    handle: "MoonDev_Hood",
-    description: "Robinhood Chain developer tools and tutorials.",
-    tags: ["Dev", "Robinhood", "Tools"],
-    ethAddresses: [],
-  },
-  {
-    address: null,
-    name: "Bonding Curve Pro",
-    handle: "BondingCurvePro",
-    description: "Bonding curve analytics and trading strategies.",
-    tags: ["Bonding-Curve", "Analytics", "Strategy"],
-    ethAddresses: [],
-  },
 ];
+
+// ─── Profile Cache ───
+const profileCache = new Map<string, { data: KOLProfile; ts: number }>();
+const PROFILE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 async function fetchEthPrice(): Promise<number> {
   try {
@@ -377,10 +369,30 @@ async function fetchEthPrice(): Promise<number> {
       { signal: AbortSignal.timeout(5000) }
     );
     const data = await res.json();
-    return data.ethereum?.usd || 2000;
+    return data.ethereum?.usd || 0;
   } catch {
-    return 2000;
+    return 0;
   }
+}
+
+async function buildProfileCached(
+  kol: KOLRegistryEntry,
+  ethPrice: number
+): Promise<KOLProfile | null> {
+  const cacheKey = `${kol.handle}-${kol.address || "x"}`;
+  const cached = profileCache.get(cacheKey);
+  if (cached && Date.now() - cached.ts < PROFILE_CACHE_TTL) return cached.data;
+
+  const profile = await buildFullProfile(
+    { ...kol, address: kol.address || "" },
+    ethPrice
+  );
+
+  if (profile) {
+    profileCache.set(cacheKey, { data: profile, ts: Date.now() });
+  }
+
+  return profile;
 }
 
 export async function GET(request: NextRequest) {
@@ -392,8 +404,11 @@ export async function GET(request: NextRequest) {
 
   const ethPrice = await fetchEthPrice();
 
+  // Single address lookup
   if (address) {
-    const kol = KOL_REGISTRY.find((k) => k.address && k.address.toLowerCase() === address.toLowerCase());
+    const kol = KOL_REGISTRY.find(
+      (k) => k.address && k.address.toLowerCase() === address.toLowerCase()
+    );
     if (!kol) {
       if (!address.startsWith("0x")) {
         const xProfile = await buildXOnlyProfile(address);
@@ -401,18 +416,19 @@ export async function GET(request: NextRequest) {
       }
       return NextResponse.json({ error: "KOL not found" }, { status: 404 });
     }
-
-    const profile = await buildFullProfile({ ...kol, address: kol.address || "" }, ethPrice);
+    const profile = await buildProfileCached(kol, ethPrice);
     return NextResponse.json({ kol: profile, ethPrice });
   }
 
+  // Search by query
   if (q) {
     const query = q.toLowerCase();
-    const matched = KOL_REGISTRY.filter((k) =>
-      k.name.toLowerCase().includes(query) ||
-      k.handle?.toLowerCase().includes(query) ||
-      k.description.toLowerCase().includes(query) ||
-      k.tags.some((t) => t.toLowerCase().includes(query))
+    const matched = KOL_REGISTRY.filter(
+      (k) =>
+        k.name.toLowerCase().includes(query) ||
+        k.handle.toLowerCase().includes(query) ||
+        k.description.toLowerCase().includes(query) ||
+        k.tags.some((t) => t.toLowerCase().includes(query))
     );
 
     if (matched.length === 0) {
@@ -424,40 +440,60 @@ export async function GET(request: NextRequest) {
     }
 
     const profiles = await Promise.allSettled(
-      matched.slice(0, 10).map((kol) => buildFullProfile({ ...kol, address: kol.address || "" }, ethPrice))
+      matched.slice(0, 10).map((kol) => buildProfileCached(kol, ethPrice))
     );
 
     const results = profiles
-      .filter((r): r is PromiseFulfilledResult<KOLProfile> => r.status === "fulfilled" && r.value !== null)
+      .filter(
+        (r): r is PromiseFulfilledResult<KOLProfile> =>
+          r.status === "fulfilled" && r.value !== null
+      )
       .map((r) => r.value);
 
     return NextResponse.json({ kols: results, ethPrice });
   }
 
+  // List all KOLs
   const filtered =
     category === "all"
       ? KOL_REGISTRY
-      : KOL_REGISTRY.filter((k) => k.tags.some((t) => t.toLowerCase().includes(category.toLowerCase())));
+      : KOL_REGISTRY.filter((k) =>
+          k.tags.some((t) => t.toLowerCase().includes(category.toLowerCase()))
+        );
 
   const offset = (page - 1) * limit;
   const paginated = filtered.slice(offset, offset + limit);
 
+  // Build all profiles in parallel
   const registryProfiles = await Promise.allSettled(
-    paginated.map((kol) => buildFullProfile({ ...kol, address: kol.address || "" }, ethPrice))
+    paginated.map((kol) => buildProfileCached(kol, ethPrice))
   );
 
   let profiles = registryProfiles
-    .filter((r): r is PromiseFulfilledResult<KOLProfile> => r.status === "fulfilled" && r.value !== null)
+    .filter(
+      (r): r is PromiseFulfilledResult<KOLProfile> =>
+        r.status === "fulfilled" && r.value !== null
+    )
     .map((r) => r.value);
 
+  // Trending: sorted by on-chain activity
   const trending = [...profiles]
     .sort((a, b) => b.totalTxs - a.totalTxs)
     .slice(0, 8);
 
+  // Leaderboard: composite score (social + on-chain + PnL)
   const leaderboard = [...profiles]
     .sort((a, b) => {
-      const aScore = (a.followers || 0) * 0.4 + a.totalTxs * 30 + a.tokenCount * 100 + Math.abs(a.pnlPercent) * 50;
-      const bScore = (b.followers || 0) * 0.4 + b.totalTxs * 30 + b.tokenCount * 100 + Math.abs(b.pnlPercent) * 50;
+      const aScore =
+        (a.followers || 0) * 0.4 +
+        a.totalTxs * 30 +
+        a.tokenCount * 100 +
+        Math.abs(a.pnlPercent) * 50;
+      const bScore =
+        (b.followers || 0) * 0.4 +
+        b.totalTxs * 30 +
+        b.tokenCount * 100 +
+        Math.abs(b.pnlPercent) * 50;
       return bScore - aScore;
     })
     .map((kol, i) => ({

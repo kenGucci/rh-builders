@@ -4,7 +4,7 @@ import { findUserById, sanitizeUser } from "@/lib/users";
 
 export async function GET(request: NextRequest) {
   try {
-    const token = request.cookies.get("gambo_token")?.value;
+    const token = request.cookies.get("thewallrh_token")?.value;
     if (!token) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }

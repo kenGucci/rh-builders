@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
       token,
     });
 
-    response.cookies.set("gambo_token", token, {
+    response.cookies.set("thewallrh_token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",

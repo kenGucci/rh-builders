@@ -646,6 +646,7 @@ export async function buildFullProfile(
   kol: { address: string; name: string; handle: string | null; description: string; tags: string[]; ethAddresses?: string[] },
   ethPrice: number
 ): Promise<KOLProfile> {
+  // Fetch everything in parallel: basic profile + RH balance + ETH balance
   const [basicProfile, rhBalance, ethBalance] = await Promise.allSettled([
     kol.address
       ? buildKOLProfileFromRegistry(kol, kol.ethAddresses)
@@ -662,8 +663,18 @@ export async function buildFullProfile(
 
   const totalBalanceEth = Number(rh?.balanceEth || "0") + Number(eth?.balanceEth || "0");
   const totalBalanceUsd = totalBalanceEth * ethPrice;
+
+  // Use real tx counts from Blockscout (not activity list length)
   const totalTxs = (rh?.txCount || 0) + (eth?.txCount || 0);
   const totalTokens = (rh?.tokenCount || 0) + (eth?.tokenCount || 0);
+
+  // Calculate a basic win rate from on-chain activity (buys vs sells approximation)
+  const recentTxs = profile.recentActivity;
+  const outTxs = recentTxs.filter((a) => a.direction === "out").length;
+  const inTxs = recentTxs.filter((a) => a.direction === "in").length;
+  const winRate = recentTxs.length > 0
+    ? Math.round(((inTxs + 1) / (outTxs + inTxs + 2)) * 100)
+    : null;
 
   return {
     ...profile,
@@ -674,6 +685,6 @@ export async function buildFullProfile(
     pnlUsd: "0",
     pnlPercent: 0,
     portfolioValue: totalBalanceUsd.toFixed(2),
-    winRate: profile.winRate,
+    winRate,
   };
 }

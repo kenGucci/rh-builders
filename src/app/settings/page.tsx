@@ -71,7 +71,7 @@ export default function SettingsPage() {
     const navLang = navigator.language || "";
     setDetectedRegion(navLang);
 
-    const saved = localStorage.getItem("gambo_theme");
+    const saved = localStorage.getItem("thewallrh_theme");
     if (saved) {
       const found = themes.find((th) => th.name === saved);
       if (found) {
@@ -109,7 +109,7 @@ export default function SettingsPage() {
     setCustomColor(theme.accent);
     setIsCustom(false);
     applyTheme(theme.accent, theme.gradient);
-    localStorage.setItem("gambo_theme", theme.name);
+    localStorage.setItem("thewallrh_theme", theme.name);
   };
 
   const selectCustom = () => {
@@ -117,7 +117,7 @@ export default function SettingsPage() {
     setCurrentTheme("");
     const gradient = [customColor, customColor];
     applyTheme(customColor, gradient);
-    localStorage.setItem("gambo_theme", customColor);
+    localStorage.setItem("thewallrh_theme", customColor);
   };
 
   const handleCustomColorChange = (color: string) => {
@@ -125,7 +125,7 @@ export default function SettingsPage() {
     setIsCustom(true);
     const gradient = [color, color];
     applyTheme(color, gradient);
-    localStorage.setItem("gambo_theme", color);
+    localStorage.setItem("thewallrh_theme", color);
   };
 
   const previewTheme = isCustom
@@ -302,7 +302,7 @@ export default function SettingsPage() {
                   className="w-5 h-5 rounded-md flex items-center justify-center transition-colors duration-300"
                   style={{ background: previewTheme.accent }}
                 >
-                  <span className="text-black font-bold text-[6px] leading-none">G</span>
+                  <span className="text-black font-bold text-[6px] leading-none">W</span>
                 </div>
                 <div>
                   <div className="text-[11px] font-medium">{t("settings.previewTitle")}</div>

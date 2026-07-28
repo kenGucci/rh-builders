@@ -2,7 +2,7 @@
 
 import SearchBar from "@/components/SearchBar";
 import Link from "next/link";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   Layers, Clock, Zap, ArrowUpRight, Users, Activity,
   TrendingUp, Fuel, Shield, Globe, BarChart3, ExternalLink,
@@ -11,6 +11,10 @@ import {
 import AddressAvatar from "@/components/AddressAvatar";
 import AnimatedCounter from "@/components/AnimatedCounter";
 import Sparkline from "@/components/Sparkline";
+import dynamic from "next/dynamic";
+
+const LiveTransactions = dynamic(() => import("@/components/LiveTransactions"), { ssr: false });
+const NewsSection = dynamic(() => import("@/components/NewsSection").catch(() => ({ default: () => null })), { ssr: false });
 
 interface NetworkStats {
   totalBlocks: number;
@@ -79,13 +83,13 @@ export default function Home() {
     const gasHistory: number[] = [];
 
     function load() {
-      fetch("https://robinhoodchain.blockscout.com/api/v2/stats")
+      fetch("/api/chain-stats")
         .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
         .then((data) => {
-          const txs = data.total_transactions ?? 0;
-          const blocks = data.total_blocks ?? 0;
-          const addrs = data.total_addresses ?? 0;
-          const gas = data.gas_prices?.fast ?? 0;
+          const txs = data.totalTransactions ?? 0;
+          const blocks = data.totalBlocks ?? 0;
+          const addrs = data.totalAddresses ?? 0;
+          const gas = data.gasPrices?.fast ?? 0;
 
           txHistory.push(txs);
           blockHistory.push(blocks);
@@ -97,11 +101,11 @@ export default function Home() {
             totalBlocks: blocks,
             totalAddresses: addrs,
             totalTransactions: txs,
-            averageBlockTime: data.average_block_time ?? 0,
-            coinPrice: data.coin_price ?? "0",
-            transactionsToday: data.transactions_today ?? "0",
-            gasPrices: data.gas_prices ?? { slow: 0, average: 0, fast: 0 },
-            marketCap: data.market_cap ?? "0",
+            averageBlockTime: data.avgBlockTime ?? 0,
+            coinPrice: data.coinPrice ?? "0",
+            transactionsToday: data.txsToday ?? "0",
+            gasPrices: data.gasPrices ?? { slow: 0, average: 0, fast: 0 },
+            marketCap: data.marketCap ?? "0",
           });
           setSparkData({ txs: [...txHistory], blocks: [...blockHistory], addresses: [...addrHistory], gas: [...gasHistory] });
           setLastUpdate(new Date());
@@ -116,18 +120,32 @@ export default function Home() {
   }, [fetchBuilders]);
 
   useEffect(() => {
+    let rafId = 0;
     const handleMove = (e: MouseEvent) => {
-      if (heroRef.current) {
-        const rect = heroRef.current.getBoundingClientRect();
-        setMousePos({
-          x: (e.clientX - rect.left) / rect.width,
-          y: (e.clientY - rect.top) / rect.height,
-        });
-      }
+      if (rafId) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = 0;
+        if (heroRef.current) {
+          const rect = heroRef.current.getBoundingClientRect();
+          setMousePos({
+            x: (e.clientX - rect.left) / rect.width,
+            y: (e.clientY - rect.top) / rect.height,
+          });
+        }
+      });
     };
-    window.addEventListener("mousemove", handleMove);
-    return () => window.removeEventListener("mousemove", handleMove);
+    window.addEventListener("mousemove", handleMove, { passive: true });
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
   }, []);
+
+  const trustBadges = useMemo(() => [
+    { icon: <Shield size={13} />, text: "Real-time data" },
+    { icon: <Globe size={13} />, text: "100 builders tracked" },
+    { icon: <BarChart3 size={13} />, text: "Live analytics" },
+  ], []);
 
   return (
     <div className="min-h-screen">
@@ -181,11 +199,7 @@ export default function Home() {
 
           {/* Trust badges */}
           <div className="relative flex flex-wrap justify-center gap-3 mt-8 fade-in animate-delay-200">
-            {[
-              { icon: <Shield size={13} />, text: "Real-time data" },
-              { icon: <Globe size={13} />, text: "100 builders tracked" },
-              { icon: <BarChart3 size={13} />, text: "Live analytics" },
-            ].map((badge) => (
+            {trustBadges.map((badge) => (
               <span key={badge.text} className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium text-[var(--text-muted)] bg-[var(--surface)] border border-[var(--border-subtle)] hover:border-[var(--accent)]/20 hover:text-[var(--text-secondary)] transition-all duration-200">
                 <span className="text-[var(--accent)]">{badge.icon}</span>
                 {badge.text}
@@ -309,7 +323,7 @@ export default function Home() {
                   {b.avatar ? (
                     <img src={b.avatar} alt={b.name} className="w-11 h-11 rounded-full border border-[var(--border)] object-cover" />
                   ) : (
-                    <AddressAvatar address={b.address || `0x${i}`} size={44} />
+                    <AddressAvatar address={b.address || `0x${i}`} size={44} handle={b.handle ?? undefined} />
                   )}
                   <div className="min-w-0 flex-1">
                     <div className="font-semibold text-[13px] truncate group-hover:text-[var(--foreground)] transition-colors">{b.name}</div>
@@ -339,6 +353,21 @@ export default function Home() {
               View all builders <ArrowUpRight size={14} />
             </Link>
           </div>
+        </section>
+
+        {/* ── Live Transactions ── */}
+        <section className="mb-20 scroll-reveal" aria-label="Recent transactions">
+          <div className="flex items-end justify-between mb-8">
+            <div>
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold tracking-widest uppercase text-[var(--accent)] mb-2">
+                <Zap size={12} />
+                Live Feed
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Recent transactions</h2>
+              <p className="text-sm text-[var(--text-muted)] mt-1.5">Real-time on-chain activity across Robinhood Chain</p>
+            </div>
+          </div>
+          <LiveTransactions />
         </section>
 
         {/* ── News ── */}
@@ -384,7 +413,7 @@ export default function Home() {
         <footer className="border-t border-[var(--border-subtle)] py-10 text-center" role="contentinfo">
           <div className="flex items-center justify-center gap-2 mb-3">
             <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[var(--accent)] to-emerald-400 flex items-center justify-center">
-              <span className="text-black font-black text-[8px]">G</span>
+              <span className="text-black font-black text-[8px]">W</span>
             </div>
             <span className="text-sm font-bold">THE WALL</span>
           </div>
@@ -464,94 +493,3 @@ function FeatureCard({ icon, title, description, href, cta }: { icon: React.Reac
   );
 }
 
-/* ── News Section ── */
-interface NewsArticle {
-  id: string;
-  title: string;
-  description: string;
-  url: string;
-  source: string;
-  publishedAt: string;
-  thumbnail: string | null;
-}
-
-function NewsSection() {
-  const [articles, setArticles] = useState<NewsArticle[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetch("/api/news?query=crypto+robinhood+chain")
-      .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
-      .then((data) => setArticles(data.articles || []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) {
-    return (
-      <section className="mb-20" aria-label="Latest news">
-        <div className="mb-8">
-          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold tracking-widest uppercase text-[var(--accent)] mb-2">
-            <Globe size={12} />
-            News
-          </span>
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Latest headlines</h2>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-44 rounded-2xl animate-shimmer" style={{ background: "var(--surface)" }} />
-          ))}
-        </div>
-      </section>
-    );
-  }
-
-  if (articles.length === 0) return null;
-
-  return (
-    <section className="mb-20 scroll-reveal" aria-label="Latest news">
-      <div className="flex items-end justify-between mb-8">
-        <div>
-          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold tracking-widest uppercase text-[var(--accent)] mb-2">
-            <Globe size={12} />
-            News
-          </span>
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Latest headlines</h2>
-          <p className="text-sm text-[var(--text-muted)] mt-1.5">Crypto & Robinhood Chain from trusted sources</p>
-        </div>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {articles.slice(0, 6).map((article, i) => (
-          <a
-            key={article.id}
-            href={article.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group relative bg-[var(--surface)] border border-[var(--border-subtle)] rounded-2xl p-5 transition-all duration-300 hover:border-[var(--accent)]/15 hover:shadow-[0_4px_20px_rgba(0,200,5,0.04)] flex flex-col card-stagger"
-            style={{ animationDelay: `${i * 40}ms` }}
-          >
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-[11px] font-semibold text-[var(--accent)]">{article.source}</span>
-              {article.publishedAt && (
-                <span className="text-[11px] text-[var(--text-muted)]">
-                  {new Date(article.publishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                </span>
-              )}
-            </div>
-            <h3 className="text-[13px] font-semibold leading-snug group-hover:text-[var(--foreground)] transition-colors line-clamp-2 flex-1">
-              {article.title}
-            </h3>
-            {article.description && (
-              <p className="text-xs text-[var(--text-muted)] mt-2 line-clamp-2 leading-relaxed">
-                {article.description}
-              </p>
-            )}
-            <div className="flex items-center gap-1 mt-4 text-[11px] text-[var(--accent)] opacity-0 group-hover:opacity-100 transition-opacity font-medium">
-              Read more <ArrowUpRight size={10} />
-            </div>
-          </a>
-        ))}
-      </div>
-    </section>
-  );
-}

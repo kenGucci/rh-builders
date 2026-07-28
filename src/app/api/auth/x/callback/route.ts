@@ -105,11 +105,14 @@ export async function GET(request: NextRequest) {
       provider: "x",
     });
 
-    const redirectTo = searchParams.get("from") || "/";
+    let redirectTo = searchParams.get("from") || "/";
+    if (!redirectTo.startsWith("/") || redirectTo.startsWith("//")) {
+      redirectTo = "/";
+    }
 
     const response = NextResponse.redirect(new URL(redirectTo, request.url));
 
-    response.cookies.set("gambo_token", jwtToken, {
+    response.cookies.set("thewallrh_token", jwtToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",

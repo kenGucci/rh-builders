@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const V2 = "https://robinhoodchain.blockscout.com/api/v2";
+import { v2Fetch, v1Fetch } from "@/lib/blockscout";
 
 export async function GET(request: NextRequest) {
   const address = request.nextUrl.searchParams.get("address");
@@ -15,17 +14,12 @@ export async function GET(request: NextRequest) {
 
   try {
     const [tokenInfoRes, balancesRes] = await Promise.allSettled([
-      fetch(`${V2}/tokens/${tokenAddress.toLowerCase()}`, { signal: AbortSignal.timeout(10000) }),
-      fetch(`${V2}/addresses/${address.toLowerCase()}/token-balances`, { signal: AbortSignal.timeout(10000) }),
+      v2Fetch(`/tokens/${tokenAddress.toLowerCase()}`),
+      v2Fetch(`/addresses/${address.toLowerCase()}/token-balances`),
     ]);
 
-    const tokenData = tokenInfoRes.status === "fulfilled" && tokenInfoRes.value.ok
-      ? await tokenInfoRes.value.json()
-      : null;
-
-    const balancesData = balancesRes.status === "fulfilled" && balancesRes.value.ok
-      ? await balancesRes.value.json()
-      : null;
+    const tokenData = tokenInfoRes.status === "fulfilled" ? tokenInfoRes.value as Record<string, unknown> : null;
+    const balancesData = balancesRes.status === "fulfilled" ? balancesRes.value : null;
 
     if (!tokenData) {
       return NextResponse.json({ error: "Token not found" }, { status: 404 });
@@ -39,30 +33,32 @@ export async function GET(request: NextRequest) {
       : null;
 
     const rawBalance = holder?.value ? BigInt(holder.value) : BigInt(0);
-    const divisor = BigInt("1" + "0".repeat(decimals));
+    const divisor = BigInt(10) ** BigInt(decimals);
     const whole = rawBalance / divisor;
     const frac = rawBalance % divisor;
     const fracStr = frac.toString().padStart(decimals, "0").slice(0, 4);
     const balanceFormatted = `${whole}.${fracStr}`;
     const balanceRaw = rawBalance.toString();
 
-    const exchangeRate = parseFloat(tokenData.exchange_rate || "0");
+    const exchangeRate = parseFloat(String(tokenData.exchange_rate || "0"));
     const tokenPrice = exchangeRate;
     const tokenValue = Number(balanceFormatted) * tokenPrice;
 
     let tokenTransfers = 0;
     try {
-      const txRes = await fetch(
-        `https://robinhoodchain.blockscout.com/api?module=account&action=tokentx&address=${address.toLowerCase()}&contractaddress=${tokenAddress.toLowerCase()}&page=1&offset=1000&sort=desc`,
-        { signal: AbortSignal.timeout(10000) }
-      );
-      if (txRes.ok) {
-        const txData = await txRes.json();
-        if (Array.isArray(txData?.result)) {
-          tokenTransfers = txData.result.length;
-        }
+      const txData = await v1Fetch("account", "tokentx", {
+        address: address.toLowerCase(),
+        contractaddress: tokenAddress.toLowerCase(),
+        page: "1",
+        offset: "1000",
+        sort: "desc",
+      }) as Record<string, unknown>;
+      if (Array.isArray(txData?.result)) {
+        tokenTransfers = txData.result.length;
       }
-    } catch {}
+    } catch (err) {
+      console.error("[token-balance] Transfer count fetch failed:", err);
+    }
 
     return NextResponse.json({
       tokenAddress: tokenAddress.toLowerCase(),
@@ -83,7 +79,8 @@ export async function GET(request: NextRequest) {
       tokenTransfers,
       isVerified: tokenData.is_verified || false,
     });
-  } catch {
+  } catch (err) {
+    console.error("[token-balance] Failed:", err);
     return NextResponse.json({ error: "Failed to fetch token balance" }, { status: 500 });
   }
 }

@@ -1,13 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const V1 = "https://robinhoodchain.blockscout.com/api";
-const V2 = "https://robinhoodchain.blockscout.com/api/v2";
-
-async function apiFetch(url: string) {
-  const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
-  return res.json();
-}
+import { v2Fetch, v1Fetch } from "@/lib/blockscout";
 
 export async function GET(request: NextRequest) {
   const address = request.nextUrl.searchParams.get("address");
@@ -17,14 +9,16 @@ export async function GET(request: NextRequest) {
 
   try {
     const [addrV2, txV1, tokenV1] = await Promise.allSettled([
-      apiFetch(`${V2}/addresses/${address.toLowerCase()}`),
-      apiFetch(`${V1}?module=account&action=txlist&address=${address}&page=1&offset=1000&sort=desc`),
-      apiFetch(`${V1}?module=account&action=tokentx&address=${address}&page=1&offset=1000&sort=desc`),
+      v2Fetch(`/addresses/${address.toLowerCase()}`),
+      v1Fetch("account", "txlist", { address, page: "1", offset: "1000", sort: "desc" }),
+      v1Fetch("account", "tokentx", { address, page: "1", offset: "1000", sort: "desc" }),
     ]);
 
-    const addrData = addrV2.status === "fulfilled" ? addrV2.value : {};
-    const rawTxs = txV1.status === "fulfilled" && Array.isArray(txV1.value?.result) ? txV1.value.result : [];
-    const rawTokens = tokenV1.status === "fulfilled" && Array.isArray(tokenV1.value?.result) ? tokenV1.value.result : [];
+    const addrData = addrV2.status === "fulfilled" ? (addrV2.value as Record<string, unknown>) : {};
+    const txRaw = txV1.status === "fulfilled" ? (txV1.value as Record<string, unknown>) : {};
+    const tokenRaw = tokenV1.status === "fulfilled" ? (tokenV1.value as Record<string, unknown>) : {};
+    const rawTxs = Array.isArray(txRaw.result) ? txRaw.result : [];
+    const rawTokens = Array.isArray(tokenRaw.result) ? tokenRaw.result : [];
 
     let contractsDeployed = 0;
     for (const tx of rawTxs) {
@@ -36,8 +30,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const balance = addrData.coin_balance || "0";
-    const exchangeRate = parseFloat(addrData.exchange_rate || "0");
+    const balance = String(addrData.coin_balance || "0");
+    const exchangeRate = Number(addrData.exchange_rate || "0");
 
     return NextResponse.json({
       totalTransactions: rawTxs.length,
@@ -54,7 +48,8 @@ export async function GET(request: NextRequest) {
       hasLogs: addrData.has_logs || false,
       hasTokens: addrData.has_tokens || false,
     });
-  } catch {
+  } catch (err) {
+    console.error("[stats] Failed:", err);
     return NextResponse.json({
       totalTransactions: 0, contractsDeployed: 0, tokenTransfers: 0,
       coinBalance: "0", coinBalanceUsd: "0", ethPrice: 0,

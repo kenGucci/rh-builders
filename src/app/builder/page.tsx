@@ -3,9 +3,9 @@ import BuilderListClient from "@/components/BuilderListClient";
 import builders from "@/lib/builders.json";
 
 export const metadata: Metadata = {
-  title: "Robinhood Chain Builders — Leaderboard & Analytics",
+  title: "Robinhood Chain — Trending Coins & Builder Analytics",
   description:
-    "The most active developers on Robinhood Chain. Live stats for launchpads, token deployments, and builder rankings on Chain ID 4663.",
+    "Top trending coins by volume and market cap on Robinhood Chain. Live DEX data, builder stats, and on-chain analytics on Chain ID 4663.",
 };
 
 export default function BuildersPage() {
@@ -33,10 +33,9 @@ export default function BuildersPage() {
           <div>
             <h1 className="text-xl font-semibold">Builders[Dev]</h1>
             <p className="text-sm text-[var(--text-muted)]">
-              The most active developers on Robinhood Chain right now.{" "}
-              {builders.builders.length} launchpads deploying tokens, bonding
-              curves, and fair-launch mechanisms on Chain ID 4663. All data
-              sourced live from Blockscout.
+              Top trending coins by volume and market cap on Robinhood Chain.{" "}
+              Live DEX data from DexScreener, on-chain stats from Blockscout.
+              Chain ID 4663.
             </p>
           </div>
         </div>

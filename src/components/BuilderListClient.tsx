@@ -77,6 +77,7 @@ export default function BuilderListClient({ builders }: { builders: Builder[] })
   const [liveLoading, setLiveLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [chainStats, setChainStats] = useState<ChainStats | null>(null);
+  const [trendingTokens, setTrendingTokens] = useState<Record<string, unknown>[]>([]);
 
   const allTags = useMemo(() => {
     const tags = new Set<string>();
@@ -99,7 +100,9 @@ export default function BuilderListClient({ builders }: { builders: Builder[] })
         if (!chainData.error) setChainStats(chainData);
       }
       setLastRefresh(new Date());
-    } catch {} finally {
+    } catch (err) {
+      console.error("[BuilderList] Stats fetch failed:", err);
+    } finally {
       setStatsLoading(false);
     }
   }, []);
@@ -110,7 +113,10 @@ export default function BuilderListClient({ builders }: { builders: Builder[] })
       if (!res.ok) throw new Error();
       const data = await res.json();
       setLiveBlock(data.block_number || 0);
-    } catch {} finally {
+      if (Array.isArray(data.trending)) setTrendingTokens(data.trending);
+    } catch (err) {
+      console.error("[BuilderList] Live activity fetch failed:", err);
+    } finally {
       setLiveLoading(false);
     }
   }, []);
@@ -129,18 +135,6 @@ export default function BuilderListClient({ builders }: { builders: Builder[] })
       return { ...b, stat };
     });
   }, [builders, statsMap]);
-
-  const trendingBuilders = useMemo(() => {
-    return [...enrichedBuilders]
-      .filter((b) => b.stat && (b.stat.txCount > 0 || Number(b.stat.balance) > 0))
-      .sort((a, b) => {
-        const aTs = a.stat?.lastTxTimestamp ? new Date(a.stat.lastTxTimestamp).getTime() : 0;
-        const bTs = b.stat?.lastTxTimestamp ? new Date(b.stat.lastTxTimestamp).getTime() : 0;
-        if (bTs !== aTs) return bTs - aTs;
-        return (b.stat?.tokenCount || 0) - (a.stat?.tokenCount || 0);
-      })
-      .slice(0, 4);
-  }, [enrichedBuilders]);
 
   const activeLaunchpadCount = useMemo(
     () => enrichedBuilders.filter((b) => b.category === "Launchpad" && b.stat && b.stat.txCount > 0).length,
@@ -220,53 +214,111 @@ export default function BuilderListClient({ builders }: { builders: Builder[] })
         </button>
       </div>
 
-      {/* Trending Launchpads */}
+      {/* Top Trending Coins */}
       <section>
         <div className="flex items-center gap-2 mb-3">
           <Flame size={14} className="text-orange-400" />
-          <h2 className="text-sm font-semibold">Trending Launchpads</h2>
-          <span className="text-[10px] text-[var(--text-muted)]">— sorted by most recent activity</span>
+          <h2 className="text-sm font-semibold">Top Trending Coins</h2>
+          <span className="text-[10px] text-[var(--text-muted)]">— by 24h volume on Robinhood Chain</span>
+          {!liveLoading && trendingTokens.length > 0 && (
+            <span className="ml-auto text-[9px] text-green-400 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400 live-blink" />
+              Live
+            </span>
+          )}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {statsLoading ? (
+          {liveLoading ? (
             Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-28 rounded-xl animate-shimmer" style={{ background: "var(--surface)" }} />
+              <div key={i} className="h-32 rounded-xl animate-shimmer" style={{ background: "var(--surface)" }} />
             ))
-          ) : trendingBuilders.length > 0 ? (
-            trendingBuilders.map((b) => (
-              <Link
-                key={b.address}
-                href={`/builder/${b.address.toLowerCase()}`}
-                className="group bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--accent)]/30 hover:shadow-[0_4px_20px_rgba(0,200,5,0.05)] transition-all"
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <AddressAvatar address={b.address} size={32} />
-                  <div className="min-w-0 flex-1">
-                    <div className="text-xs font-semibold truncate group-hover:text-[var(--accent)] transition-colors">{b.name}</div>
-                    {b.twitter && (
-                      <div className="text-[9px] text-[var(--text-muted)] truncate">@{b.twitter}</div>
-                    )}
+          ) : trendingTokens.length > 0 ? (
+            trendingTokens.slice(0, 8).map((token, i) => {
+              const name = (token.name as string) || "Unknown";
+              const symbol = (token.symbol as string) || "???";
+              const priceUsd = parseFloat(token.priceUsd as string || "0");
+              const volume24h = (token.volume24h as number) || 0;
+              const marketCap = (token.marketCap as number) || 0;
+              const priceChange24h = (token.priceChange24h as number) || 0;
+              const liquidityUsd = (token.liquidityUsd as number) || 0;
+              const buys24h = (token.buys24h as number) || 0;
+              const sells24h = (token.sells24h as number) || 0;
+              const address = (token.address as string) || "";
+              const dexUrl = (token.url as string) || "";
+              const imageUrl = (token.imageUrl as string) || null;
+              const isPositive = priceChange24h >= 0;
+              const buyRatio = buys24h + sells24h > 0 ? (buys24h / (buys24h + sells24h)) * 100 : 50;
+              const colors = ["#00c805", "#f59e0b", "#3b82f6", "#8b5cf6", "#ef4444", "#06b6d4", "#ec4899", "#f97316"];
+              const bgColor = colors[i % colors.length];
+
+              return (
+                <a
+                  key={`${address}-${i}`}
+                  href={dexUrl || `https://dexscreener.com/robinhood/${address}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--accent)]/30 hover:shadow-[0_4px_20px_rgba(0,200,5,0.05)] transition-all"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {imageUrl ? (
+                        <img
+                          src={imageUrl}
+                          alt={name}
+                          className="w-9 h-9 rounded-full border border-[var(--border)] object-cover bg-[var(--surface)]"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden"); }}
+                        />
+                      ) : null}
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${imageUrl ? "hidden" : ""}`} style={{ backgroundColor: bgColor }}>
+                        {symbol.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-semibold truncate group-hover:text-[var(--accent)] transition-colors">{name}</div>
+                        <div className="text-[9px] text-[var(--text-muted)] font-mono">${symbol}</div>
+                      </div>
+                    </div>
+                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${isPositive ? "bg-green-500/10 text-green-400" : "bg-red-500/10 text-red-400"}`}>
+                      {isPositive ? "+" : ""}{priceChange24h.toFixed(1)}%
+                    </span>
                   </div>
-                  <ChevronRight size={12} className="text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors flex-shrink-0" />
-                </div>
-                {b.stat && (
-                  <div className="flex items-center gap-2 text-[9px] text-[var(--text-muted)]">
-                    <span className="flex items-center gap-0.5"><Activity size={8} className="text-[var(--accent)]" />{b.stat.txCount.toLocaleString()} txs</span>
-                    <span className="flex items-center gap-0.5"><Zap size={8} className="text-yellow-400" />{b.stat.tokenCount} tokens</span>
-                    {Number(b.stat.balance) > 0 && (
-                      <span className="flex items-center gap-0.5"><DollarSign size={8} className="text-blue-400" />{b.stat.balanceFormatted} ETH</span>
-                    )}
+
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-[10px]">
+                      <span className="text-[var(--text-muted)]">Price</span>
+                      <span className="font-medium">
+                        {priceUsd < 0.0001 ? `$${priceUsd.toExponential(2)}` : priceUsd < 1 ? `$${priceUsd.toFixed(6)}` : `$${priceUsd.toFixed(2)}`}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-[10px]">
+                      <span className="text-[var(--text-muted)]">Volume 24h</span>
+                      <span className="font-medium text-blue-400">${volume24h >= 1e6 ? `${(volume24h / 1e6).toFixed(2)}M` : volume24h >= 1e3 ? `${(volume24h / 1e3).toFixed(1)}K` : volume24h.toFixed(0)}</span>
+                    </div>
+                    <div className="flex justify-between text-[10px]">
+                      <span className="text-[var(--text-muted)]">Market Cap</span>
+                      <span className="font-medium">${marketCap >= 1e6 ? `${(marketCap / 1e6).toFixed(2)}M` : marketCap >= 1e3 ? `${(marketCap / 1e3).toFixed(1)}K` : marketCap.toFixed(0)}</span>
+                    </div>
+                    <div className="flex justify-between text-[10px]">
+                      <span className="text-[var(--text-muted)]">Liquidity</span>
+                      <span className="font-medium text-purple-400">${liquidityUsd >= 1e6 ? `${(liquidityUsd / 1e6).toFixed(2)}M` : liquidityUsd >= 1e3 ? `${(liquidityUsd / 1e3).toFixed(1)}K` : liquidityUsd.toFixed(0)}</span>
+                    </div>
                   </div>
-                )}
-                {b.stat?.lastTxTimestamp && (
-                  <div className="text-[8px] text-[var(--text-muted)] mt-1.5 flex items-center gap-1">
-                    <Clock size={7} />Last active: {timeAgo(b.stat.lastTxTimestamp)}
+
+                  <div className="mt-2 pt-2 border-t border-[var(--border)]">
+                    <div className="flex items-center justify-between text-[9px]">
+                      <span className="text-[var(--text-muted)]">Buy/Sell ratio</span>
+                      <span className={buyRatio >= 50 ? "text-green-400" : "text-red-400"}>
+                        {buys24h.toLocaleString()} / {sells24h.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="w-full h-1 rounded-full bg-[var(--border)] mt-1 overflow-hidden">
+                      <div className="h-full rounded-full transition-all" style={{ width: `${buyRatio}%`, backgroundColor: buyRatio >= 50 ? "#22c55e" : "#ef4444" }} />
+                    </div>
                   </div>
-                )}
-              </Link>
-            ))
+                </a>
+              );
+            })
           ) : (
-            <div className="col-span-full text-center py-6 text-[var(--text-muted)] text-xs">No active builders found on-chain</div>
+            <div className="col-span-full text-center py-6 text-[var(--text-muted)] text-xs">No trending tokens found</div>
           )}
         </div>
       </section>
@@ -365,7 +417,7 @@ export default function BuilderListClient({ builders }: { builders: Builder[] })
             aria-label={`${b.name}${b.description ? ` — ${b.description.slice(0, 100)}` : ''}. ${b.stat ? `${b.stat.txCount} transactions, ${b.stat.balanceFormatted} ETH` : 'Loading stats...'}`}
           >
             <div className="flex items-start gap-3">
-              <AddressAvatar address={b.address} size={44} />
+              <AddressAvatar address={b.address} size={44} handle={b.twitter} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="font-medium text-sm truncate">{b.name}</span>

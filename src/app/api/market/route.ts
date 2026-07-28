@@ -408,7 +408,6 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     return NextResponse.json({
       error: "Failed to fetch market data",
-      details: error instanceof Error ? error.message : "Unknown",
     }, { status: 500 });
   }
 }

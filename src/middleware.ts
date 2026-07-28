@@ -1,36 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
 
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT_WINDOW = 60_000;
-const RATE_LIMIT_MAX = 60;
-const API_RATE_LIMIT_MAX = 30;
+const redis = process.env.UPSTASH_REDIS_REST_URL
+  ? new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    })
+  : null;
 
-const PUBLIC_PATHS = ["/auth", "/api/auth/login", "/api/auth/x/login", "/api/auth/x/callback", "/api/auth/me"];
+const ratelimit = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(60, "60s"),
+      analytics: true,
+    })
+  : null;
 
-function getRateLimitKey(request: NextRequest): string {
-  const forwarded = request.headers.get("x-forwarded-for");
-  const ip = forwarded?.split(",")[0]?.trim() || "127.0.0.1";
-  return ip;
-}
-
-function checkRateLimit(key: string, max: number): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(key);
-
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
-    if (rateLimitMap.size > 10000) {
-      for (const [k, v] of rateLimitMap) {
-        if (now > v.resetAt) rateLimitMap.delete(k);
-      }
-    }
-    return true;
-  }
-
-  entry.count++;
-  if (entry.count > max) return false;
-  return true;
-}
+const apiRatelimit = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(30, "60s"),
+      analytics: true,
+    })
+  : null;
 
 function sanitizePath(pathname: string): string {
   return pathname.replace(/[<>'"]/g, "");
@@ -49,7 +42,6 @@ function addSecurityHeaders(response: NextResponse, request: NextRequest): NextR
   response.headers.set("X-Robots-Tag", "index, follow");
 
   const isDev = request.nextUrl.hostname === "localhost" || request.nextUrl.hostname === "127.0.0.1";
-  const origin = isDev ? request.nextUrl.origin : "https://gamborh.xyz";
 
   const scriptSrc = isDev
     ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
@@ -82,20 +74,27 @@ export async function middleware(request: NextRequest) {
 
   const cleanPath = sanitizePath(pathname);
 
-  if (!checkRateLimit(getRateLimitKey(request), RATE_LIMIT_MAX)) {
-    if (pathname.startsWith("/api/")) {
-      return NextResponse.json({ error: "Rate limit exceeded. Please try again later." }, { status: 429 });
-    }
-    return new NextResponse("Too Many Requests", { status: 429, headers: { "Retry-After": "60" } });
-  }
+  if (ratelimit) {
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+      || request.headers.get("x-real-ip")
+      || "127.0.0.1";
 
-  if (pathname.startsWith("/api/")) {
-    if (!checkRateLimit(`api:${getRateLimitKey(request)}`, API_RATE_LIMIT_MAX)) {
-      return NextResponse.json({ error: "API rate limit exceeded." }, { status: 429 });
+    const activeLimit = pathname.startsWith("/api/") && apiRatelimit ? apiRatelimit : ratelimit;
+    const limit = await activeLimit.limit(ip);
+
+    if (!limit.success) {
+      if (pathname.startsWith("/api/")) {
+        return NextResponse.json(
+          { error: "Rate limit exceeded. Please try again later." },
+          { status: 429, headers: { "Retry-After": String(limit.reset) } }
+        );
+      }
+      return new NextResponse("Too Many Requests", {
+        status: 429,
+        headers: { "Retry-After": String(limit.reset) },
+      });
     }
   }
-
-  // Auth removed — all paths public
 
   const response = NextResponse.next();
   return addSecurityHeaders(response, request);

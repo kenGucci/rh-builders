@@ -1024,14 +1024,14 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem("gambo_lang");
+    const saved = localStorage.getItem("thewallrh_lang");
     setLangState(saved && translations[saved] ? saved : detectLanguage());
     setReady(true);
   }, []);
 
   const setLang = useCallback((code: string) => {
     setLangState(code);
-    localStorage.setItem("gambo_lang", code);
+    localStorage.setItem("thewallrh_lang", code);
   }, []);
 
   const t = useCallback(

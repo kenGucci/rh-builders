@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import builders from "@/lib/builders.json";
-
-const BLOCKSCOUT_V2 = "https://robinhoodchain.blockscout.com/api/v2";
+import { v2Fetch } from "@/lib/blockscout";
 
 interface BuilderLight {
   address: string;
@@ -25,21 +24,15 @@ const CACHE_TTL = 30_000;
 
 async function fetchBuilderStats(address: string): Promise<Partial<BuilderLight>> {
   try {
-    const res = await fetch(`${BLOCKSCOUT_V2}/addresses/${address}`, {
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!res.ok) return {};
-    const data = await res.json();
+    const data = await v2Fetch(`/addresses/${address}`) as Record<string, unknown>;
 
     const rawBalance = String(data.coin_balance || "0");
     const balanceEth = (Number(rawBalance) / 1e18).toFixed(4);
     const coinPrice = Number(data.coin_price || 0);
     const balanceUsd = (Number(balanceEth) * coinPrice).toFixed(2);
 
-    let avatar: string | null = null;
-    if (data.token?.icon_url) {
-      avatar = data.token.icon_url;
-    }
+    const tokenObj = data.token as Record<string, unknown> | undefined;
+    const avatar = (tokenObj?.icon_url as string) || null;
 
     return {
       balanceEth,
@@ -47,10 +40,11 @@ async function fetchBuilderStats(address: string): Promise<Partial<BuilderLight>
       txCount: Number(data.transaction_count || 0),
       tokenCount: Number(data.token_balances_count || data.tokens_count || 0),
       isContract: Boolean(data.is_contract),
-      lastTxTimestamp: data.last_tx_at || null,
+      lastTxTimestamp: (data.last_tx_at as string) || null,
       avatar,
     };
-  } catch {
+  } catch (err) {
+    console.error("[top-builders] Stats fetch failed:", address, err);
     return {};
   }
 }

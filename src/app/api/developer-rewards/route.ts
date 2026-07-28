@@ -97,11 +97,19 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    let reward: DevReward | null = null;
+    let allTransfers: Record<string, unknown>[] = [];
     if (creatorAddress) {
       try {
         const transfersData = await v2Fetch(`/addresses/${creatorAddress.toLowerCase()}/token-transfers`) as { items?: Record<string, unknown>[] };
-        const transfers = transfersData.items || [];
+        allTransfers = transfersData.items || [];
+      } catch (err) {
+        console.error("[developer-rewards] Failed to fetch transfers:", err);
+      }
+    }
+
+    let reward: DevReward | null = null;
+    if (creatorAddress) {
+      try {
         const walletLower = creatorAddress.toLowerCase();
 
         let totalClaimedRaw = BigInt(0);
@@ -110,7 +118,7 @@ export async function GET(request: NextRequest) {
         let destinationWallet: string | null = null;
         let holderBalanceRaw = BigInt(0);
 
-        for (const t of transfers) {
+        for (const t of allTransfers) {
           const toAddr = (t.to as Record<string, unknown>)?.hash as string;
           const fromAddr = (t.from as Record<string, unknown>)?.hash as string;
           const tToken = t.token as Record<string, unknown> | undefined;
@@ -138,7 +146,7 @@ export async function GET(request: NextRequest) {
         }
 
         const decimals = Number(tData.decimals || 18);
-        const divisor = BigInt(10 ** decimals);
+        const divisor = BigInt(10) ** BigInt(decimals);
         const totalClaimed = Number(totalClaimedRaw / divisor).toFixed(4);
         const totalClaimedUsd = (Number(totalClaimed) * tokenPrice).toFixed(2);
         const holderBalance = Number(holderBalanceRaw / divisor).toFixed(4);
@@ -159,14 +167,15 @@ export async function GET(request: NextRequest) {
           isClaimed: totalClaimedRaw > BigInt(0),
           destinationWallet,
         };
-      } catch {}
+      } catch (err) {
+        console.error("[developer-rewards] Reward calculation failed:", err);
+      }
     }
 
     let previousLaunches: TokenLaunch[] = [];
     if (creatorAddress) {
       try {
-        const launchesRes = await v2Fetch(`/addresses/${creatorAddress.toLowerCase()}/token-transfers`) as { items?: Record<string, unknown>[] };
-        const launches = launchesRes.items || [];
+        const launches = allTransfers;
         const seen = new Set<string>();
 
         for (const l of launches) {
@@ -183,7 +192,9 @@ export async function GET(request: NextRequest) {
           let tokenInfo: Record<string, unknown> | null = null;
           try {
             tokenInfo = await v2Fetch(`/tokens/${tAddr}`) as Record<string, unknown>;
-          } catch {}
+          } catch (err) {
+            console.error("[developer-rewards] Token info fetch failed:", tAddr, err);
+          }
 
           previousLaunches.push({
             tokenAddress: tAddr,
@@ -196,7 +207,9 @@ export async function GET(request: NextRequest) {
 
           if (previousLaunches.length >= 10) break;
         }
-      } catch {}
+      } catch (err) {
+        console.error("[developer-rewards] Previous launches fetch failed:", err);
+      }
     }
 
     let transactionHistory: DevRewardResponse["transactionHistory"] = [];
@@ -219,7 +232,9 @@ export async function GET(request: NextRequest) {
           method: (tx.functionName as string) || "",
         }));
       }
-    } catch {}
+    } catch (err) {
+      console.error("[developer-rewards] Transaction history fetch failed:", err);
+    }
 
     const response: DevRewardResponse = {
       creatorAddress,
