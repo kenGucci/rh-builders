@@ -350,7 +350,16 @@ export async function GET(request: NextRequest) {
 
     if (action === "batch" && symbolsParam) {
       const syms = symbolsParam.split(",").filter(Boolean);
-      const quotes = await yahooBatch(syms);
+      let quotes: MarketQuote[] = [];
+      if (FMP_ENABLED) {
+        const results = await Promise.allSettled(syms.map((s) => fmpQuote(s)));
+        quotes = results
+          .filter((r): r is PromiseFulfilledResult<MarketQuote> => r.status === "fulfilled" && r.value !== null)
+          .map((r) => r.value);
+      }
+      if (quotes.length === 0) {
+        quotes = await yahooBatch(syms);
+      }
       return NextResponse.json({ quotes });
     }
 
@@ -374,7 +383,16 @@ export async function GET(request: NextRequest) {
 
     if (action === "quotes") {
       const symbols = WATCHLIST;
-      const quotes = await yahooBatch(symbols);
+      let quotes: MarketQuote[] = [];
+      if (FMP_ENABLED) {
+        const results = await Promise.allSettled(symbols.map((s) => fmpQuote(s)));
+        quotes = results
+          .filter((r): r is PromiseFulfilledResult<MarketQuote> => r.status === "fulfilled" && r.value !== null)
+          .map((r) => r.value);
+      }
+      if (quotes.length === 0) {
+        quotes = await yahooBatch(symbols);
+      }
       for (const q of quotes) {
         if (!q.name || q.name === q.symbol) {
           q.name = NAME_MAP[q.symbol] || q.symbol;
