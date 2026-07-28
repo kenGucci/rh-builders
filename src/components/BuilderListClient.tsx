@@ -61,7 +61,8 @@ function timeAgo(ts: string | null) {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
-function formatDeployed(n: number): string {
+function formatDeployed(n: number | null | undefined): string {
+  if (n == null || isNaN(n)) return "0";
   if (n >= 1e9) return `${(n / 1e9).toFixed(1)}B`;
   if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
   if (n >= 1e3) return `${(n / 1e3).toFixed(1)}K`;
@@ -408,7 +409,7 @@ export default function BuilderListClient({ builders }: { builders: Builder[] })
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" role="list" aria-label="Developer profiles">
         {filtered.map((b, i) => (
           <Link
-            key={b.address}
+            key={`${b.address}-${i}`}
             href={`/builder/${b.address.toLowerCase()}`}
             className="group bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--accent)]/30 transition-all duration-200 hover:shadow-[0_0_20px_var(--accent-glow)] fade-in"
             style={{ animationDelay: `${i * 30}ms`, animationFillMode: "both" }}
@@ -428,16 +429,16 @@ export default function BuilderListClient({ builders }: { builders: Builder[] })
                   )}
                 </div>
                 {b.twitter && (
-                  <a
-                    href={`https://x.com/${b.twitter}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="text-[11px] text-[var(--text-muted)] hover:text-[#1DA1F2] transition-colors flex items-center gap-1"
+                  <span
+                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); window.open(`https://x.com/${b.twitter}`, "_blank", "noopener"); }}
+                    onKeyDown={(e) => { if (e.key === "Enter") window.open(`https://x.com/${b.twitter}`, "_blank", "noopener"); }}
+                    role="link"
+                    tabIndex={0}
+                    className="text-[11px] text-[var(--text-muted)] hover:text-[#1DA1F2] transition-colors flex items-center gap-1 cursor-pointer"
                   >
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
                     @{b.twitter}
-                  </a>
+                  </span>
                 )}
 
                 <div className="flex items-center gap-3 mt-2 text-[11px]">
