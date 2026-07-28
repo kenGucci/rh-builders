@@ -4,8 +4,22 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   TrendingUp, TrendingDown, RefreshCw, Search, ArrowUpRight, Activity,
   BarChart3, DollarSign, Zap, Clock, Flame, ArrowDownRight, X,
-  ChevronRight, Loader2, Wifi,
+  ChevronRight, Loader2, Wifi, Shield, Wallet, Globe, Lock, Layers,
+  ChevronDown, ExternalLink, Info, CircleDollarSign,
 } from "lucide-react";
+
+interface StockToken {
+  symbol: string;
+  name: string;
+  sector: string;
+  chain: string;
+  multiplier: number;
+  backed: boolean;
+  custodian: string;
+  tokenAddress: string;
+  apy: number;
+  tvl: number;
+}
 
 interface MarketQuote {
   symbol: string;
@@ -112,6 +126,128 @@ function MiniSparkline({ data, positive }: { data: number[]; positive: boolean }
       <path d={svg.fill} fill={`url(#${svg.gid})`} />
       <path d={svg.line} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
+  );
+}
+
+function StockTokenCard({ token, quote }: { token: StockToken; quote?: MarketQuote }) {
+  const [expanded, setExpanded] = useState(false);
+  const positive = quote ? quote.changePercent >= 0 : true;
+
+  return (
+    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 hover:border-[var(--accent)]/30 transition-all duration-300 hover:shadow-[0_0_30px_var(--accent-glow)]">
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--accent)]/20 to-[var(--accent)]/5 border border-[var(--accent)]/20 flex items-center justify-center">
+            <span className="text-sm font-bold text-[var(--accent)]">{token.symbol}</span>
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-[var(--foreground)]">{token.symbol}</span>
+              <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20 font-medium">
+                STOCK TOKEN
+              </span>
+            </div>
+            <div className="text-[10px] text-[var(--text-muted)]">{token.name}</div>
+          </div>
+        </div>
+        {quote && (
+          <MiniSparkline data={quote.sparkline} positive={positive} />
+        )}
+      </div>
+
+      {quote && (
+        <div className="flex items-end gap-2 mb-3">
+          <span className="text-xl font-bold text-[var(--foreground)]">{formatPrice(quote.price)}</span>
+          <div className={`flex items-center gap-0.5 text-xs font-semibold ${positive ? "text-green-400" : "text-red-400"}`}>
+            {positive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+            {positive ? "+" : ""}{quote.changePercent.toFixed(2)}%
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <div className="flex items-center gap-1.5 text-[10px]">
+          <Shield size={10} className="text-green-400" />
+          <span className="text-[var(--text-muted)]">1:1 Backed</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-[10px]">
+          <Globe size={10} className="text-blue-400" />
+          <span className="text-[var(--text-muted)]">Robinhood Chain</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-[10px]">
+          <Lock size={10} className="text-purple-400" />
+          <span className="text-[var(--text-muted)]">{token.custodian}</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-[10px]">
+          <Layers size={10} className="text-orange-400" />
+          <span className="text-[var(--text-muted)]">{token.sector}</span>
+        </div>
+      </div>
+
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between py-2 px-3 rounded-lg bg-[var(--bg-card)] border border-[var(--border-subtle)] text-[10px] text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
+      >
+        <span>Token Details</span>
+        <ChevronDown size={12} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
+      </button>
+
+      {expanded && (
+        <div className="mt-3 space-y-2 fade-in">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex justify-between py-1.5 px-3 rounded-lg bg-[var(--bg-card)]/50 border border-[var(--border-subtle)]">
+              <span className="text-[10px] text-[var(--text-muted)]">Multiplier</span>
+              <span className="text-xs font-semibold text-[var(--foreground)]">{token.multiplier}x</span>
+            </div>
+            <div className="flex justify-between py-1.5 px-3 rounded-lg bg-[var(--bg-card)]/50 border border-[var(--border-subtle)]">
+              <span className="text-[10px] text-[var(--text-muted)]">Backed</span>
+              <span className="text-xs font-semibold text-green-400">Yes</span>
+            </div>
+            <div className="flex justify-between py-1.5 px-3 rounded-lg bg-[var(--bg-card)]/50 border border-[var(--border-subtle)]">
+              <span className="text-[10px] text-[var(--text-muted)]">Chain</span>
+              <span className="text-xs font-semibold text-[var(--foreground)]">4663</span>
+            </div>
+            <div className="flex justify-between py-1.5 px-3 rounded-lg bg-[var(--bg-card)]/50 border border-[var(--border-subtle)]">
+              <span className="text-[10px] text-[var(--text-muted)]">TVL</span>
+              <span className="text-xs font-semibold text-[var(--foreground)]">{formatMarketCap(token.tvl)}</span>
+            </div>
+          </div>
+          <div className="flex justify-between py-1.5 px-3 rounded-lg bg-[var(--bg-card)]/50 border border-[var(--border-subtle)]">
+            <span className="text-[10px] text-[var(--text-muted)]">Contract</span>
+            <a
+              href={`https://robinhoodchain.blockscout.com/token/${token.tokenAddress}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] text-[var(--accent)] hover:underline flex items-center gap-1"
+            >
+              {token.tokenAddress.slice(0, 6)}...{token.tokenAddress.slice(-4)}
+              <ExternalLink size={8} />
+            </a>
+          </div>
+        </div>
+      )}
+
+      {quote && (
+        <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[9px] mt-3 pt-3 border-t border-[var(--border-subtle)]">
+          <div className="flex justify-between">
+            <span className="text-[var(--text-muted)]">High</span>
+            <span className="text-green-400">{formatPrice(quote.dayHigh)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-[var(--text-muted)]">Low</span>
+            <span className="text-red-400">{formatPrice(quote.dayLow)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-[var(--text-muted)]">Vol</span>
+            <span className="text-[var(--text-secondary)]">{formatVolume(quote.volume)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-[var(--text-muted)]">MCap</span>
+            <span className="text-[var(--text-secondary)]">{formatMarketCap(quote.marketCap)}</span>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -339,7 +475,70 @@ function DetailModal({ symbol, onClose }: { symbol: string; onClose: () => void 
   );
 }
 
+function FaqAccordion({ question, answer }: { question: string; answer: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border border-[var(--border)] rounded-xl overflow-hidden">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-4 py-3 text-left bg-[var(--surface)] hover:bg-[var(--bg-card-hover)] transition-colors"
+      >
+        <span className="text-sm font-medium text-[var(--foreground)]">{question}</span>
+        <ChevronDown size={16} className={`text-[var(--text-muted)] transition-transform flex-shrink-0 ml-2 ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="px-4 py-3 text-xs text-[var(--text-muted)] leading-relaxed bg-[var(--bg-card)] border-t border-[var(--border-subtle)] fade-in">
+          {answer}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const FAQ_DATA = [
+  {
+    q: "What are Stock Tokens?",
+    a: "Stock Tokens are tokenized debt securities issued by Robinhood Assets (Jersey) Limited. They provide economic exposure to underlying securities like NVIDIA, Apple, and Google — all on Robinhood Chain (Chain ID 4663).",
+  },
+  {
+    q: "How do Stock Tokens work?",
+    a: "Each Stock Token is backed 1:1 by the corresponding underlying equity. The shares are held by a licensed US-based custodian. Your token's multiplier increases when dividends are paid — meaning your token represents more shares over time.",
+  },
+  {
+    q: "Can I receive dividends?",
+    a: "Instead of cash dividends, a multiplier mechanism is used. When an underlying company pays a dividend, it is automatically reinvested to purchase more shares. Your token's multiplier increases, meaning it dynamically represents more than one share of stock over time.",
+  },
+  {
+    q: "Can I redeem my Stock Tokens?",
+    a: "Yes. You can sell your Stock Tokens in the secondary market or redeem them directly with the Issuer, subject to completing KYC/AML identity verification processes.",
+  },
+  {
+    q: "What wallets are supported?",
+    a: "Stock Tokens are compatible with popular self-custody wallets including Robinhood Wallet, Trust Wallet, SafePal, and more. Trade and manage your tokens from the wallet you already use.",
+  },
+  {
+    q: "Are my assets protected?",
+    a: "Yes. Stock Tokens are fully collateralized with their underlying assets, which are monitored daily. In the unlikely event of issuer insolvency, an independent security agent will sell the underlying shares and distribute cash proceeds to token holders.",
+  },
+];
+
+const WALLET_LIST = [
+  { name: "Robinhood Wallet", desc: "Native wallet for Robinhood Chain", color: "from-green-500/20 to-green-500/5" },
+  { name: "Trust Wallet", desc: "Multi-chain self-custody wallet", color: "from-blue-500/20 to-blue-500/5" },
+  { name: "SafePal", desc: "Hardware + software wallet", color: "from-purple-500/20 to-purple-500/5" },
+  { name: "MetaMask", desc: "Popular browser extension wallet", color: "from-orange-500/20 to-orange-500/5" },
+];
+
+const FEATURE_CARDS = [
+  { icon: Globe, title: "Markets beyond borders, 24/7", desc: "Get exposure to US markets. Invest in Stock Tokens linked to popular US stocks and ETFs — available around the clock.", color: "text-blue-400" },
+  { icon: Shield, title: "Shares behind every token", desc: "Every Stock Token is backed 1:1 by the underlying stock. Held by a licensed custodian and monitored daily.", color: "text-green-400" },
+  { icon: Zap, title: "Unlock more opportunities", desc: "Put your Stock Tokens to work. Deploy them onchain to earn yield, use as collateral to borrow, and more.", color: "text-yellow-400" },
+  { icon: Lock, title: "Built-in protection", desc: "Stock Tokens are fully collateralized with their underlying assets. In case of insolvency, assets are protected by an independent security agent.", color: "text-purple-400" },
+];
+
 export default function MarketPage() {
+  const [stockTokens, setStockTokens] = useState<StockToken[]>([]);
+  const [tokenQuotes, setTokenQuotes] = useState<Record<string, MarketQuote>>({});
   const [quotes, setQuotes] = useState<MarketQuote[]>([]);
   const [gainers, setGainers] = useState<MarketQuote[]>([]);
   const [losers, setLosers] = useState<MarketQuote[]>([]);
@@ -349,14 +548,33 @@ export default function MarketPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [filter, setFilter] = useState<"all" | "stock" | "crypto">("all");
+  const [sectorFilter, setSectorFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [detailSymbol, setDetailSymbol] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"watchlist" | "gainers" | "losers" | "movers">("watchlist");
+  const [activeTab, setActiveTab] = useState<"tokens" | "watchlist" | "gainers" | "losers" | "movers">("tokens");
   const searchRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const fetchStockTokens = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/stock-tokens?sector=${sectorFilter}`);
+      const data = await res.json();
+      if (data.tokens) {
+        setStockTokens(data.tokens);
+        const symbols = data.tokens.map((t: StockToken) => t.symbol).join(",");
+        const qRes = await fetch(`/api/market?action=batch&symbols=${symbols}`);
+        const qData = await qRes.json();
+        if (qData.quotes) {
+          const map: Record<string, MarketQuote> = {};
+          for (const q of qData.quotes) map[q.symbol] = q;
+          setTokenQuotes(map);
+        }
+      }
+    } catch {}
+  }, [sectorFilter]);
 
   const fetchWatchlist = useCallback(async () => {
     try {
@@ -387,8 +605,8 @@ export default function MarketPage() {
   }, []);
 
   const fetchAll = useCallback(async () => {
-    await Promise.all([fetchWatchlist(), fetchMovers()]);
-  }, [fetchWatchlist, fetchMovers]);
+    await Promise.all([fetchStockTokens(), fetchWatchlist(), fetchMovers()]);
+  }, [fetchStockTokens, fetchWatchlist, fetchMovers]);
 
   useEffect(() => {
     setLoading(true);
@@ -397,27 +615,18 @@ export default function MarketPage() {
 
   useEffect(() => {
     if (!autoRefresh) return;
-    const interval = setInterval(() => {
-      fetchAll();
-    }, 10000);
+    const interval = setInterval(() => { fetchAll(); }, 15000);
     return () => clearInterval(interval);
   }, [autoRefresh, fetchAll]);
 
   const handleSearch = useCallback(async (q: string) => {
-    if (!q.trim() || q.length < 1) {
-      setSearchResults([]);
-      return;
-    }
+    if (!q.trim() || q.length < 1) { setSearchResults([]); return; }
     setSearching(true);
     try {
       const res = await fetch(`/api/market?action=search&query=${encodeURIComponent(q)}`);
       const data = await res.json();
       setSearchResults(data.results || []);
-    } catch {
-      setSearchResults([]);
-    } finally {
-      setSearching(false);
-    }
+    } catch { setSearchResults([]); } finally { setSearching(false); }
   }, []);
 
   const onSearchChange = (value: string) => {
@@ -436,9 +645,7 @@ export default function MarketPage() {
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
-        setShowSearch(false);
-      }
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) setShowSearch(false);
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -452,7 +659,13 @@ export default function MarketPage() {
     });
   }, [quotes, filter]);
 
+  const sectors = useMemo(() => {
+    const s = new Set(stockTokens.map((t) => t.sector));
+    return ["all", ...Array.from(s)];
+  }, [stockTokens]);
+
   const tabs = [
+    { id: "tokens" as const, label: "Stock Tokens", icon: CircleDollarSign, count: stockTokens.length, color: "text-[var(--accent)]" },
     { id: "watchlist" as const, label: "Watchlist", icon: Activity, count: filteredQuotes.length },
     { id: "gainers" as const, label: "Gainers", icon: TrendingUp, count: gainers.length, color: "text-green-400" },
     { id: "losers" as const, label: "Losers", icon: TrendingDown, count: losers.length, color: "text-red-400" },
@@ -460,12 +673,101 @@ export default function MarketPage() {
   ];
 
   return (
-    <div className="space-y-6 fade-in">
+    <div className="space-y-8 fade-in">
+
       {/* Hero */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[var(--surface)] via-[var(--surface)] to-[var(--accent)]/5 border border-[var(--border)] p-8">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--accent)]/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        <div className="relative">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-[var(--accent)]/10 border border-[var(--accent)]/20 flex items-center justify-center">
+              <CircleDollarSign size={16} className="text-[var(--accent)]" />
+            </div>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20 font-medium uppercase tracking-wider">
+              Robinhood Chain
+            </span>
+          </div>
+          <h1 className="text-3xl font-bold mb-2">Invest with <span className="gradient-text">Stock Tokens</span></h1>
+          <p className="text-sm text-[var(--text-muted)] max-w-xl">
+            Trade and own 90+ Stock Tokens linked to companies and ETFs including NVIDIA, Google, Apple, and Invesco QQQ — all from your wallet on Robinhood Chain.
+          </p>
+          <div className="flex items-center gap-4 mt-5">
+            <a
+              href="https://robinhood.com/rhj/stocktokens/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--accent)] text-black text-sm font-semibold hover:opacity-90 transition-opacity"
+            >
+              Learn more <ArrowUpRight size={14} />
+            </a>
+            <a
+              href="https://robinhood.com/chain/ecosystem"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-sm font-medium text-[var(--foreground)] hover:border-[var(--accent)]/30 transition-colors"
+            >
+              Explore apps <ExternalLink size={14} />
+            </a>
+          </div>
+        </div>
+      </div>
+
+      {/* Feature Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {FEATURE_CARDS.map((card) => (
+          <div key={card.title} className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 hover:border-[var(--accent)]/20 transition-all">
+            <card.icon size={20} className={`${card.color} mb-3`} />
+            <h3 className="text-sm font-bold text-[var(--foreground)] mb-1.5">{card.title}</h3>
+            <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">{card.desc}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Search + Controls */}
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Market</h1>
-          <p className="text-xs text-[var(--text-muted)] mt-1">Live stock & crypto data · Updates every 10s</p>
+        <div ref={searchRef} className="relative flex-1 max-w-xl">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            onFocus={() => setShowSearch(true)}
+            placeholder="Search any stock or crypto symbol..."
+            className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-sm text-[var(--foreground)] placeholder-[var(--text-muted)] focus:border-[var(--accent)]/40 focus:shadow-[0_0_20px_var(--accent-glow)] transition-all"
+          />
+          {searching && <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-[var(--accent)]" />}
+          {showSearch && searchResults.length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-xl z-50 max-h-80 overflow-y-auto">
+              {searchResults.map((result) => (
+                <button
+                  key={result.symbol}
+                  onClick={() => selectSearchResult(result)}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[var(--bg-card-hover)] transition-colors text-left"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-[var(--accent)]/10 border border-[var(--accent)]/20 flex items-center justify-center flex-shrink-0">
+                    <span className="text-[9px] font-bold text-[var(--accent)]">{result.symbol.slice(0, 3)}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-[var(--foreground)]">{result.symbol}</span>
+                      <span className={`text-[7px] px-1 py-0.5 rounded font-medium ${
+                        isCryptoSymbol(result.symbol) ? "bg-purple-500/10 text-purple-400" : "bg-blue-500/10 text-blue-400"
+                      }`}>
+                        {isCryptoSymbol(result.symbol) ? "CRYPTO" : "STOCK"}
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-[var(--text-muted)] truncate">{result.name}</div>
+                  </div>
+                  <ArrowUpRight size={12} className="text-[var(--text-muted)] flex-shrink-0" />
+                </button>
+              ))}
+            </div>
+          )}
+          {showSearch && searchQuery && !searching && searchResults.length === 0 && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-xl z-50 p-4 text-center">
+              <span className="text-xs text-[var(--text-muted)]">No results found</span>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 text-[10px] text-[var(--text-muted)]">
@@ -488,56 +790,6 @@ export default function MarketPage() {
             <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
           </button>
         </div>
-      </div>
-
-      {/* Search */}
-      <div ref={searchRef} className="relative max-w-xl">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
-          onFocus={() => setShowSearch(true)}
-          placeholder="Search any stock or crypto symbol..."
-          className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-sm text-[var(--foreground)] placeholder-[var(--text-muted)] focus:border-[var(--accent)]/40 focus:shadow-[0_0_20px_var(--accent-glow)] transition-all"
-        />
-        {searching && (
-          <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-[var(--accent)]" />
-        )}
-
-        {showSearch && searchResults.length > 0 && (
-          <div className="absolute top-full left-0 right-0 mt-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-xl z-50 max-h-80 overflow-y-auto">
-            {searchResults.map((result) => (
-              <button
-                key={result.symbol}
-                onClick={() => selectSearchResult(result)}
-                className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[var(--bg-card-hover)] transition-colors text-left"
-              >
-                <div className="w-8 h-8 rounded-lg bg-[var(--accent)]/10 border border-[var(--accent)]/20 flex items-center justify-center flex-shrink-0">
-                  <span className="text-[9px] font-bold text-[var(--accent)]">{result.symbol.slice(0, 3)}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-[var(--foreground)]">{result.symbol}</span>
-                    <span className={`text-[7px] px-1 py-0.5 rounded font-medium ${
-                      isCryptoSymbol(result.symbol) ? "bg-purple-500/10 text-purple-400" : "bg-blue-500/10 text-blue-400"
-                    }`}>
-                      {isCryptoSymbol(result.symbol) ? "CRYPTO" : "STOCK"}
-                    </span>
-                  </div>
-                  <div className="text-[10px] text-[var(--text-muted)] truncate">{result.name}</div>
-                </div>
-                <ArrowUpRight size={12} className="text-[var(--text-muted)] flex-shrink-0" />
-              </button>
-            ))}
-          </div>
-        )}
-
-        {showSearch && searchQuery && !searching && searchResults.length === 0 && (
-          <div className="absolute top-full left-0 right-0 mt-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-xl z-50 p-4 text-center">
-            <span className="text-xs text-[var(--text-muted)]">No results found</span>
-          </div>
-        )}
       </div>
 
       {/* Summary Stats */}
@@ -575,23 +827,6 @@ export default function MarketPage() {
         </div>
       )}
 
-      {/* Filter Tabs */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex gap-1 bg-[var(--surface)] border border-[var(--border)] rounded-xl p-1">
-          {(["all", "stock", "crypto"] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                filter === f ? "bg-[var(--accent)] text-black shadow-[0_0_12px_var(--accent-glow)]" : "text-[var(--text-muted)] hover:text-[var(--foreground)]"
-              }`}
-            >
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* Content Tabs */}
       <div className="flex gap-1 bg-[var(--surface)] border border-[var(--border)] rounded-xl p-1 overflow-x-auto">
         {tabs.map((tab) => (
@@ -613,6 +848,40 @@ export default function MarketPage() {
         ))}
       </div>
 
+      {/* Stock Tokens Filter */}
+      {activeTab === "tokens" && (
+        <div className="flex gap-1 bg-[var(--surface)] border border-[var(--border)] rounded-xl p-1">
+          {sectors.map((s) => (
+            <button
+              key={s}
+              onClick={() => setSectorFilter(s)}
+              className={`px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
+                sectorFilter === s ? "bg-[var(--accent)]/10 border border-[var(--accent)]/30 text-[var(--accent)]" : "text-[var(--text-muted)] hover:text-[var(--foreground)]"
+              }`}
+            >
+              {s === "all" ? "All Sectors" : s}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Watchlist Filter */}
+      {activeTab === "watchlist" && (
+        <div className="flex gap-1 bg-[var(--surface)] border border-[var(--border)] rounded-xl p-1">
+          {(["all", "stock", "crypto"] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                filter === f ? "bg-[var(--accent)] text-black shadow-[0_0_12px_var(--accent-glow)]" : "text-[var(--text-muted)] hover:text-[var(--foreground)]"
+              }`}
+            >
+              {f.charAt(0).toUpperCase() + f.slice(1)}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Loading */}
       {loading && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -620,6 +889,24 @@ export default function MarketPage() {
             <div key={i} className="h-52 rounded-2xl animate-shimmer" style={{ background: "var(--surface)" }} />
           ))}
         </div>
+      )}
+
+      {/* Stock Tokens Grid */}
+      {!loading && activeTab === "tokens" && (
+        <>
+          {stockTokens.length === 0 ? (
+            <div className="text-center py-16">
+              <CircleDollarSign size={32} className="mx-auto text-[var(--text-muted)] mb-3" />
+              <div className="text-sm text-[var(--text-muted)]">No stock tokens available.</div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {stockTokens.map((token) => (
+                <StockTokenCard key={token.symbol} token={token} quote={tokenQuotes[token.symbol]} />
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {/* Watchlist Grid */}
@@ -692,10 +979,92 @@ export default function MarketPage() {
         </div>
       )}
 
+      {/* Wallet Compatibility */}
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Wallet size={18} className="text-[var(--accent)]" />
+          <h2 className="text-lg font-bold text-[var(--foreground)]">Trade on wallets you trust</h2>
+        </div>
+        <p className="text-xs text-[var(--text-muted)] mb-5 max-w-lg">
+          Stock Tokens are compatible with popular self-custody wallets. Manage your tokens from the wallet you already use.
+        </p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {WALLET_LIST.map((w) => (
+            <div key={w.name} className={`bg-gradient-to-br ${w.color} border border-[var(--border)] rounded-xl p-4 text-center`}>
+              <div className="text-sm font-bold text-[var(--foreground)] mb-1">{w.name}</div>
+              <div className="text-[10px] text-[var(--text-muted)]">{w.desc}</div>
+            </div>
+          ))}
+        </div>
+        <a
+          href="https://robinhood.com/chain/ecosystem"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 mt-4 text-xs text-[var(--accent)] hover:underline"
+        >
+          Explore wallets <ArrowUpRight size={12} />
+        </a>
+      </div>
+
+      {/* Ecosystem */}
+      <div className="bg-gradient-to-br from-[var(--surface)] to-[var(--accent)]/5 border border-[var(--border)] rounded-2xl p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Layers size={18} className="text-[var(--accent)]" />
+          <h2 className="text-lg font-bold text-[var(--foreground)]">See what&apos;s onchain</h2>
+        </div>
+        <p className="text-xs text-[var(--text-muted)] mb-5 max-w-lg">
+          New apps are always launching on Robinhood Chain. Explore apps for trading, lending, borrowing, and more.
+        </p>
+        <div className="flex items-center gap-3">
+          <a
+            href="https://robinhood.com/chain/ecosystem"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--accent)] text-black text-sm font-semibold hover:opacity-90 transition-opacity"
+          >
+            Explore the ecosystem <ArrowUpRight size={14} />
+          </a>
+          <a
+            href="https://docs.robinhood.com/rhj/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-sm font-medium text-[var(--foreground)] hover:border-[var(--accent)]/30 transition-colors"
+          >
+            Read docs <ExternalLink size={14} />
+          </a>
+        </div>
+      </div>
+
+      {/* FAQ */}
+      <div>
+        <div className="flex items-center gap-2 mb-4">
+          <Info size={18} className="text-[var(--accent)]" />
+          <h2 className="text-lg font-bold text-[var(--foreground)]">Frequently Asked Questions</h2>
+        </div>
+        <div className="space-y-2">
+          {FAQ_DATA.map((faq) => (
+            <FaqAccordion key={faq.q} question={faq.q} answer={faq.a} />
+          ))}
+        </div>
+      </div>
+
+      {/* Disclaimer */}
+      <div className="text-[10px] text-[var(--text-muted)] leading-relaxed bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 space-y-3">
+        <div className="flex items-start gap-2">
+          <Info size={12} className="mt-0.5 flex-shrink-0 text-[var(--accent)]" />
+          <div>
+            <p className="font-medium text-[var(--text-secondary)] mb-1">Stock Tokens are tokenized debt securities</p>
+            <p>Issued by Robinhood Assets (Jersey) Limited. They provide economic exposure to underlying securities but do not grant investors any legal or beneficial rights in, or against the issuer of, those underlying securities.</p>
+            <p className="mt-2">Stock Tokens are not registered under U.S. securities laws and may not be offered, sold, or delivered, directly or indirectly, in the United States or to, or for the account or benefit of, U.S. persons.</p>
+            <p className="mt-2">Stock Tokens carry a high level of risk and are not appropriate for all investors. Investors should be prepared for the possibility of losing some or all of their investment.</p>
+          </div>
+        </div>
+      </div>
+
       {/* Footer */}
       <div className="text-center text-[10px] text-[var(--text-muted)] py-4 border-t border-[var(--border-subtle)]">
-        <p>Live data from Financial Modeling Prep · Prices may be delayed · Updates every 10s</p>
-        <p className="mt-1">Works for both stocks and crypto · Search any symbol worldwide</p>
+        <p>Live data from Financial Modeling Prep & Robinhood Chain · Prices may be delayed</p>
+        <p className="mt-1">Stock Tokens on Chain ID 4663 · Block Explorer: robinhoodchain.blockscout.com</p>
       </div>
 
       {/* Detail Modal */}
