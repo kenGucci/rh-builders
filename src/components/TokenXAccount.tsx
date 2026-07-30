@@ -24,13 +24,13 @@ interface Props {
   builderName?: string;
 }
 
-export default function TokenXAccount({ tokenSymbol, builderTwitter, builderName }: Props) {
+export default function TokenXAccount({ tokenSymbol, tokenAddress, builderTwitter, builderName }: Props) {
   const [xData, setXData] = useState<TokenXData | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    if (!builderTwitter && !tokenSymbol) {
+    if (!builderTwitter && !tokenSymbol && !tokenAddress) {
       setLoading(false);
       setNotFound(true);
       return;
@@ -41,8 +41,25 @@ export default function TokenXAccount({ tokenSymbol, builderTwitter, builderName
 
     const handle = builderTwitter || "";
     if (!handle) {
-      setLoading(false);
-      setNotFound(true);
+      // No explicit twitter handle, try searching by token symbol
+      if (tokenSymbol) {
+        // Try fetching with the token symbol as a potential handle
+        fetch(`/api/twitter?handle=${encodeURIComponent(tokenSymbol)}`)
+          .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
+          .then((data) => {
+            if (data.handle && !data.error) {
+              setXData(data);
+              setNotFound(false);
+            } else {
+              setNotFound(true);
+            }
+          })
+          .catch(() => setNotFound(true))
+          .finally(() => setLoading(false));
+      } else {
+        setNotFound(true);
+        setLoading(false);
+      }
       return;
     }
 
@@ -62,7 +79,7 @@ export default function TokenXAccount({ tokenSymbol, builderTwitter, builderName
         setXData(null);
       })
       .finally(() => setLoading(false));
-  }, [builderTwitter, tokenSymbol]);
+  }, [builderTwitter, tokenSymbol, tokenAddress]);
 
   if (loading) {
     return (
@@ -83,7 +100,7 @@ export default function TokenXAccount({ tokenSymbol, builderTwitter, builderName
   }
 
   if (notFound || !xData) {
-    const handle = builderTwitter || tokenSymbol;
+    const searchQuery = builderTwitter || tokenSymbol || (tokenAddress ? tokenAddress.slice(0, 10) : "");
     return (
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6 text-center">
         <div className="w-14 h-14 rounded-full bg-[#000]/10 border border-[#000]/20 flex items-center justify-center mx-auto mb-4">
@@ -95,19 +112,33 @@ export default function TokenXAccount({ tokenSymbol, builderTwitter, builderName
         <div className="text-xs text-[var(--text-muted)] mb-4">
           {builderName
             ? `No official X account registered for ${builderName}`
-            : `No official X account found for this ${tokenSymbol ? "token" : "address"}`
+            : tokenSymbol
+            ? `No official X account found for $${tokenSymbol}`
+            : tokenAddress
+            ? `No official X account found for this token`
+            : `No official X account found for this address`
           }
         </div>
-        {handle && (
-          <a
-            href={`https://x.com/search?q=${encodeURIComponent(`$${handle}`)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-black text-xs text-white font-medium hover:opacity-90 transition-opacity"
-          >
-            {`Search ${handle} on X`}
-            <ExternalLink size={10} />
-          </a>
+        {searchQuery && (
+          <div className="flex flex-col items-center gap-2">
+            <a
+              href={`https://x.com/search?q=${encodeURIComponent(`$${searchQuery}`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-black text-xs text-white font-medium hover:opacity-90 transition-opacity"
+            >
+              Search ${searchQuery} on X
+              <ExternalLink size={10} />
+            </a>
+            <a
+              href={`https://x.com/search?q=${encodeURIComponent(searchQuery)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] text-[var(--text-muted)] hover:text-[var(--accent)]"
+            >
+              Full search on X →
+            </a>
+          </div>
         )}
       </div>
     );

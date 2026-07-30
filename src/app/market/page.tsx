@@ -5,8 +5,13 @@ import {
   TrendingUp, TrendingDown, RefreshCw, Search, ArrowUpRight, Activity,
   BarChart3, DollarSign, Zap, Clock, Flame, X,
   ChevronRight, Loader2, Wifi, Shield, Wallet, Globe, Lock, Layers,
-  ChevronDown, ExternalLink, Info, CircleDollarSign,
+  ChevronDown, ExternalLink, Info, CircleDollarSign, ArrowUpDown,
 } from "lucide-react";
+import ConnectWalletButton from "@/components/ConnectWalletButton";
+import SwapPanel from "@/components/SwapPanel";
+import { useAccount, useBalance } from "wagmi";
+import { formatUnits } from "viem";
+import type { EcosystemApp } from "@/app/api/ecosystem/route";
 
 interface StockToken {
   symbol: string;
@@ -563,8 +568,15 @@ export default function MarketPage() {
   const [activeTab, setActiveTab] = useState<"board" | "txns" | "tokens" | "watchlist" | "gainers" | "losers" | "movers">("board");
   const [liveTxns, setLiveTxns] = useState<LiveTxn[]>([]);
   const [txnsLoading, setTxnsLoading] = useState(false);
+  const [ecosystemApps, setEcosystemApps] = useState<EcosystemApp[]>([]);
+  const [ecosystemLoading, setEcosystemLoading] = useState(true);
+  const [ecosystemCategory, setEcosystemCategory] = useState("All");
   const searchRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const { address, isConnected } = useAccount();
+  const { data: ethBalance } = useBalance({ address });
+  const [walletTokens, setWalletTokens] = useState<{ symbol: string; balance: string }[]>([]);
 
   const fetchStockTokens = useCallback(async () => {
     try {
@@ -622,9 +634,28 @@ export default function MarketPage() {
     } catch {} finally { setTxnsLoading(false); }
   }, []);
 
+  const fetchEcosystem = useCallback(async () => {
+    try {
+      const res = await fetch("/api/ecosystem");
+      const data = await res.json();
+      if (data.apps) setEcosystemApps(data.apps);
+    } catch {} finally { setEcosystemLoading(false); }
+  }, []);
+
+  const fetchWalletTokens = useCallback(async () => {
+    if (!address) return;
+    try {
+      const res = await fetch(`/api/address-tokens?address=${address}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.tokens) setWalletTokens(data.tokens);
+      }
+    } catch {}
+  }, [address]);
+
   const fetchAll = useCallback(async () => {
-    await Promise.all([fetchStockTokens(), fetchWatchlist(), fetchMovers(), fetchTxns()]);
-  }, [fetchStockTokens, fetchWatchlist, fetchMovers, fetchTxns]);
+    await Promise.all([fetchStockTokens(), fetchWatchlist(), fetchMovers(), fetchTxns(), fetchEcosystem(), fetchWalletTokens()]);
+  }, [fetchStockTokens, fetchWatchlist, fetchMovers, fetchTxns, fetchEcosystem, fetchWalletTokens]);
 
   useEffect(() => {
     setLoading(true);
@@ -789,7 +820,8 @@ export default function MarketPage() {
             </div>
           )}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <ConnectWalletButton compact />
           <div className="flex items-center gap-1.5 text-[10px] text-[var(--text-muted)]">
             <Wifi size={12} className={autoRefresh ? "text-[var(--accent)]" : "text-[var(--text-muted)]"} />
             <span>{autoRefresh ? "Live" : "Paused"}</span>
@@ -1009,60 +1041,184 @@ export default function MarketPage() {
         </div>
       )}
 
-      {/* Wallet Compatibility */}
+      {/* Wallet Connection + Trading */}
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6">
         <div className="flex items-center gap-2 mb-4">
           <Wallet size={18} className="text-[var(--accent)]" />
           <h2 className="text-lg font-bold text-[var(--foreground)]">Trade on wallets you trust</h2>
         </div>
         <p className="text-xs text-[var(--text-muted)] mb-5 max-w-lg">
-          Stock Tokens are compatible with popular self-custody wallets. Manage your tokens from the wallet you already use.
+          Stock Tokens are compatible with popular self-custody wallets. Connect your wallet to trade, check balances, and swap tokens directly on Robinhood Chain.
         </p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {WALLET_LIST.map((w) => (
-            <div key={w.name} className={`bg-gradient-to-br ${w.color} border border-[var(--border)] rounded-xl p-4 text-center`}>
-              <div className="text-sm font-bold text-[var(--foreground)] mb-1">{w.name}</div>
-              <div className="text-[10px] text-[var(--text-muted)]">{w.desc}</div>
+
+        {!isConnected ? (
+          <div className="flex flex-col items-center py-8 border border-dashed border-[var(--border)] rounded-xl">
+            <Wallet size={32} className="text-[var(--text-muted)] mb-3" />
+            <p className="text-sm font-medium text-[var(--foreground)] mb-1">Connect your wallet to start trading</p>
+            <p className="text-xs text-[var(--text-muted)] mb-4">Link MetaMask, WalletConnect, or Coinbase Wallet</p>
+            <ConnectWalletButton />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6 w-full max-w-2xl">
+              {WALLET_LIST.map((w) => (
+                <div key={w.name} className={`bg-gradient-to-br ${w.color} border border-[var(--border)] rounded-xl p-3 text-center`}>
+                  <div className="text-sm font-bold text-[var(--foreground)] mb-0.5">{w.name}</div>
+                  <div className="text-[10px] text-[var(--text-muted)]">{w.desc}</div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-        <a
-          href="https://robinhood.com/chain/ecosystem"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 mt-4 text-xs text-[var(--accent)] hover:underline"
-        >
-          Explore wallets <ArrowUpRight size={12} />
-        </a>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Wallet Info */}
+            <div className="lg:col-span-2 space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-4">
+                  <div className="text-[10px] text-[var(--text-muted)] mb-1">Connected</div>
+                  <div className="text-xs font-semibold text-green-400 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-400 live-blink" />
+                    {address?.slice(0, 6)}...{address?.slice(-4)}
+                  </div>
+                </div>
+                <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-4">
+                  <div className="text-[10px] text-[var(--text-muted)] mb-1">ETH Balance</div>
+                  <div className="text-xs font-semibold text-[var(--foreground)]">
+                    {ethBalance ? `${Number(formatUnits(ethBalance.value, ethBalance.decimals)).toFixed(4)} ETH` : "—"}
+                  </div>
+                </div>
+                <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-4">
+                  <div className="text-[10px] text-[var(--text-muted)] mb-1">Chain</div>
+                  <div className="text-xs font-semibold text-[var(--foreground)]">Robinhood Chain</div>
+                </div>
+                <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-4">
+                  <div className="text-[10px] text-[var(--text-muted)] mb-1">Tokens</div>
+                  <div className="text-xs font-semibold text-[var(--foreground)]">{walletTokens.length > 0 ? walletTokens.length : "—"}</div>
+                </div>
+              </div>
+
+              {walletTokens.length > 0 && (
+                <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-4">
+                  <div className="text-[10px] text-[var(--text-muted)] mb-2 uppercase tracking-wider">Your Token Balances</div>
+                  <div className="space-y-1">
+                    {walletTokens.map((t, i) => (
+                      <div key={i} className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-[var(--bg-card-hover)] transition-colors">
+                        <span className="text-xs font-medium text-[var(--foreground)]">{t.symbol}</span>
+                        <span className="text-[10px] text-[var(--text-secondary)]">{t.balance}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Real Swap Panel */}
+            <SwapPanel tokens={stockTokens} tokenPrices={Object.fromEntries(stockTokens.map(t => [t.symbol, tokenQuotes[t.symbol]?.price || 0]))} />
+          </div>
+        )}
       </div>
 
-      {/* Ecosystem */}
+      {/* Ecosystem — Real Data */}
       <div className="bg-gradient-to-br from-[var(--surface)] to-[var(--accent)]/5 border border-[var(--border)] rounded-2xl p-6">
         <div className="flex items-center gap-2 mb-4">
           <Layers size={18} className="text-[var(--accent)]" />
           <h2 className="text-lg font-bold text-[var(--foreground)]">See what&apos;s onchain</h2>
+          {!ecosystemLoading && ecosystemApps.length > 0 && (
+            <span className="ml-auto text-[9px] text-green-400 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400 live-blink" />
+              {ecosystemApps.length} apps
+            </span>
+          )}
         </div>
-        <p className="text-xs text-[var(--text-muted)] mb-5 max-w-lg">
+        <p className="text-xs text-[var(--text-muted)] mb-4 max-w-lg">
           New apps are always launching on Robinhood Chain. Explore apps for trading, lending, borrowing, and more.
         </p>
-        <div className="flex items-center gap-3">
-          <a
-            href="https://robinhood.com/chain/ecosystem"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--accent)] text-black text-sm font-semibold hover:opacity-90 transition-opacity"
-          >
-            Explore the ecosystem <ArrowUpRight size={14} />
-          </a>
-          <a
-            href="https://docs.robinhood.com/rhj/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-sm font-medium text-[var(--foreground)] hover:border-[var(--accent)]/30 transition-colors"
-          >
-            Read docs <ExternalLink size={14} />
-          </a>
-        </div>
+
+        {/* Category Filter */}
+        {!ecosystemLoading && ecosystemApps.length > 0 && (
+          <div className="flex gap-1 flex-wrap mb-4">
+            {["All", ...Array.from(new Set(ecosystemApps.flatMap((a) => a.categories)))].map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setEcosystemCategory(cat)}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-medium transition-all ${
+                  ecosystemCategory === cat
+                    ? "bg-[var(--accent)]/10 border border-[var(--accent)]/30 text-[var(--accent)]"
+                    : "bg-[var(--surface)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--foreground)]"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Apps Grid */}
+        {ecosystemLoading ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            {Array.from({ length: 10 }).map((_, i) => (
+              <div key={i} className="h-32 rounded-xl animate-shimmer" style={{ background: "var(--surface)" }} />
+            ))}
+          </div>
+        ) : ecosystemApps.length > 0 ? (
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+              {ecosystemApps
+                .filter((app) => ecosystemCategory === "All" || app.categories.includes(ecosystemCategory))
+                .map((app) => (
+                  <a
+                    key={app.name}
+                    href={app.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--accent)]/20 transition-all text-center"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center mx-auto mb-2.5 overflow-hidden">
+                      <EcosystemLogo logo={app.logo} name={app.name} />
+                    </div>
+                    <div className="text-xs font-semibold text-[var(--foreground)] truncate group-hover:text-[var(--accent)] transition-colors">
+                      {app.name}
+                    </div>
+                    <div className="text-[9px] text-[var(--text-muted)] mt-0.5 line-clamp-2 leading-relaxed">
+                      {app.description}
+                    </div>
+                    {app.categories.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2 justify-center">
+                        {app.categories.slice(0, 2).map((cat) => (
+                          <span key={cat} className="text-[7px] px-1.5 py-0.5 rounded-full bg-[var(--accent)]/10 text-[var(--accent)]">
+                            {cat}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </a>
+                ))}
+            </div>
+            <div className="flex items-center justify-between mt-4">
+              <span className="text-[10px] text-[var(--text-muted)]">
+                Showing {ecosystemApps.filter((a) => ecosystemCategory === "All" || a.categories.includes(ecosystemCategory)).length} of {ecosystemApps.length} apps
+              </span>
+              <a
+                href="https://robinhood.com/chain/ecosystem"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-xs text-[var(--accent)] hover:underline"
+              >
+                View all on Robinhood <ExternalLink size={11} />
+              </a>
+            </div>
+          </>
+        ) : (
+          <div className="text-center py-8">
+            <Layers size={24} className="mx-auto text-[var(--text-muted)] mb-2" />
+            <p className="text-xs text-[var(--text-muted)]">Unable to load ecosystem apps.</p>
+            <a
+              href="https://robinhood.com/chain/ecosystem"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs text-[var(--accent)] hover:underline mt-2"
+            >
+              Visit Robinhood Chain ecosystem <ArrowUpRight size={12} />
+            </a>
+          </div>
+        )}
       </div>
 
       {/* FAQ */}
@@ -1111,6 +1267,14 @@ function isCryptoSymbol(symbol: string): boolean {
   if (upper.endsWith("-USD")) return true;
   const cryptos = ["BTC", "ETH", "SOL", "DOGE", "XRP", "ADA", "AVAX", "DOT", "LINK", "MATIC", "SHIB", "LTC", "ATOM", "UNI", "FIL", "APT", "ARB", "OP", "NEAR", "SUI", "PEPE", "WIF", "BONK", "FLOKI", "HBAR", "VET", "ALGO"];
   return cryptos.includes(upper);
+}
+
+function EcosystemLogo({ logo, name }: { logo: string; name: string }) {
+  const [failed, setFailed] = useState(false);
+  if (!logo || failed) {
+    return <span className="text-xs font-bold text-[var(--accent)]">{name.slice(0, 2).toUpperCase()}</span>;
+  }
+  return <img src={logo} alt={name} className="w-full h-full object-cover" onError={() => setFailed(true)} />;
 }
 
 function LiveBoard({ quotes, onSelect }: { quotes: MarketQuote[]; onSelect: (s: string) => void }) {

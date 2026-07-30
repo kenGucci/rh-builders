@@ -88,10 +88,11 @@ export default function BuilderProfileClient() {
   const [tokenLoading, setTokenLoading] = useState(false);
   const [devRewards, setDevRewards] = useState<{
     creatorAddress: string | null;
-    token: { address: string; name: string; symbol: string; icon: string | null; price: number; holdersCount: number; totalSupply: string; marketCap: string | null } | null;
+    token: { address: string; name: string; symbol: string; icon: string | null; price: number; holdersCount: number; totalSupply: string; marketCap: string | null; decimals: number } | null;
     creatorBalance: { eth: string; ethUsd: string } | null;
-    reward: { tokenAddress: string; tokenName: string; tokenSymbol: string; tokenIcon: string | null; tokenPrice: number; holderBalance: string; holderBalanceUsd: string; totalClaimed: string; totalClaimedUsd: string; claimCount: number; lastClaimDate: string | null; isClaimed: boolean; destinationWallet: string | null } | null;
-    previousLaunches: { tokenAddress: string; tokenName: string; tokenSymbol: string; tokenIcon: string | null; launchDate: string; holdersCount: number }[];
+    reward: { tokenAddress: string; tokenName: string; tokenSymbol: string; tokenIcon: string | null; tokenPrice: number; tokenDecimals: number; totalSupply: string; marketCap: string | null; holdersCount: number; holderBalance: string; holderBalanceUsd: string; totalClaimed: string; totalClaimedUsd: string; claimCount: number; lastClaimDate: string | null; isClaimed: boolean; destinationWallet: string | null } | null;
+    allDeployedTokens: { tokenAddress: string; tokenName: string; tokenSymbol: string; tokenIcon: string | null; tokenPrice: number; totalSupply: string; marketCap: string | null; holdersCount: number; launchDate: string; reward: { totalClaimed: string; totalClaimedUsd: string; claimCount: number; lastClaimDate: string | null; holderBalance: string; holderBalanceUsd: string } | null }[];
+    previousLaunches: { tokenAddress: string; tokenName: string; tokenSymbol: string; tokenIcon: string | null; tokenPrice: number; totalSupply: string; marketCap: string | null; holdersCount: number; launchDate: string; reward: { totalClaimed: string; totalClaimedUsd: string; claimCount: number; lastClaimDate: string | null; holderBalance: string; holderBalanceUsd: string } | null }[];
     transactionHistory: { hash: string; type: string; value: string; timestamp: string; method: string }[];
   } | null>(null);
   const [devRewardsLoading, setDevRewardsLoading] = useState(false);
@@ -686,27 +687,51 @@ export default function BuilderProfileClient() {
               </div>
 
               <div className="p-4 space-y-4">
+                {/* Current Token Full Info */}
                 {devRewards.token && (
-                  <div className="flex items-center gap-3">
-                    {devRewards.token.icon && (
-                      <img src={devRewards.token.icon} alt={devRewards.token.symbol} className="w-8 h-8 rounded-full border border-[var(--border)]" />
+                  <div className="flex items-center gap-4 p-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border)]">
+                    {devRewards.token.icon ? (
+                      <img src={devRewards.token.icon} alt={devRewards.token.symbol} className="w-12 h-12 rounded-xl border border-[var(--border)]" />
+                    ) : (
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[var(--accent)]/20 to-[var(--accent)]/5 flex items-center justify-center text-lg font-bold text-[var(--accent)] border border-[var(--accent)]/20">
+                        {devRewards.token.symbol?.slice(0, 2)}
+                      </div>
                     )}
-                    <div>
-                      <div className="text-sm font-medium">{devRewards.token.name}</div>
-                      <div className="text-[11px] text-[var(--text-muted)]">{devRewards.token.symbol} · {devRewards.token.holdersCount.toLocaleString()} holders</div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-bold">{devRewards.token.name}</div>
+                      <div className="text-[10px] text-[var(--text-muted)] font-mono">${devRewards.token.symbol} · {devRewards.token.address?.slice(0, 10)}...{devRewards.token.address?.slice(-6)}</div>
+                      <div className="flex flex-wrap gap-2 mt-1.5">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--surface)] border border-[var(--border)] text-[var(--text-muted)]">
+                          {devRewards.token.holdersCount.toLocaleString()} holders
+                        </span>
+                        {devRewards.token.totalSupply && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--surface)] border border-[var(--border)] text-[var(--text-muted)]">
+                            Supply: {Number(devRewards.token.totalSupply) >= 1e18 ? `${(Number(devRewards.token.totalSupply) / 1e18).toFixed(2)}` : devRewards.token.totalSupply}
+                          </span>
+                        )}
+                        {devRewards.token.price > 0 && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/10 border border-green-500/20 text-green-400">
+                            ${devRewards.token.price.toLocaleString(undefined, { maximumFractionDigits: 8 })}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    {devRewards.token.price > 0 && (
-                      <span className="ml-auto text-xs text-[var(--text-muted)]">Price: ${devRewards.token.price.toLocaleString(undefined, { maximumFractionDigits: 6 })}</span>
-                    )}
+                    <a
+                      href={`/token/${devRewards.token.address}`}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[var(--accent)]/10 border border-[var(--accent)]/20 text-[10px] text-[var(--accent)] hover:bg-[var(--accent)]/20 transition-colors"
+                    >
+                      Full Profile <ArrowUpRight size={10} />
+                    </a>
                   </div>
                 )}
 
+                {/* Current Token Rewards */}
                 {devRewards.reward && (
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-3">
                       <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">ETH Earned</div>
                       <div className="text-lg font-bold gradient-text mt-1">Ξ {devRewards.reward.totalClaimed}</div>
-                      <div className="text-[10px] text-[var(--text-muted)]">{devRewards.reward.totalClaimedUsd !== "0" ? `$${devRewards.reward.totalClaimedUsd}` : ""}</div>
+                      {devRewards.reward.totalClaimedUsd !== "0" && <div className="text-[10px] text-[var(--text-muted)]">${Number(devRewards.reward.totalClaimedUsd).toLocaleString()}</div>}
                     </div>
                     <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-3">
                       <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Claim Count</div>
@@ -728,44 +753,110 @@ export default function BuilderProfileClient() {
                 {devRewards.reward?.destinationWallet && (
                   <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-3">
                     <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Destination Wallet (Last Claim)</div>
-                    <a
-                      href={`/builder/${devRewards.reward.destinationWallet}`}
-                      className="text-xs font-mono text-[var(--foreground)] hover:text-[var(--accent)] transition-colors"
-                    >
+                    <a href={`/builder/${devRewards.reward.destinationWallet}`} className="text-xs font-mono text-[var(--foreground)] hover:text-[var(--accent)] transition-colors">
                       {devRewards.reward.destinationWallet}
                     </a>
                   </div>
                 )}
 
+                {/* All Tokens Deployed by this Developer with Individual Rewards */}
+                {devRewards.allDeployedTokens.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Coins size={14} className="text-[var(--accent)]" />
+                      <span className="text-xs font-semibold">All Tokens Deployed ({devRewards.allDeployedTokens.length})</span>
+                    </div>
+                    <div className="space-y-2">
+                      {devRewards.allDeployedTokens.map((launch) => (
+                        <div key={launch.tokenAddress} className="flex items-center gap-3 p-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] hover:border-[var(--accent)]/30 transition-all">
+                          {launch.tokenIcon ? (
+                            <img src={launch.tokenIcon} alt={launch.tokenSymbol} className="w-10 h-10 rounded-full border border-[var(--border)]" />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--accent)]/20 to-[var(--accent)]/5 flex items-center justify-center text-xs font-bold text-[var(--accent)] border border-[var(--accent)]/20">
+                              {launch.tokenSymbol?.slice(0, 2)}
+                            </div>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-semibold truncate">{launch.tokenName}</span>
+                              <span className="text-[9px] px-1 py-0.5 rounded bg-[var(--surface)] border border-[var(--border)] text-[var(--text-muted)] font-mono">{launch.tokenSymbol}</span>
+                            </div>
+                            <div className="flex flex-wrap gap-2 mt-1">
+                              <span className="text-[9px] text-[var(--text-muted)]">{launch.holdersCount.toLocaleString()} holders</span>
+                              {launch.tokenPrice > 0 && (
+                                <span className="text-[9px] text-green-400">${launch.tokenPrice.toLocaleString(undefined, { maximumFractionDigits: 8 })}</span>
+                              )}
+                              {launch.marketCap && (
+                                <span className="text-[9px] text-[var(--text-muted)]">MCap: ${Number(launch.marketCap) >= 1e6 ? `${(Number(launch.marketCap) / 1e6).toFixed(2)}M` : Number(launch.marketCap).toLocaleString()}</span>
+                              )}
+                            </div>
+                            {launch.reward && (
+                              <div className="flex items-center gap-3 mt-1.5 p-1.5 rounded-lg bg-green-500/5 border border-green-500/20">
+                                <span className="text-[9px] font-mono text-green-400">Ξ {launch.reward.totalClaimed}</span>
+                                {launch.reward.totalClaimedUsd !== "0" && (
+                                  <span className="text-[9px] text-[var(--text-muted)]">(${Number(launch.reward.totalClaimedUsd).toLocaleString()})</span>
+                                )}
+                                <span className="text-[9px] text-[var(--text-muted)]">{launch.reward.claimCount} claims</span>
+                                {launch.reward.lastClaimDate && (
+                                  <span className="text-[9px] text-[var(--text-muted)]">{timeAgo(launch.reward.lastClaimDate)}</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                            <a href={`/token/${launch.tokenAddress}`} className="text-[9px] text-[var(--accent)] hover:underline flex items-center gap-0.5">
+                              View <ArrowUpRight size={8} />
+                            </a>
+                            <a href={`/builder/${address}?ca=${launch.tokenAddress}`} className="text-[9px] text-[var(--text-muted)] hover:text-[var(--accent)]">
+                              Rewards
+                            </a>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Previous Token Launches Summary (excluding current token) */}
                 {devRewards.previousLaunches.length > 0 && (
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <History size={14} className="text-[var(--accent)]" />
                       <span className="text-xs font-semibold">Previous Token Launches ({devRewards.previousLaunches.length})</span>
                     </div>
-                    <div className="space-y-2">
-                      {devRewards.previousLaunches.map((launch) => (
-                        <a
-                          key={launch.tokenAddress}
-                          href={`https://robinhoodchain.blockscout.com/token/${launch.tokenAddress}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-3 p-2 rounded-lg bg-[var(--bg-card)] border border-[var(--border)] hover:border-[var(--accent)]/30 transition-colors"
-                        >
-                          {launch.tokenIcon && (
-                            <img src={launch.tokenIcon} alt={launch.tokenSymbol} className="w-6 h-6 rounded-full border border-[var(--border)]" />
-                          )}
-                          <div className="min-w-0 flex-1">
-                            <div className="text-xs font-medium truncate">{launch.tokenName}</div>
-                            <div className="text-[10px] text-[var(--text-muted)]">{launch.tokenSymbol} · {launch.holdersCount.toLocaleString()} holders</div>
-                          </div>
-                          <ArrowUpRight size={12} className="text-[var(--text-muted)] flex-shrink-0" />
-                        </a>
-                      ))}
+                    <div className="space-y-1.5">
+                      {devRewards.previousLaunches.map((launch) => {
+                        const totalRewardUsd = launch.reward ? Number(launch.reward.totalClaimedUsd) : 0;
+                        return (
+                          <a
+                            key={launch.tokenAddress}
+                            href={`/builder/${address}?ca=${launch.tokenAddress}`}
+                            className="flex items-center gap-3 p-2 rounded-lg hover:bg-[var(--bg-card-hover)] transition-colors"
+                          >
+                            {launch.tokenIcon && (
+                              <img src={launch.tokenIcon} alt={launch.tokenSymbol} className="w-7 h-7 rounded-full border border-[var(--border)]" />
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <div className="text-xs font-medium truncate">{launch.tokenName}</div>
+                              <div className="text-[9px] text-[var(--text-muted)]">{launch.tokenSymbol} · {launch.holdersCount.toLocaleString()} holders</div>
+                            </div>
+                            {launch.reward && (
+                              <div className="text-right flex-shrink-0">
+                                <div className="text-[11px] font-mono font-semibold gradient-text">Ξ {launch.reward.totalClaimed}</div>
+                                {totalRewardUsd > 0 && (
+                                  <div className="text-[9px] text-[var(--text-muted)]">${totalRewardUsd.toLocaleString()}</div>
+                                )}
+                              </div>
+                            )}
+                            <ArrowUpRight size={12} className="text-[var(--text-muted)] flex-shrink-0" />
+                          </a>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
 
+                {/* Transaction History */}
                 {devRewards.transactionHistory.length > 0 && (
                   <div>
                     <div className="flex items-center gap-2 mb-2">
@@ -785,9 +876,7 @@ export default function BuilderProfileClient() {
                             <div className="text-[11px] font-mono text-[var(--foreground)] truncate">
                               {tx.hash.slice(0, 10)}...{tx.hash.slice(-6)}
                             </div>
-                            {tx.method && (
-                              <div className="text-[10px] text-[var(--text-muted)] truncate">{tx.method}</div>
-                            )}
+                            {tx.method && <div className="text-[10px] text-[var(--text-muted)] truncate">{tx.method}</div>}
                           </div>
                           <div className="text-right flex-shrink-0">
                             <div className={`text-[11px] font-mono ${tx.type === "outgoing" ? "text-red-400" : "text-green-400"}`}>

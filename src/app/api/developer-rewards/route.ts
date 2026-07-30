@@ -7,6 +7,10 @@ interface DevReward {
   tokenSymbol: string;
   tokenIcon: string | null;
   tokenPrice: number;
+  tokenDecimals: number;
+  totalSupply: string;
+  marketCap: string | null;
+  holdersCount: number;
   holderBalance: string;
   holderBalanceUsd: string;
   totalClaimed: string;
@@ -22,8 +26,19 @@ interface TokenLaunch {
   tokenName: string;
   tokenSymbol: string;
   tokenIcon: string | null;
-  launchDate: string;
+  tokenPrice: number;
+  totalSupply: string;
+  marketCap: string | null;
   holdersCount: number;
+  launchDate: string;
+  reward: {
+    totalClaimed: string;
+    totalClaimedUsd: string;
+    claimCount: number;
+    lastClaimDate: string | null;
+    holderBalance: string;
+    holderBalanceUsd: string;
+  } | null;
 }
 
 interface DevRewardResponse {
@@ -37,12 +52,14 @@ interface DevRewardResponse {
     holdersCount: number;
     totalSupply: string;
     marketCap: string | null;
+    decimals: number;
   } | null;
   creatorBalance: {
     eth: string;
     ethUsd: string;
   } | null;
   reward: DevReward | null;
+  allDeployedTokens: TokenLaunch[];
   previousLaunches: TokenLaunch[];
   transactionHistory: {
     hash: string;
@@ -85,6 +102,7 @@ export async function GET(request: NextRequest) {
     const holdersCount = Number(tData.holders_count || 0);
     const totalSupply = (tData.total_supply as string) || "0";
     const marketCap = (tData.circulating_market_cap as string) || null;
+    const decimals = Number(tData.decimals || 18);
 
     let creatorBalance = null;
     if (creatorAddress) {
@@ -107,71 +125,84 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    let reward: DevReward | null = null;
-    if (creatorAddress) {
-      try {
-        const walletLower = creatorAddress.toLowerCase();
+    function calcRewardForToken(
+  tAddr: string,
+  tInfo: Record<string, unknown>,
+  transfers: Record<string, unknown>[],
+  creatorWallet: string
+): DevReward | null {
+  try {
+    const walletLower = creatorWallet.toLowerCase();
+    let totalClaimedRaw = BigInt(0);
+    let claimCount = 0;
+    let lastClaimDate: string | null = null;
+    let destinationWallet: string | null = null;
+    let holderBalanceRaw = BigInt(0);
+    const tDecimals = Number(tInfo.decimals || 18);
+    const tPrice = parseFloat((tInfo.exchange_rate as string) || "0");
 
-        let totalClaimedRaw = BigInt(0);
-        let claimCount = 0;
-        let lastClaimDate: string | null = null;
-        let destinationWallet: string | null = null;
-        let holderBalanceRaw = BigInt(0);
+    for (const tx of transfers) {
+      const toAddr = (tx.to as Record<string, unknown>)?.hash as string;
+      const fromAddr = (tx.from as Record<string, unknown>)?.hash as string;
+      const tToken = tx.token as Record<string, unknown> | undefined;
+      const tTokenAddr = (tToken?.address_hash as string || "").toLowerCase();
+      if (tTokenAddr !== tAddr) continue;
 
-        for (const t of allTransfers) {
-          const toAddr = (t.to as Record<string, unknown>)?.hash as string;
-          const fromAddr = (t.from as Record<string, unknown>)?.hash as string;
-          const tToken = t.token as Record<string, unknown> | undefined;
-          const tTokenAddr = (tToken?.address_hash as string || "").toLowerCase();
+      const rawValue = (tx.total as Record<string, unknown>)?.value || tx.value || "0";
+      const tFrom = fromAddr?.toLowerCase();
+      const tTo = toAddr?.toLowerCase();
 
-          if (tTokenAddr !== tokenAddrLower) continue;
-
-          const rawValue = (t.total as Record<string, unknown>)?.value || t.value || "0";
-          const tFrom = fromAddr?.toLowerCase();
-          const tTo = toAddr?.toLowerCase();
-
-          if (tTo === walletLower && tFrom !== walletLower) {
-            totalClaimedRaw += BigInt(String(rawValue || "0"));
-            claimCount++;
-            const ts = t.timestamp as string;
-            if (ts && (!lastClaimDate || ts > lastClaimDate)) {
-              lastClaimDate = ts;
-            }
-            destinationWallet = toAddr;
-          }
-
-          if (tTo === walletLower) {
-            holderBalanceRaw += BigInt(String(rawValue || "0"));
-          }
+      if (tTo === walletLower && tFrom !== walletLower) {
+        totalClaimedRaw += BigInt(String(rawValue || "0"));
+        claimCount++;
+        const ts = tx.timestamp as string;
+        if (ts && (!lastClaimDate || ts > lastClaimDate)) {
+          lastClaimDate = ts;
         }
+        destinationWallet = toAddr;
+      }
 
-        const decimals = Number(tData.decimals || 18);
-        const divisor = BigInt(10) ** BigInt(decimals);
-        const totalClaimed = Number(totalClaimedRaw / divisor).toFixed(4);
-        const totalClaimedUsd = (Number(totalClaimed) * tokenPrice).toFixed(2);
-        const holderBalance = Number(holderBalanceRaw / divisor).toFixed(4);
-        const holderBalanceUsd = (Number(holderBalance) * tokenPrice).toFixed(2);
-
-        reward = {
-          tokenAddress: tokenAddrLower,
-          tokenName: (tData.name as string) || "Unknown",
-          tokenSymbol: (tData.symbol as string) || "???",
-          tokenIcon: (tData.icon_url as string) || null,
-          tokenPrice,
-          holderBalance,
-          holderBalanceUsd,
-          totalClaimed,
-          totalClaimedUsd,
-          claimCount,
-          lastClaimDate,
-          isClaimed: totalClaimedRaw > BigInt(0),
-          destinationWallet,
-        };
-      } catch (err) {
-        console.error("[developer-rewards] Reward calculation failed:", err);
+      if (tTo === walletLower) {
+        holderBalanceRaw += BigInt(String(rawValue || "0"));
       }
     }
 
+    const divisor = BigInt(10) ** BigInt(tDecimals);
+    const totalClaimed = Number(totalClaimedRaw / divisor).toFixed(4);
+    const totalClaimedUsd = (Number(totalClaimed) * tPrice).toFixed(2);
+    const holderBalance = Number(holderBalanceRaw / divisor).toFixed(4);
+    const holderBalanceUsd = (Number(holderBalance) * tPrice).toFixed(2);
+
+    return {
+      tokenAddress: tAddr,
+      tokenName: (tInfo.name as string) || "Unknown",
+      tokenSymbol: (tInfo.symbol as string) || "???",
+      tokenIcon: (tInfo.icon_url as string) || null,
+      tokenPrice: tPrice,
+      tokenDecimals: tDecimals,
+      totalSupply: (tInfo.total_supply as string) || "0",
+      marketCap: (tInfo.circulating_market_cap as string) || null,
+      holdersCount: Number(tInfo.holders_count || 0),
+      holderBalance,
+      holderBalanceUsd,
+      totalClaimed,
+      totalClaimedUsd,
+      claimCount,
+      lastClaimDate,
+      isClaimed: totalClaimedRaw > BigInt(0),
+      destinationWallet,
+    };
+  } catch {
+    return null;
+  }
+}
+
+    let reward: DevReward | null = null;
+    if (creatorAddress) {
+      reward = calcRewardForToken(tokenAddrLower, tData, allTransfers, creatorAddress);
+    }
+
+    let allDeployedTokens: TokenLaunch[] = [];
     let previousLaunches: TokenLaunch[] = [];
     if (creatorAddress) {
       try {
@@ -185,30 +216,51 @@ export async function GET(request: NextRequest) {
 
           if (!tAddr || seen.has(tAddr)) continue;
           if (fromAddr?.toLowerCase() !== creatorAddress.toLowerCase()) continue;
-          if (tAddr === tokenAddrLower) continue;
 
           seen.add(tAddr);
 
           let tokenInfo: Record<string, unknown> | null = null;
           try {
             tokenInfo = await v2Fetch(`/tokens/${tAddr}`) as Record<string, unknown>;
-          } catch (err) {
-            console.error("[developer-rewards] Token info fetch failed:", tAddr, err);
+          } catch {
+            tokenInfo = null;
           }
 
-          previousLaunches.push({
+          // Calculate reward for this specific token
+          const tokenReward = tAddr === tokenAddrLower
+            ? reward
+            : calcRewardForToken(tAddr, tokenInfo || (tToken as Record<string, unknown>) || {}, allTransfers, creatorAddress);
+
+          const launchEntry: TokenLaunch = {
             tokenAddress: tAddr,
             tokenName: (tokenInfo?.name as string) || (tToken?.name as string) || "Unknown",
             tokenSymbol: (tokenInfo?.symbol as string) || (tToken?.symbol as string) || "???",
             tokenIcon: (tokenInfo?.icon_url as string) || (tToken?.icon_url as string) || null,
-            launchDate: (l.timestamp as string) || "",
+            tokenPrice: parseFloat((tokenInfo?.exchange_rate as string) || "0"),
+            totalSupply: (tokenInfo?.total_supply as string) || "0",
+            marketCap: (tokenInfo?.circulating_market_cap as string) || null,
             holdersCount: Number(tokenInfo?.holders_count || 0),
-          });
+            launchDate: (l.timestamp as string) || "",
+            reward: tokenReward ? {
+              totalClaimed: tokenReward.totalClaimed,
+              totalClaimedUsd: tokenReward.totalClaimedUsd,
+              claimCount: tokenReward.claimCount,
+              lastClaimDate: tokenReward.lastClaimDate,
+              holderBalance: tokenReward.holderBalance,
+              holderBalanceUsd: tokenReward.holderBalanceUsd,
+            } : null,
+          };
 
-          if (previousLaunches.length >= 10) break;
+          allDeployedTokens.push(launchEntry);
+
+          if (tAddr !== tokenAddrLower) {
+            previousLaunches.push(launchEntry);
+          }
+
+          if (allDeployedTokens.length >= 50) break;
         }
       } catch (err) {
-        console.error("[developer-rewards] Previous launches fetch failed:", err);
+        console.error("[developer-rewards] Deployed tokens fetch failed:", err);
       }
     }
 
@@ -247,9 +299,11 @@ export async function GET(request: NextRequest) {
         holdersCount,
         totalSupply,
         marketCap,
+        decimals,
       },
       creatorBalance,
       reward,
+      allDeployedTokens,
       previousLaunches,
       transactionHistory,
     };

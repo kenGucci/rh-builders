@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Shell from "@/components/Shell";
 import { I18nProvider } from "@/lib/i18n";
+import WalletProvider from "@/components/WalletProvider";
 
 export const metadata: Metadata = {
   title: {
@@ -130,9 +131,11 @@ window.addEventListener("error",function(e){if(e.message&&e.message.includes("Ca
         />
       </head>
       <body className="min-h-screen bg-[var(--bg)] text-[var(--text)] antialiased">
-        <I18nProvider>
-          <Shell>{children}</Shell>
-        </I18nProvider>
+        <WalletProvider>
+          <I18nProvider>
+            <Shell>{children}</Shell>
+          </I18nProvider>
+        </WalletProvider>
       </body>
     </html>
   );

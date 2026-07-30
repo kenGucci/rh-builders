@@ -79,6 +79,7 @@ export default function BuilderListClient({ builders }: { builders: Builder[] })
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [chainStats, setChainStats] = useState<ChainStats | null>(null);
   const [trendingTokens, setTrendingTokens] = useState<Record<string, unknown>[]>([]);
+  const [launchpadStats, setLaunchpadStats] = useState<{ txCount: number; tokenCount: number; uniqueBuilders: number } | null>(null);
 
   const allTags = useMemo(() => {
     const tags = new Set<string>();
@@ -110,11 +111,23 @@ export default function BuilderListClient({ builders }: { builders: Builder[] })
 
   const fetchLive = useCallback(async () => {
     try {
-      const res = await fetch("/api/live-activity");
-      if (!res.ok) return;
-      const data = await res.json();
-      setLiveBlock(data.block_number || 0);
-      if (Array.isArray(data.trending)) setTrendingTokens(data.trending);
+      const [liveRes, launchpadRes] = await Promise.all([
+        fetch("/api/live-activity"),
+        fetch("/api/launchpad-stats"),
+      ]);
+      if (liveRes.ok) {
+        const data = await liveRes.json();
+        setLiveBlock(data.block_number || 0);
+        if (Array.isArray(data.trending)) setTrendingTokens(data.trending);
+      }
+      if (launchpadRes.ok) {
+        const lpData = await launchpadRes.json();
+        setLaunchpadStats({
+          txCount: (lpData as { txCount?: number }).txCount || 0,
+          tokenCount: (lpData as { tokenTransfers?: number }).tokenTransfers || 0,
+          uniqueBuilders: (lpData as { uniqueBuilders?: number }).uniqueBuilders || 0,
+        });
+      }
     } catch {
     } finally {
       setLiveLoading(false);
@@ -163,7 +176,7 @@ export default function BuilderListClient({ builders }: { builders: Builder[] })
     const q = filter.toLowerCase();
     let list = q
       ? enrichedBuilders.filter((b) => {
-          const fields = [b.name, b.twitter, b.ens, ...(b.tags || [])].filter(Boolean).map((f) => f!.toLowerCase());
+          const fields = [b.name, b.twitter, b.ens, b.address, ...(b.tags || [])].filter(Boolean).map((f) => f!.toLowerCase());
           return fields.some((f) => f.includes(q));
         })
       : enrichedBuilders;
@@ -202,7 +215,7 @@ export default function BuilderListClient({ builders }: { builders: Builder[] })
 
       <div className="flex items-center gap-3">
         <div className="flex-1">
-          <SearchBar compact />
+          <SearchBar compact value={filter} onValueChange={setFilter} />
         </div>
         <button
           onClick={() => { setStatsLoading(true); fetchStats(); fetchLive(); }}
@@ -237,14 +250,22 @@ export default function BuilderListClient({ builders }: { builders: Builder[] })
               const symbol = (token.symbol as string) || "???";
               const priceUsd = parseFloat(token.priceUsd as string || "0");
               const volume24h = (token.volume24h as number) || 0;
+              const volume6h = (token.volume6h as number) || 0;
+              const volume1h = (token.volume1h as number) || 0;
               const marketCap = (token.marketCap as number) || 0;
+              const fdv = (token.fdv as number) || 0;
               const priceChange24h = (token.priceChange24h as number) || 0;
+              const priceChange1h = (token.priceChange1h as number) || 0;
+              const priceChange6h = (token.priceChange6h as number) || 0;
               const liquidityUsd = (token.liquidityUsd as number) || 0;
               const buys24h = (token.buys24h as number) || 0;
               const sells24h = (token.sells24h as number) || 0;
+              const buys1h = (token.buys1h as number) || 0;
+              const sells1h = (token.sells1h as number) || 0;
               const address = (token.address as string) || "";
               const dexUrl = (token.url as string) || "";
               const imageUrl = (token.imageUrl as string) || null;
+              const pairCreatedAt = (token.pairCreatedAt as number) || 0;
               const isPositive = priceChange24h >= 0;
               const buyRatio = buys24h + sells24h > 0 ? (buys24h / (buys24h + sells24h)) * 100 : 50;
               const colors = ["#00c805", "#f59e0b", "#3b82f6", "#8b5cf6", "#ef4444", "#06b6d4", "#ec4899", "#f97316"];
@@ -293,8 +314,20 @@ export default function BuilderListClient({ builders }: { builders: Builder[] })
                       <span className="font-medium text-blue-400">${volume24h >= 1e6 ? `${(volume24h / 1e6).toFixed(2)}M` : volume24h >= 1e3 ? `${(volume24h / 1e3).toFixed(1)}K` : volume24h.toFixed(0)}</span>
                     </div>
                     <div className="flex justify-between text-[10px]">
+                      <span className="text-[var(--text-muted)]">Vol 6h</span>
+                      <span className="font-medium text-indigo-400">${volume6h >= 1e6 ? `${(volume6h / 1e6).toFixed(2)}M` : volume6h >= 1e3 ? `${(volume6h / 1e3).toFixed(1)}K` : volume6h.toFixed(0)}</span>
+                    </div>
+                    <div className="flex justify-between text-[10px]">
+                      <span className="text-[var(--text-muted)]">Vol 1h</span>
+                      <span className="font-medium text-cyan-400">${volume1h >= 1e6 ? `${(volume1h / 1e6).toFixed(2)}M` : volume1h >= 1e3 ? `${(volume1h / 1e3).toFixed(1)}K` : volume1h.toFixed(0)}</span>
+                    </div>
+                    <div className="flex justify-between text-[10px]">
                       <span className="text-[var(--text-muted)]">Market Cap</span>
                       <span className="font-medium">${marketCap >= 1e6 ? `${(marketCap / 1e6).toFixed(2)}M` : marketCap >= 1e3 ? `${(marketCap / 1e3).toFixed(1)}K` : marketCap.toFixed(0)}</span>
+                    </div>
+                    <div className="flex justify-between text-[10px]">
+                      <span className="text-[var(--text-muted)]">FDV</span>
+                      <span className="font-medium">${fdv >= 1e6 ? `${(fdv / 1e6).toFixed(2)}M` : fdv >= 1e3 ? `${(fdv / 1e3).toFixed(1)}K` : fdv.toFixed(0)}</span>
                     </div>
                     <div className="flex justify-between text-[10px]">
                       <span className="text-[var(--text-muted)]">Liquidity</span>
@@ -304,14 +337,35 @@ export default function BuilderListClient({ builders }: { builders: Builder[] })
 
                   <div className="mt-2 pt-2 border-t border-[var(--border)]">
                     <div className="flex items-center justify-between text-[9px]">
-                      <span className="text-[var(--text-muted)]">Buy/Sell ratio</span>
+                      <span className="text-[var(--text-muted)]">Buys/Sells 24h</span>
                       <span className={buyRatio >= 50 ? "text-green-400" : "text-red-400"}>
                         {buys24h.toLocaleString()} / {sells24h.toLocaleString()}
                       </span>
                     </div>
-                    <div className="w-full h-1 rounded-full bg-[var(--border)] mt-1 overflow-hidden">
+                    <div className="flex items-center justify-between text-[9px] mt-0.5">
+                      <span className="text-[var(--text-muted)]">1h Activity</span>
+                      <span className="text-[var(--text-secondary)]">{buys1h} buys / {sells1h} sells</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[9px] mt-0.5">
+                      <span className="text-[var(--text-muted)]">Price Δ 1h</span>
+                      <span className={`${priceChange1h >= 0 ? "text-green-400" : "text-red-400"}`}>
+                        {priceChange1h >= 0 ? "+" : ""}{priceChange1h.toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[9px] mt-0.5">
+                      <span className="text-[var(--text-muted)]">Price Δ 6h</span>
+                      <span className={`${priceChange6h >= 0 ? "text-green-400" : "text-red-400"}`}>
+                        {priceChange6h >= 0 ? "+" : ""}{priceChange6h.toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="w-full h-1 rounded-full bg-[var(--border)] mt-1.5 overflow-hidden">
                       <div className="h-full rounded-full transition-all" style={{ width: `${buyRatio}%`, backgroundColor: buyRatio >= 50 ? "#22c55e" : "#ef4444" }} />
                     </div>
+                    {pairCreatedAt > 0 && (
+                      <div className="text-[8px] text-[var(--text-muted)] mt-1">
+                        Created {new Date(pairCreatedAt).toLocaleDateString()}
+                      </div>
+                    )}
                   </div>
                 </a>
               );
@@ -330,34 +384,62 @@ export default function BuilderListClient({ builders }: { builders: Builder[] })
           <span className="text-[10px] text-[var(--text-muted)]">— what&apos;s live on Robinhood Chain</span>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <TechCard
-            icon={<Rocket size={16} />}
-            title="Token Launchpads"
-            count={statsLoading ? "..." : `${activeLaunchpadCount} active`}
-            desc="Bonding curves, fair-launch, instant deploy"
-            color="accent"
-          />
-          <TechCard
-            icon={<Shield size={16} />}
-            title="Anti-Rug Mechanisms"
-            count={statsLoading ? "..." : `${antiRugCount} verified`}
-            desc="LP locking, renounced ownership, audits"
-            color="green"
-          />
-          <TechCard
-            icon={<BarChart3 size={16} />}
-            title="On-Chain Analytics"
-            count={statsLoading ? "..." : `${analyticsCount} tools`}
-            desc="Holder distribution, tx tracking, rugs"
-            color="blue"
-          />
-          <TechCard
-            icon={<Code size={16} />}
-            title="ERC-20 Standards"
-            count={statsLoading ? "..." : `${totalTokens} deployed`}
-            desc="Standard, proxy, gasless, meta-tx"
-            color="purple"
-          />
+          <button
+            onClick={() => setFilter("Launchpad")}
+            className="text-left group bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--accent)]/20 transition-all cursor-pointer"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--accent)] border border-[var(--accent)]/20 bg-[var(--accent)]/5">
+                <Rocket size={16} />
+              </div>
+              {launchpadStats && (
+                <span className="text-[9px] text-green-400 flex items-center gap-1">
+                  <span className="w-1 h-1 rounded-full bg-green-400 live-blink" />
+                  Live
+                </span>
+              )}
+            </div>
+            <div className="text-xs font-semibold">Token Launchpads</div>
+            {launchpadStats ? (
+              <div className="mt-1 space-y-0.5">
+                <div className="text-[10px] font-medium text-[var(--foreground)]">{launchpadStats.txCount.toLocaleString()} transactions</div>
+                <div className="text-[9px] text-[var(--text-muted)]">{launchpadStats.tokenCount.toLocaleString()} token transfers · {launchpadStats.uniqueBuilders} projects</div>
+              </div>
+            ) : (
+              <div className="text-[10px] font-medium text-[var(--foreground)] mt-0.5">{statsLoading ? "..." : `${activeLaunchpadCount} active`}</div>
+            )}
+            <div className="text-[9px] text-[var(--text-muted)] mt-0.5 leading-relaxed">Bonding curves, fair-launch, instant deploy</div>
+          </button>
+          <button
+            onClick={() => setFilter("anti-rug")}
+            className="text-left group bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 hover:border-green-400/20 transition-all cursor-pointer"
+          >
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center mb-2 text-green-400 border border-green-400/20 bg-green-400/5">
+              <Shield size={16} />
+            </div>
+            <div className="text-xs font-semibold">Anti-Rug Mechanisms</div>
+            <div className="text-[10px] font-medium text-[var(--foreground)] mt-0.5">{antiRugCount} verified contracts</div>
+            <div className="text-[9px] text-[var(--text-muted)] mt-0.5 leading-relaxed">LP locking, renounced ownership, audits</div>
+          </button>
+          <button
+            onClick={() => setFilter("analytics")}
+            className="text-left group bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 hover:border-blue-400/20 transition-all cursor-pointer"
+          >
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center mb-2 text-blue-400 border border-blue-400/20 bg-blue-400/5">
+              <BarChart3 size={16} />
+            </div>
+            <div className="text-xs font-semibold">On-Chain Analytics</div>
+            <div className="text-[10px] font-medium text-[var(--foreground)] mt-0.5">{chainStats ? `${chainStats.totalTransactions.toLocaleString()} total txs` : "—"}</div>
+            <div className="text-[9px] text-[var(--text-muted)] mt-0.5 leading-relaxed">{chainStats ? `${chainStats.totalAddresses.toLocaleString()} addresses · ${chainStats.txsToday.toLocaleString()} txs today` : "Holder distribution, tx tracking"}</div>
+          </button>
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 hover:border-purple-400/20 transition-all">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center mb-2 text-purple-400 border border-purple-400/20 bg-purple-400/5">
+              <Code size={16} />
+            </div>
+            <div className="text-xs font-semibold">ERC-20 Standards</div>
+            <div className="text-[10px] font-medium text-[var(--foreground)] mt-0.5">{totalTokens.toLocaleString()} deployed</div>
+            <div className="text-[9px] text-[var(--text-muted)] mt-0.5 leading-relaxed">Standard, proxy, gasless, meta-tx</div>
+          </div>
         </div>
       </section>
 
@@ -539,29 +621,4 @@ function AggregateCard({ label, value, icon, live }: {
   );
 }
 
-function TechCard({ icon, title, count, desc, color }: {
-  icon: React.ReactNode;
-  title: string;
-  count: string;
-  desc: string;
-  color: string;
-}) {
-  const colorMap: Record<string, string> = {
-    accent: "text-[var(--accent)] border-[var(--accent)]/20 bg-[var(--accent)]/5",
-    green: "text-green-400 border-green-400/20 bg-green-400/5",
-    blue: "text-blue-400 border-blue-400/20 bg-blue-400/5",
-    purple: "text-purple-400 border-purple-400/20 bg-purple-400/5",
-  };
-  const c = colorMap[color] || colorMap.accent;
 
-  return (
-    <div className={`bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--accent)]/20 transition-all`}>
-      <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-2 ${c}`}>
-        {icon}
-      </div>
-      <div className="text-xs font-semibold">{title}</div>
-      <div className="text-[10px] font-medium text-[var(--foreground)] mt-0.5">{count}</div>
-      <div className="text-[9px] text-[var(--text-muted)] mt-0.5 leading-relaxed">{desc}</div>
-    </div>
-  );
-}

@@ -2,10 +2,10 @@
 
 > Real-time builder analytics dashboard for [Robinhood Chain](https://robinhoodchain.blockscout.com) (Chain ID 4663)
 
-![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)
+![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
 ![React](https://img.shields.io/badge/React-19-61dafb?logo=react)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178c6?logo=typescript)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.1-06b6d4?logo=tailwindcss)
+![TypeScript](https://img.shields.io/badge/TypeScript-6-3178c6?logo=typescript)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.3-06b6d4?logo=tailwindcss)
 
 ---
 
@@ -63,17 +63,23 @@ src/
 
 ## Tech Stack
 
-- **Framework:** Next.js 15 (App Router, React Server Components)
-- **UI:** React 19, Tailwind CSS v4, custom CSS animations (scroll-driven, glassmorphism, view transitions)
-- **Backend:** Next.js API routes (serverless)
+- **Framework:** Next.js 16 (App Router, Turbopack, React Server Components)
+- **UI:** React 19, Tailwind CSS v4.3, Lucide icons, react-blockies, custom CSS animations (scroll-driven, glassmorphism, view transitions)
+- **Backend:** Next.js API routes (serverless) + custom Node.js proxy server (`src/proxy.ts`)
 - **Database:** Supabase (PostgreSQL)
 - **Auth:** JWT (jose), OTP email, X/Twitter OAuth 2.0 PKCE
+- **Rate Limiting:** Upstash Redis + Ratelimit
 - **Data Sources:**
   - [Blockscout](https://robinhoodchain.blockscout.com) — On-chain analytics
   - [DexScreener](https://dexscreener.com) — DEX token data
-  - [Financial Modeling Prep](https://financialmodelingprep.com) — Stock & crypto quotes
-  - [DuckDuckGo](https://duckduckgo.com) — Web search
-  - [X/Twitter](https://x.com) — Social profiles & KOL data
+  - [Yahoo Finance](https://finance.yahoo.com) — Stock & crypto quotes (primary)
+  - [Financial Modeling Prep](https://financialmodelingprep.com) — Stock & crypto quotes (fallback)
+  - [DuckDuckGo](https://duckduckgo.com) — Web, image & video search
+  - [Pexels](https://pexels.com) — Image search
+  - [YouTube](https://youtube.com) — Video search
+  - [Wikipedia](https://wikipedia.org) — Knowledge graph
+  - [OpenStreetMap](https://openstreetmap.org) — Maps & geocoding
+  - [X/Twitter](https://x.com) — Social profiles & KOL data (page scrape + oembed + [unavatar.io](https://unavatar.io))
 - **Package Manager:** pnpm
 
 ## Features

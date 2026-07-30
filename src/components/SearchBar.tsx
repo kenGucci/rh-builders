@@ -20,7 +20,8 @@ interface SearchResult {
   } | null;
 }
 
-export default function SearchBar({ compact = false }: { compact?: boolean }) {
+export default function SearchBar({ compact = false, value, onValueChange }: { compact?: boolean; value?: string; onValueChange?: (v: string) => void }) {
+  const isControlled = value !== undefined;
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -41,6 +42,21 @@ export default function SearchBar({ compact = false }: { compact?: boolean }) {
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
+
+  const handleNavigate = async (q: string) => {
+    if (!q.trim()) return;
+    try {
+      const res = await fetch(`/api/search?q=${encodeURIComponent(q.trim())}`);
+      const data = await res.ok ? await res.json() : {};
+      if (data.address && data.type !== "unknown") {
+        if (data.type === "token" && data.creator) {
+          router.push(`/builder/${data.creator}?ca=${data.address}`);
+        } else {
+          router.push(`/builder/${data.address}`);
+        }
+      }
+    } catch {}
+  };
 
   const handleSearch = async (q: string) => {
     if (!q.trim()) return;
@@ -97,19 +113,23 @@ export default function SearchBar({ compact = false }: { compact?: boolean }) {
     handleSearch(query);
   };
 
-  const handleInputChange = (value: string) => {
-    setQuery(value);
+  const handleInputChange = (val: string) => {
+    if (isControlled) {
+      onValueChange!(val);
+      return;
+    }
+    setQuery(val);
     setError("");
     setSearchResult(null);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (value.trim().length < 2) {
+    if (val.trim().length < 2) {
       setSuggestions([]);
       setShowSuggestions(false);
       return;
     }
     debounceRef.current = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(value.trim())}`);
+        const res = await fetch(`/api/search?q=${encodeURIComponent(val.trim())}`);
         const data = await res.ok ? await res.json() : {};
         if (data.address) {
           setSuggestions([data]);
@@ -141,8 +161,15 @@ export default function SearchBar({ compact = false }: { compact?: boolean }) {
   };
 
   if (compact) {
+    const currentValue = isControlled ? value : query;
+    const handleCompactSubmit = (e: FormEvent) => {
+      e.preventDefault();
+      if (!isControlled) {
+        handleSearch(query);
+      }
+    };
     return (
-      <form onSubmit={handleSubmit} className="flex-1">
+      <form onSubmit={handleCompactSubmit} className="flex-1">
         <div className="space-y-2">
           <div className="flex items-center bg-[var(--bg-card)] border border-[var(--border)] rounded-lg overflow-hidden focus-within:border-[var(--accent)]/40 focus-within:shadow-[0_0_20px_var(--accent-glow)] transition-all duration-300">
             <button
@@ -159,19 +186,30 @@ export default function SearchBar({ compact = false }: { compact?: boolean }) {
             <input
               ref={inputRef}
               type="text"
-              value={query}
+              value={currentValue}
               onChange={(e) => handleInputChange(e.target.value)}
-              onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+              onFocus={() => !isControlled && suggestions.length > 0 && setShowSuggestions(true)}
               placeholder="Search CA, X handle, or wallet..."
               className="flex-1 bg-transparent px-2.5 py-2 text-sm text-[var(--text)] placeholder-[var(--text-muted)]"
             />
-            <button
-              type="submit"
-              disabled={loading || !query.trim()}
-              className="px-4 py-2 bg-[var(--accent)] text-black text-sm font-medium hover:brightness-110 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-            >
-              {loading ? <span className="inline-block w-3.5 h-3.5 border-2 border-black/20 border-t-black rounded-full animate-spin" /> : "Go"}
-            </button>
+            {isControlled && currentValue && (
+              <button
+                type="submit"
+                disabled={loading}
+                className="px-3 py-2 text-xs text-[var(--accent)] hover:text-[var(--text)] transition-colors"
+              >
+                {loading ? <span className="inline-block w-3.5 h-3.5 border-2 border-[var(--accent)]/20 border-t-[var(--accent)] rounded-full animate-spin" /> : "Go"}
+              </button>
+            )}
+            {!isControlled && (
+              <button
+                type="submit"
+                disabled={loading || !query.trim()}
+                className="px-4 py-2 bg-[var(--accent)] text-black text-sm font-medium hover:brightness-110 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              >
+                {loading ? <span className="inline-block w-3.5 h-3.5 border-2 border-black/20 border-t-black rounded-full animate-spin" /> : "Go"}
+              </button>
+            )}
           </div>
           {error && <p className="text-xs text-red-400 pl-1">{error}</p>}
         </div>
