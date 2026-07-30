@@ -27,7 +27,7 @@ interface FeedbackEntry {
 interface FeedbackStats {
   total: number; good: number; bad: number; testers: number;
   users: number; uniqueNames: number;
-  byPage: Record<string, { good: number; bad: number }>;
+  byPage: Record<string, { good: number; bad: number; total: number; pct: number }>;
 }
 
 function hexToRgba(hex: string, alpha: number) {
@@ -416,6 +416,7 @@ export default function SettingsPage() {
                     <div className="flex items-center gap-2 text-[8px] mt-0.5">
                       <span className="text-green-400">{counts.good}g</span>
                       <span className="text-red-400">{counts.bad}b</span>
+                      <span className="text-[var(--accent)] font-semibold">{counts.pct}%</span>
                     </div>
                   </div>
                 ))}

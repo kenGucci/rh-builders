@@ -201,7 +201,7 @@ async function searchNews(query: string): Promise<SearchResult[]> {
   return results.slice(0, 15);
 }
 
-// ─── IMAGES SEARCH ─── Pexels API + Wikipedia ───
+// ─── IMAGES SEARCH ─── Pexels API + DuckDuckGo + Wikipedia ───
 async function searchImages(query: string): Promise<SearchResult[]> {
   const results: SearchResult[] = [];
 
@@ -231,7 +231,37 @@ async function searchImages(query: string): Promise<SearchResult[]> {
     } catch {}
   }
 
-  // 2. Wikipedia images (fallback)
+  // 2. DuckDuckGo image search (fallback)
+  if (results.length === 0) {
+    try {
+      const res = await fetch(
+        `https://duckduckgo.com/?q=${encodeURIComponent(query)}&iax=images&ia=images`,
+        {
+          signal: AbortSignal.timeout(8000),
+          headers: { "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36" },
+        }
+      );
+      if (res.ok) {
+        const html = await res.text();
+        const imgMatches = html.match(/https?:\/\/[^"'\s]+\.(?:jpg|jpeg|png|gif|webp)[^"'\s]*/gi);
+        if (imgMatches) {
+          const unique = [...new Set(imgMatches)].filter((u) => !u.includes("duckduckgo.com") && !u.includes("pixel.")).slice(0, 12);
+          for (let i = 0; i < unique.length; i++) {
+            results.push({
+              id: `ddg-img-${i}-${query}`,
+              title: `${query} - Image ${i + 1}`,
+              description: `DuckDuckGo image result for ${query}`,
+              url: unique[i],
+              source: "DuckDuckGo",
+              thumbnail: unique[i],
+            });
+          }
+        }
+      }
+    } catch {}
+  }
+
+  // 3. Wikipedia images (final fallback)
   if (results.length === 0) {
     try {
       const res = await fetch(
@@ -315,7 +345,39 @@ async function searchVideos(query: string): Promise<SearchResult[]> {
     }
   } catch {}
 
-  // 2. DuckDuckGo fallback
+  // 2. DuckDuckGo video search (fallback)
+  if (results.length === 0) {
+    try {
+      const res = await fetch(
+        `https://duckduckgo.com/?q=${encodeURIComponent(query)}+video&ia=web`,
+        {
+          signal: AbortSignal.timeout(8000),
+          headers: { "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36" },
+        }
+      );
+      if (res.ok) {
+        const html = await res.text();
+        const linkMatches = html.match(/href="(https?:\/\/(?:www\.)?(?:youtube|youtu\.be|vimeo|dailymotion)[^"]+)"/gi);
+        if (linkMatches) {
+          const unique = [...new Set(linkMatches)].slice(0, 10);
+          for (let i = 0; i < unique.length; i++) {
+            const url = unique[i].replace(/^href="/, "").replace(/"$/, "");
+            const videoId = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/)?.[1];
+            results.push({
+              id: `ddg-vid-${i}-${query}`,
+              title: `${query} - Video ${i + 1}`,
+              description: `Video result from DuckDuckGo for ${query}`,
+              url,
+              source: new URL(url).hostname.replace("www.", ""),
+              thumbnail: videoId ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : undefined,
+            });
+          }
+        }
+      }
+    } catch {}
+  }
+
+  // 3. DuckDuckGo Instant Answer fallback
   if (results.length === 0) {
     try {
       const res = await fetch(

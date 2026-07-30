@@ -111,12 +111,11 @@ export default function BuilderListClient({ builders }: { builders: Builder[] })
   const fetchLive = useCallback(async () => {
     try {
       const res = await fetch("/api/live-activity");
-      if (!res.ok) throw new Error();
+      if (!res.ok) return;
       const data = await res.json();
       setLiveBlock(data.block_number || 0);
       if (Array.isArray(data.trending)) setTrendingTokens(data.trending);
-    } catch (err) {
-      console.error("[BuilderList] Live activity fetch failed:", err);
+    } catch {
     } finally {
       setLiveLoading(false);
     }

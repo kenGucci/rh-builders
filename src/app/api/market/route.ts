@@ -111,6 +111,18 @@ async function yahooFetch(url: string): Promise<unknown> {
   return res.json();
 }
 
+async function yahooSparkline(symbol: string): Promise<number[]> {
+  try {
+    const data = await yahooFetch(
+      `${YAHOO_BASE}/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1w`
+    );
+    const mapped = mapYahooChart(data as Record<string, unknown>, symbol);
+    return mapped?.sparkline || [];
+  } catch {
+    return [];
+  }
+}
+
 async function yahooQuote(symbol: string): Promise<MarketQuote | null> {
   try {
     const data = await yahooFetch(
@@ -214,6 +226,7 @@ async function fmpQuote(symbol: string): Promise<MarketQuote | null> {
     const q = data[0] as Record<string, unknown>;
     const price = Number(q.price) || 0;
     const prev = Number(q.previousClose) || price;
+    const sparkline = await yahooSparkline(symbol);
     return {
       symbol: String(q.symbol || symbol),
       name: String(q.name || symbol),
@@ -228,9 +241,9 @@ async function fmpQuote(symbol: string): Promise<MarketQuote | null> {
       avgVolume: Number(q.avgVolume) || null,
       marketCap: Number(q.marketCap) || null,
       pe: Number(q.pe) || null,
-      week52High: Number(q.week52High) || price,
-      week52Low: Number(q.week52Low) || price,
-      sparkline: [],
+      week52High: Number(q.yearHigh) || Number(q.week52High) || price,
+      week52Low: Number(q.yearLow) || Number(q.week52Low) || price,
+      sparkline,
       marketState: "REGULAR",
       currency: "USD",
       category: isCryptoSymbol(symbol) ? "crypto" : "stock",
@@ -342,23 +355,20 @@ export async function GET(request: NextRequest) {
     }
 
     if (action === "quote" && symbol) {
-      let quote = await fmpQuote(symbol);
-      if (!quote) quote = await yahooQuote(symbol);
+      let quote = await yahooQuote(symbol);
+      if (!quote) quote = await fmpQuote(symbol);
       if (!quote) return NextResponse.json({ error: "Symbol not found" }, { status: 404 });
       return NextResponse.json({ quote });
     }
 
     if (action === "batch" && symbolsParam) {
       const syms = symbolsParam.split(",").filter(Boolean);
-      let quotes: MarketQuote[] = [];
-      if (FMP_ENABLED) {
+      let quotes = await yahooBatch(syms);
+      if (quotes.length === 0 && FMP_ENABLED) {
         const results = await Promise.allSettled(syms.map((s) => fmpQuote(s)));
         quotes = results
           .filter((r): r is PromiseFulfilledResult<MarketQuote> => r.status === "fulfilled" && r.value !== null)
           .map((r) => r.value);
-      }
-      if (quotes.length === 0) {
-        quotes = await yahooBatch(syms);
       }
       return NextResponse.json({ quotes });
     }
@@ -383,15 +393,12 @@ export async function GET(request: NextRequest) {
 
     if (action === "quotes") {
       const symbols = WATCHLIST;
-      let quotes: MarketQuote[] = [];
-      if (FMP_ENABLED) {
+      let quotes = await yahooBatch(symbols);
+      if (quotes.length === 0 && FMP_ENABLED) {
         const results = await Promise.allSettled(symbols.map((s) => fmpQuote(s)));
         quotes = results
           .filter((r): r is PromiseFulfilledResult<MarketQuote> => r.status === "fulfilled" && r.value !== null)
           .map((r) => r.value);
-      }
-      if (quotes.length === 0) {
-        quotes = await yahooBatch(symbols);
       }
       for (const q of quotes) {
         if (!q.name || q.name === q.symbol) {

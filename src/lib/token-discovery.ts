@@ -144,12 +144,17 @@ async function fetchDexScreenerSearch(): Promise<DexPair[]> {
 
 async function fetchDexScreenerBatch(addresses: string[]): Promise<DexPair[]> {
   if (addresses.length === 0) return [];
-  const res = await fetch(`${DEXSCREENER_API}/latest/dex/tokens/${addresses.join(",")}`, {
-    signal: AbortSignal.timeout(8000),
-  });
-  if (!res.ok) return [];
-  const data = await res.json();
-  return (data.pairs || []).filter((p: DexPair) => p.chainId === "robinhood");
+  try {
+    const res = await fetch(`${DEXSCREENER_API}/latest/dex/tokens/${addresses.join(",")}`, {
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!data) return [];
+    return (data.pairs || []).filter((p: DexPair) => p.chainId === "robinhood");
+  } catch {
+    return [];
+  }
 }
 
 async function discoverAll(): Promise<CacheEntry> {

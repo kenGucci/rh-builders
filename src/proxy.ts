@@ -7,12 +7,12 @@ const redis = process.env.UPSTASH_REDIS_REST_URL
   : null;
 
 const ratelimit = redis ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(60, "60s"), analytics: true }) : null;
-const apiRatelimit = redis ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(30, "60s"), analytics: true }) : null;
+const apiRatelimit = redis ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(60, "60s"), analytics: true }) : null;
 
 const STATIC_CSP = [
   "default-src 'self'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://pbs.twimg.com https://abs.twimg.com https://robinhoodchain.blockscout.com https://en.wikipedia.org https://upload.wikimedia.org https://i.ytimg.com https://*.ytimg.com",
+  "img-src 'self' data: blob: https://pbs.twimg.com https://abs.twimg.com https://robinhoodchain.blockscout.com https://en.wikipedia.org https://upload.wikimedia.org https://i.ytimg.com https://*.ytimg.com https://unavatar.io https://*.unavatar.io",
   "font-src 'self'",
   "connect-src 'self' https://robinhoodchain.blockscout.com https://rpc.mainnet.chain.robinhood.com https://financialmodelingprep.com https://eth.blockscout.com https://polygon.blockscout.com https://arbitrum.blockscout.com https://optimism.blockscout.com https://base.blockscout.com https://bsc.blockscout.com https://publish.twitter.com https://api.twitter.com https://api.duckduckgo.com https://html.duckduckgo.com https://en.wikipedia.org https://news.google.com https://nominatim.openstreetmap.org https://vid.puffyan.us https://inv.nadeko.net https://www.youtube.com https://query1.finance.yahoo.com https://query2.finance.yahoo.com",
   "frame-ancestors 'none'",

@@ -73,6 +73,7 @@ export interface XProfileData {
   avatar: string | null;
   description: string;
   followers: number | null;
+  following: number | null;
   bannerUrl: string | null;
 }
 
@@ -88,6 +89,7 @@ export async function fetchXProfile(handle: string): Promise<XProfileData | null
   let avatar: string | null = null;
   let description = "";
   let followers: number | null = null;
+  let following: number | null = null;
   let bannerUrl: string | null = null;
 
   // Tier 1: oembed (fast, but often returns minimal data)
@@ -111,8 +113,19 @@ export async function fetchXProfile(handle: string): Promise<XProfileData | null
         html.match(/property="og:description"[^>]*content="([^"]+)"/);
       if (descMatch) description = descMatch[1].substring(0, 200);
 
-      const followersMatch = html.match(/"followers_count":(\d+)/);
-      if (followersMatch) followers = parseInt(followersMatch[1]);
+      const relMatch = html.match(/followers:(\d+),following:(\d+)/);
+      if (relMatch) {
+        followers = parseInt(relMatch[1]);
+        following = parseInt(relMatch[2]);
+      }
+      if (followers === null) {
+        const fMatch = html.match(/"followers_count":(\d+)/);
+        if (fMatch) followers = parseInt(fMatch[1]);
+      }
+      if (following === null) {
+        const fMatch = html.match(/"friends_count":(\d+)/);
+        if (fMatch) following = parseInt(fMatch[1]);
+      }
 
       const bannerMatch = html.match(/https:\/\/pbs\.twimg\.com\/profile_banners\/\d+\/\d+\/1500x500/);
       if (bannerMatch) bannerUrl = bannerMatch[0];
@@ -157,9 +170,20 @@ export async function fetchXProfile(handle: string): Promise<XProfileData | null
             if (descMatch) description = descMatch[1].substring(0, 200);
           }
 
+          if (followers === null || following === null) {
+            const relMatch = html.match(/followers:(\d+),following:(\d+)/);
+            if (relMatch) {
+              if (followers === null) followers = parseInt(relMatch[1]);
+              if (following === null) following = parseInt(relMatch[2]);
+            }
+          }
           if (followers === null) {
-            const followersMatch = html.match(/"followers_count":(\d+)/);
-            if (followersMatch) followers = parseInt(followersMatch[1]);
+            const fMatch = html.match(/"followers_count":(\d+)/);
+            if (fMatch) followers = parseInt(fMatch[1]);
+          }
+          if (following === null) {
+            const fMatch = html.match(/"friends_count":(\d+)/);
+            if (fMatch) following = parseInt(fMatch[1]);
           }
 
           if (!bannerUrl) {
@@ -189,7 +213,7 @@ export async function fetchXProfile(handle: string): Promise<XProfileData | null
     return null;
   }
 
-  const result: XProfileData = { displayName, avatar, description, followers, bannerUrl };
+  const result: XProfileData = { displayName, avatar, description, followers, following, bannerUrl };
   xProfileCache.set(lower, { data: result, ts: Date.now() });
   return result;
 }

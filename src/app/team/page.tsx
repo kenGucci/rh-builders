@@ -1,27 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ExternalLink, Users, MapPin, Calendar, Link as LinkIcon, Shield } from "lucide-react";
+import { ExternalLink, MapPin, Calendar, Link as LinkIcon, Shield } from "lucide-react";
 
 interface XProfile {
   displayName: string;
   avatar: string | null;
   description: string;
-  followers: number | null;
-  following: number | null;
   bannerUrl: string | null;
   joinDate: string | null;
   location: string | null;
   website: string | null;
   verified: boolean;
-  tweetCount: number | null;
-}
-
-function formatFollowers(n: number | null): string {
-  if (n === null) return "—";
-  if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
-  if (n >= 1e3) return `${(n / 1e3).toFixed(1)}K`;
-  return n.toLocaleString();
 }
 
 export default function TeamPage() {
@@ -45,14 +35,11 @@ export default function TeamPage() {
           displayName: data.displayName || "suggestionii",
           avatar: data.avatarUrl || null,
           description: data.description || "",
-          followers: data.followers,
-          following: data.following,
           bannerUrl: data.bannerUrl || null,
           joinDate: data.joinDate || null,
           location: data.location || null,
           website: data.website || null,
           verified: data.verified || false,
-          tweetCount: data.tweetCount,
         });
         setLoading(false);
       })
@@ -142,12 +129,6 @@ export default function TeamPage() {
               </div>
               <div className="text-sm text-[var(--text-muted)] mb-3">@suggestionii</div>
 
-              {profile.description && (
-                <p className="text-sm text-[var(--foreground)] leading-relaxed mb-4 max-w-lg">
-                  {profile.description}
-                </p>
-              )}
-
               {/* Meta */}
               <div className="flex flex-wrap items-center gap-4 text-xs text-[var(--text-muted)]">
                 {profile.location && (
@@ -177,45 +158,7 @@ export default function TeamPage() {
             </div>
           </div>
 
-          {/* Stats Grid */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 text-center">
-              <Users size={18} className="mx-auto mb-2 text-[var(--accent)]" />
-              <div className="text-xl font-bold">{formatFollowers(profile.followers)}</div>
-              <div className="text-[10px] text-[var(--text-muted)] mt-0.5">Followers</div>
-            </div>
-            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 text-center">
-              <Users size={18} className="mx-auto mb-2 text-[var(--text-muted)]" />
-              <div className="text-xl font-bold">{formatFollowers(profile.following)}</div>
-              <div className="text-[10px] text-[var(--text-muted)] mt-0.5">Following</div>
-            </div>
-            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 text-center">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-2 text-[var(--accent)]">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-              </svg>
-              <div className="text-xl font-bold">{formatFollowers(profile.tweetCount)}</div>
-              <div className="text-[10px] text-[var(--text-muted)] mt-0.5">Posts</div>
-            </div>
-          </div>
 
-          {/* About */}
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6">
-            <h3 className="text-sm font-semibold mb-3">About</h3>
-            <div className="space-y-3 text-sm text-[var(--text-muted)]">
-              <p>
-                Built THE WALL to bring full transparency to the Robinhood Chain ecosystem.
-                Real-time builder analytics and on-chain data — all open-source.
-              </p>
-              <div className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
-                Robinhood Chain (4663) contributor
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
-                Open-source builder tooling
-              </div>
-            </div>
-          </div>
         </>
       )}
     </div>

@@ -82,11 +82,15 @@ export async function getFeedbackStats() {
   const users = entries.filter((e) => e.role === "user").length;
   const uniqueNames = new Set(entries.map((e) => e.name.toLowerCase())).size;
 
-  const byPage: Record<string, { good: number; bad: number }> = {};
+  const byPage: Record<string, { good: number; bad: number; total: number; pct: number }> = {};
   for (const e of entries) {
     const p = e.page || "general";
-    if (!byPage[p]) byPage[p] = { good: 0, bad: 0 };
+    if (!byPage[p]) byPage[p] = { good: 0, bad: 0, total: 0, pct: 0 };
     byPage[p][e.rating]++;
+    byPage[p].total++;
+  }
+  for (const p of Object.keys(byPage)) {
+    byPage[p].pct = byPage[p].total > 0 ? Math.round((byPage[p].good / byPage[p].total) * 100) : 0;
   }
 
   return { total, good, bad, testers, users, uniqueNames, byPage };

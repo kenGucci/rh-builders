@@ -38,7 +38,6 @@ interface BuilderProfile {
   address: string;
   name: string;
   handle: string | null;
-  avatar: string | null;
   description: string;
   tags: string[];
   txCount: number;
@@ -65,7 +64,6 @@ export default function Home() {
         address: (b.address as string) || "",
         name: (b.name as string) || "Unknown",
         handle: (b.handle as string) || null,
-        avatar: (b.avatar as string) || null,
         description: (b.description as string) || "",
         tags: (b.tags as string[]) || [],
         txCount: (b.txCount as number) || 0,
@@ -319,13 +317,9 @@ export default function Home() {
                 className="group relative bg-[var(--surface)] border border-[var(--border-subtle)] rounded-2xl p-4 transition-all duration-300 hover:border-[var(--accent)]/20 hover:shadow-[0_8px_30px_rgba(0,200,5,0.06)] card-stagger"
                 style={{ animationDelay: `${i * 50}ms` }}
               >
-                <div className="flex items-center gap-3">
-                  {b.avatar ? (
-                    <img src={b.avatar} alt={b.name} className="w-11 h-11 rounded-full border border-[var(--border)] object-cover" />
-                  ) : (
+                  <div className="flex items-center gap-3">
                     <AddressAvatar address={b.address || `0x${i}`} size={44} handle={b.handle ?? undefined} />
-                  )}
-                  <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1">
                     <div className="font-semibold text-[13px] truncate group-hover:text-[var(--foreground)] transition-colors">{b.name}</div>
                     <div className="text-[11px] text-[var(--text-muted)] truncate mt-0.5">
                       {b.tags?.slice(0, 2).join(" · ") || "Builder"}

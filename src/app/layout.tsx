@@ -92,6 +92,13 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <head>
         <script
+          dangerouslySetInnerHTML={{
+            __html: `
+window.addEventListener("error",function(e){if(e.message&&e.message.includes("Cannot redefine property: ethereum")){e.preventDefault();e.stopPropagation()}});
+`.trim(),
+          }}
+        />
+        <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({

@@ -32,7 +32,6 @@ async function fetchBuilderStats(address: string): Promise<Partial<BuilderLight>
     const balanceUsd = (Number(balanceEth) * coinPrice).toFixed(2);
 
     const tokenObj = data.token as Record<string, unknown> | undefined;
-    const avatar = (tokenObj?.icon_url as string) || null;
 
     return {
       balanceEth,
@@ -41,7 +40,7 @@ async function fetchBuilderStats(address: string): Promise<Partial<BuilderLight>
       tokenCount: Number(data.token_balances_count || data.tokens_count || 0),
       isContract: Boolean(data.is_contract),
       lastTxTimestamp: (data.last_tx_at as string) || null,
-      avatar,
+      avatar: null,
     };
   } catch (err) {
     console.error("[top-builders] Stats fetch failed:", address, err);

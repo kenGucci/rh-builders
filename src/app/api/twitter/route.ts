@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 const profileCache = new Map<string, { data: Record<string, unknown>; ts: number }>();
 const CACHE_TTL = 300_000;
 
-function buildFallback(handle: string, source: "fallback" | "meta" | "unavatar" = "fallback") {
+function buildFallback(handle: string, source: "fallback" | "meta" | "unavatar" | "oembed" = "fallback") {
   return {
     handle,
     profileUrl: `https://x.com/${handle}`,
@@ -45,66 +45,7 @@ export async function GET(request: NextRequest) {
 
   const profileUrl = `https://x.com/${clean}`;
 
-  // Approach 1: Try oembed for tweet + author data
-  try {
-    const oembedUrl = `https://publish.twitter.com/oembed?url=${profileUrl}&omit_script=true&dnt=true`;
-    const res = await fetch(oembedUrl, { signal: AbortSignal.timeout(12000) });
-
-    if (res.ok) {
-      const data = await res.json();
-      const html = data.html || "";
-
-      let avatarUrl: string | null = null;
-      const avatarMatch = html.match(/src="(https:\/\/pbs\.twimg\.com\/profile_images\/[^"]+)"/);
-      if (avatarMatch) {
-        avatarUrl = avatarMatch[1].replace(/_normal(\.\w+)$/, "_400x400$1");
-      }
-
-      let tweetText: string | null = null;
-      const textMatch = html.match(/<p[^>]*>([\s\S]*?)<\/p>/);
-      if (textMatch) {
-        tweetText = textMatch[1].replace(/<[^>]+>/g, "").trim();
-      }
-
-      let tweetUrl: string | null = null;
-      const urlMatch = html.match(/href="(https?:\/\/(twitter|x)\.com\/[^"]*\/status\/\d+)"/);
-      if (urlMatch) {
-        tweetUrl = urlMatch[1];
-      }
-
-      let tweetDate: string | null = null;
-      const dateMatch = html.match(/datetime="([^"]+)"/);
-      if (dateMatch) {
-        tweetDate = dateMatch[1];
-      }
-
-      const result = {
-        handle: clean,
-        profileUrl,
-        displayName: data.author_name || clean,
-        avatarUrl,
-        description: null,
-        followers: null,
-        following: null,
-        bannerUrl: null,
-        joinDate: null,
-        location: null,
-        website: null,
-        verified: false,
-        tweetCount: null,
-        tweetText,
-        tweetUrl,
-        tweetDate,
-        tweetEngagement: null,
-        source: "oembed" as const,
-      };
-
-      profileCache.set(lower, { data: result, ts: Date.now() });
-      return NextResponse.json(result);
-    }
-  } catch {}
-
-  // Approach 2: Try fetching the profile page meta tags
+  // Approach 1: Try fetching the profile page meta tags (full profile data)
   try {
     const res = await fetch(profileUrl, {
       signal: AbortSignal.timeout(10000),
@@ -146,12 +87,20 @@ export async function GET(request: NextRequest) {
       if (descMatch) description = descMatch[1].substring(0, 300);
 
       let followers: number | null = null;
-      const followersMatch = html.match(/"followers_count":(\d+)/);
-      if (followersMatch) followers = parseInt(followersMatch[1]);
-
       let following: number | null = null;
-      const followingMatch = html.match(/"friends_count":(\d+)/);
-      if (followingMatch) following = parseInt(followingMatch[1]);
+      const relMatch = html.match(/followers:(\d+),following:(\d+)/);
+      if (relMatch) {
+        followers = parseInt(relMatch[1]);
+        following = parseInt(relMatch[2]);
+      }
+      if (followers === null) {
+        const fMatch = html.match(/"followers_count":(\d+)/);
+        if (fMatch) followers = parseInt(fMatch[1]);
+      }
+      if (following === null) {
+        const fMatch = html.match(/"friends_count":(\d+)/);
+        if (fMatch) following = parseInt(fMatch[1]);
+      }
 
       let bannerUrl: string | null = null;
       const bannerMatch = html.match(/https:\/\/pbs\.twimg\.com\/profile_banners\/\d+\/\d+\/1500x500/);
@@ -201,7 +150,33 @@ export async function GET(request: NextRequest) {
     }
   } catch {}
 
-  // Approach 3: Try unavatar.io for avatar + social data
+  // Approach 2: Try oembed for at least avatar + display name
+  try {
+    const oembedUrl = `https://publish.twitter.com/oembed?url=${profileUrl}&omit_script=true&dnt=true`;
+    const res = await fetch(oembedUrl, { signal: AbortSignal.timeout(12000) });
+
+    if (res.ok) {
+      const data = await res.json();
+      const html = data.html || "";
+
+      let avatarUrl: string | null = null;
+      const avatarMatch = html.match(/src="(https:\/\/pbs\.twimg\.com\/profile_images\/[^"]+)"/);
+      if (avatarMatch) {
+        avatarUrl = avatarMatch[1].replace(/_normal(\.\w+)$/, "_400x400$1");
+      }
+
+      const result = {
+        ...buildFallback(clean, "oembed"),
+        displayName: data.author_name || clean,
+        avatarUrl,
+      };
+
+      profileCache.set(lower, { data: result, ts: Date.now() });
+      return NextResponse.json(result);
+    }
+  } catch {}
+
+  // Approach 3: Try unavatar.io for avatar
   try {
     const unavatarRes = await fetch(`https://unavatar.io/twitter/${clean}`, {
       signal: AbortSignal.timeout(8000),
