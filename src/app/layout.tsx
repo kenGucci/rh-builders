@@ -26,11 +26,11 @@ export const metadata: Metadata = {
   authors: [{ name: "THE WALL" }],
   creator: "THE WALL",
   publisher: "THE WALL",
-  metadataBase: new URL("https://thewall.com"),
+  metadataBase: new URL("https://rh-builders.vercel.app"),
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://thewall.com",
+    url: "https://rh-builders.vercel.app",
     siteName: "THE WALL",
     title: "THE WALL — Robinhood Chain Builder Dashboard",
     description:
@@ -110,7 +110,7 @@ window.addEventListener("error",function(e){if(e.message&&e.message.includes("Ca
               operatingSystem: "Web",
               description:
                 "Builder analytics dashboard for Robinhood Chain (Chain ID 4663). Track deployed contracts, token launches, and reward claims.",
-              url: "https://thewall.com",
+              url: "https://rh-builders.vercel.app",
               creator: {
                 "@type": "Organization",
               name: "THE WALL",

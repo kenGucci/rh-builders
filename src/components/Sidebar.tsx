@@ -48,6 +48,17 @@ const links: NavItem[] = [
     ),
   },
   {
+    href: "/crypto",
+    label: "Crypto",
+    icon: (
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10" />
+        <path d="M12 6v12" />
+        <path d="M9 9c0-1.5 1.5-3 3-3s3 1.5 3 3-1.5 3-3 3-3 1.5-3 3 1.5 3 3 3 3-1.5 3-3" />
+      </svg>
+    ),
+  },
+  {
     href: "/market",
     label: "Market",
     section: "Analytics",

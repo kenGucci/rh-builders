@@ -1110,7 +1110,7 @@ export default function MarketPage() {
             </div>
 
             {/* Real Swap Panel */}
-            <SwapPanel tokens={stockTokens} tokenPrices={Object.fromEntries(stockTokens.map(t => [t.symbol, tokenQuotes[t.symbol]?.price || 0]))} />
+            <SwapPanel tokens={stockTokens} />
           </div>
         )}
       </div>
