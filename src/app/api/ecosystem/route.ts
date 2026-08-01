@@ -81,7 +81,7 @@ function getFallbackApps(): EcosystemApp[] {
 
 export async function GET() {
   if (cache && Date.now() - cache.timestamp < ECOSYSTEM_CACHE_TTL) {
-    return NextResponse.json({ apps: cache.data, cached: true });
+    return NextResponse.json({ apps: cache.data, cached: true }, { headers: { "Cache-Control": "s-maxage=3600, stale-while-revalidate=7200" } });
   }
 
   const apps = await fetchEcosystemApps();
@@ -95,5 +95,5 @@ export async function GET() {
     count: apps.length,
     cached: false,
     generatedAt: new Date().toISOString(),
-  });
+  }, { headers: { "Cache-Control": "s-maxage=3600, stale-while-revalidate=7200" } });
 }

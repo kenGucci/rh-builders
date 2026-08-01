@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     if (action === "detail" && symbol) {
       const token = STOCK_TOKENS.find((t) => t.symbol === symbol.toUpperCase());
       if (!token) return NextResponse.json({ error: "Token not found" }, { status: 404 });
-      return NextResponse.json({ token, chain: CHAIN_INFO });
+      return NextResponse.json({ token, chain: CHAIN_INFO }, { headers: { "Cache-Control": "s-maxage=60, stale-while-revalidate=120" } });
     }
 
     let tokens = [...STOCK_TOKENS];
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
         totalTvl,
         sectors: sectors.length,
       },
-    });
+    }, { headers: { "Cache-Control": "s-maxage=60, stale-while-revalidate=120" } });
   } catch {
     return NextResponse.json({ error: "Failed to fetch stock tokens" }, { status: 500 });
   }

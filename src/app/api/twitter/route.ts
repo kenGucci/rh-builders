@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const profileCache = new Map<string, { data: Record<string, unknown>; ts: number }>();
 const CACHE_TTL = 300_000;
+const CACHE_HEADERS = { headers: { "Cache-Control": "s-maxage=300, stale-while-revalidate=600" } };
 
 function buildFallback(handle: string, source: "fallback" | "meta" | "unavatar" | "oembed" = "fallback") {
   return {
@@ -40,7 +41,7 @@ export async function GET(request: NextRequest) {
   const lower = clean.toLowerCase();
   const cached = profileCache.get(lower);
   if (cached && Date.now() - cached.ts < CACHE_TTL) {
-    return NextResponse.json(cached.data);
+    return NextResponse.json(cached.data, CACHE_HEADERS);
   }
 
   const profileUrl = `https://x.com/${clean}`;
@@ -64,7 +65,7 @@ export async function GET(request: NextRequest) {
       if (html.includes("This account doesn") || html.includes("page not found") || html.includes("suspended")) {
         const result = buildFallback(clean, "meta");
         profileCache.set(lower, { data: result, ts: Date.now() });
-        return NextResponse.json(result);
+        return NextResponse.json(result, CACHE_HEADERS);
       }
 
       let displayName = clean;
@@ -146,7 +147,7 @@ export async function GET(request: NextRequest) {
       };
 
       profileCache.set(lower, { data: result, ts: Date.now() });
-      return NextResponse.json(result);
+      return NextResponse.json(result, CACHE_HEADERS);
     }
   } catch {}
 
@@ -172,7 +173,7 @@ export async function GET(request: NextRequest) {
       };
 
       profileCache.set(lower, { data: result, ts: Date.now() });
-      return NextResponse.json(result);
+      return NextResponse.json(result, CACHE_HEADERS);
     }
   } catch {}
 
@@ -189,10 +190,10 @@ export async function GET(request: NextRequest) {
         avatarUrl,
       };
       profileCache.set(lower, { data: result, ts: Date.now() });
-      return NextResponse.json(result);
+      return NextResponse.json(result, CACHE_HEADERS);
     }
   } catch {}
 
   // Final fallback
-  return NextResponse.json(buildFallback(clean));
+  return NextResponse.json(buildFallback(clean), CACHE_HEADERS);
 }

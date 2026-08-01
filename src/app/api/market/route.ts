@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+const cacheHeaders = { headers: { "Cache-Control": "s-maxage=5, stale-while-revalidate=10" } };
+
 const FMP_BASE = "https://financialmodelingprep.com/api/v3";
 const FMP_KEY = process.env.FMP_API_KEY || "";
 const FMP_ENABLED = FMP_KEY && FMP_KEY !== "demo" && FMP_KEY.length > 5;
@@ -351,14 +353,14 @@ export async function GET(request: NextRequest) {
           merged.push(r);
         }
       }
-      return NextResponse.json({ results: merged });
+      return NextResponse.json({ results: merged }, cacheHeaders);
     }
 
     if (action === "quote" && symbol) {
       let quote = await yahooQuote(symbol);
       if (!quote) quote = await fmpQuote(symbol);
       if (!quote) return NextResponse.json({ error: "Symbol not found" }, { status: 404 });
-      return NextResponse.json({ quote });
+      return NextResponse.json({ quote }, cacheHeaders);
     }
 
     if (action === "batch" && symbolsParam) {
@@ -370,25 +372,25 @@ export async function GET(request: NextRequest) {
           .filter((r): r is PromiseFulfilledResult<MarketQuote> => r.status === "fulfilled" && r.value !== null)
           .map((r) => r.value);
       }
-      return NextResponse.json({ quotes });
+      return NextResponse.json({ quotes }, cacheHeaders);
     }
 
     if (action === "gainers-losers") {
       const fmpGL = await fmpGainersLosers();
       if (fmpGL.gainers.length > 0 || fmpGL.losers.length > 0) {
-        return NextResponse.json(fmpGL);
+        return NextResponse.json(fmpGL, cacheHeaders);
       }
       const yahooGL = await yahooGainersLosers();
-      return NextResponse.json(yahooGL);
+      return NextResponse.json(yahooGL, cacheHeaders);
     }
 
     if (action === "movers") {
       const fmpGL = await fmpGainersLosers();
       if (fmpGL.gainers.length > 0) {
-        return NextResponse.json({ movers: fmpGL.gainers });
+        return NextResponse.json({ movers: fmpGL.gainers }, cacheHeaders);
       }
       const yahooGL = await yahooGainersLosers();
-      return NextResponse.json({ movers: yahooGL.gainers });
+      return NextResponse.json({ movers: yahooGL.gainers }, cacheHeaders);
     }
 
     if (action === "quotes") {
@@ -426,7 +428,7 @@ export async function GET(request: NextRequest) {
           topLoser: topLoser ? { symbol: topLoser.symbol, name: topLoser.name, changePercent: topLoser.changePercent, price: topLoser.price } : null,
           lastUpdated: new Date().toISOString(),
         },
-      });
+      }, cacheHeaders);
     }
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });

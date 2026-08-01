@@ -46,7 +46,7 @@ export async function GET() {
       block_number: blockNumber,
       totalTokens: tokenData.bestPerToken.size,
       lastUpdated: new Date().toISOString(),
-    });
+    }, { headers: { "Cache-Control": "s-maxage=10, stale-while-revalidate=30" } });
   } catch (err) {
     console.error("[live-activity] Failed:", err);
     return NextResponse.json({

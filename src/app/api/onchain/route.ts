@@ -19,7 +19,7 @@ async function fastFetch(url: string, timeoutMs = 10000): Promise<unknown> {
 export async function GET() {
   const now = Date.now();
   if (cache && now - cache.ts < MAX_AGE * 1000) {
-    return NextResponse.json(cache.data);
+    return NextResponse.json(cache.data, { headers: { "Cache-Control": "s-maxage=15, stale-while-revalidate=30" } });
   }
 
   if (inflight) return inflight;
@@ -132,7 +132,7 @@ export async function GET() {
     };
 
     cache = { data: result, ts: Date.now() };
-    return NextResponse.json(result);
+    return NextResponse.json(result, { headers: { "Cache-Control": "s-maxage=15, stale-while-revalidate=30" } });
   })();
 
   try {

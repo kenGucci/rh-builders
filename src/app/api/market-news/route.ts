@@ -84,7 +84,7 @@ async function collectNews(): Promise<MarketNewsItem[]> {
 
 export async function GET() {
   if (cache && Date.now() - cache.timestamp < CACHE_TTL) {
-    return NextResponse.json({ news: cache.data, cached: true, updatedAt: cache.timestamp });
+    return NextResponse.json({ news: cache.data, cached: true, updatedAt: cache.timestamp }, { headers: { "Cache-Control": "s-maxage=60, stale-while-revalidate=120" } });
   }
 
   const news = await collectNews();
@@ -94,5 +94,5 @@ export async function GET() {
     return NextResponse.json({ news: [], cached: false, updatedAt: Date.now() });
   }
 
-  return NextResponse.json({ news, cached: false, updatedAt: Date.now() });
+  return NextResponse.json({ news, cached: false, updatedAt: Date.now() }, { headers: { "Cache-Control": "s-maxage=60, stale-while-revalidate=120" } });
 }

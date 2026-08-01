@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import dynamic from "next/dynamic";
 import {
   TrendingUp, TrendingDown, RefreshCw, Search, ArrowUpRight, Activity,
   BarChart3, DollarSign, Zap, Clock, Flame, X,
@@ -9,10 +10,11 @@ import {
   Newspaper, LogOut, Users as UsersIcon, Boxes,
 } from "lucide-react";
 import ConnectWalletButton from "@/components/ConnectWalletButton";
-import SwapPanel from "@/components/SwapPanel";
 import { useAccount, useBalance, useDisconnect } from "wagmi";
 import { formatUnits } from "viem";
 import type { EcosystemApp } from "@/app/api/ecosystem/route";
+
+const SwapPanel = dynamic(() => import("@/components/SwapPanel"), { ssr: false });
 
 interface MarketNewsItem {
   id: string;
@@ -804,20 +806,39 @@ export default function MarketPage() {
     setXAccounts(profiles);
   }, []);
 
-  const fetchAll = useCallback(async () => {
-    await Promise.all([fetchStockTokens(), fetchWatchlist(), fetchMovers(), fetchTxns(), fetchEcosystem(), fetchOnchain(), fetchWalletTokens(), fetchNews(), fetchXAccounts()]);
-  }, [fetchStockTokens, fetchWatchlist, fetchMovers, fetchTxns, fetchEcosystem, fetchOnchain, fetchWalletTokens, fetchNews, fetchXAccounts]);
+  const fetchLive = useCallback(async () => {
+    await Promise.allSettled([fetchStockTokens(), fetchWatchlist(), fetchMovers(), fetchOnchain(), fetchTxns()]);
+  }, [fetchStockTokens, fetchWatchlist, fetchMovers, fetchOnchain, fetchTxns]);
 
   useEffect(() => {
+    let active = true;
     setLoading(true);
-    fetchAll().finally(() => setLoading(false));
-  }, [fetchAll]);
+    (async () => {
+      await Promise.all([fetchStockTokens(), fetchWatchlist(), fetchWalletTokens()]);
+      if (active) setLoading(false);
+    })();
+    fetchMovers();
+    fetchTxns();
+    fetchOnchain();
+    fetchNews();
+    fetchXAccounts();
+    fetchEcosystem();
+    return () => { active = false; };
+  }, [fetchStockTokens, fetchWatchlist, fetchWalletTokens, fetchMovers, fetchTxns, fetchOnchain, fetchNews, fetchXAccounts, fetchEcosystem]);
 
   useEffect(() => {
     if (!autoRefresh) return;
-    const interval = setInterval(() => { fetchAll(); }, 15000);
-    return () => clearInterval(interval);
-  }, [autoRefresh, fetchAll]);
+    const fast = setInterval(() => {
+      fetchStockTokens();
+      fetchWatchlist();
+      fetchMovers();
+      fetchOnchain();
+    }, 15000);
+    const txns = setInterval(() => { fetchTxns(); }, 30000);
+    const news = setInterval(() => { fetchNews(); }, 60000);
+    const slow = setInterval(() => { fetchXAccounts(); fetchEcosystem(); }, 300000);
+    return () => { clearInterval(fast); clearInterval(txns); clearInterval(news); clearInterval(slow); };
+  }, [autoRefresh, fetchStockTokens, fetchWatchlist, fetchMovers, fetchOnchain, fetchTxns, fetchNews, fetchXAccounts, fetchEcosystem]);
 
   const handleSearch = useCallback(async (q: string) => {
     if (!q.trim() || q.length < 1) { setSearchResults([]); return; }
@@ -986,7 +1007,7 @@ export default function MarketPage() {
             {autoRefresh ? "Auto ON" : "Auto OFF"}
           </button>
           <button
-            onClick={async () => { setRefreshing(true); await fetchAll(); setRefreshing(false); }}
+            onClick={() => { setRefreshing(true); fetchLive().finally(() => setRefreshing(false)); fetchNews(); fetchXAccounts(); fetchEcosystem(); }}
             disabled={refreshing}
             className="p-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)]/30 transition-colors disabled:opacity-50"
           >
