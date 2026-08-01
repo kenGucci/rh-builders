@@ -141,27 +141,54 @@ async function searchWikipediaSuggestions(query: string): Promise<SearchResult[]
   }
 }
 
-// ─── WEB SEARCH ─── DDG HTML + DDG Lite + Wikipedia + DuckDuckGo Instant Answer ───
+// ─── Wikipedia full-text search (reliable, guaranteed results) ───
+async function searchWikipediaFulltext(query: string): Promise<SearchResult[]> {
+  try {
+    const res = await fetch(
+      `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&srlimit=10&srprop=snippet&format=json&origin=*`,
+      { signal: AbortSignal.timeout(7000) }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data?.query?.search || []).map((r: { title: string; snippet?: string }, i: number) => ({
+      id: `wiki-fs-${i}-${query}`,
+      title: r.title,
+      description: decodeEntities(r.snippet || "").replace(/<[^>]*>/g, "").slice(0, 240),
+      url: `https://en.wikipedia.org/wiki/${encodeURIComponent(r.title.replace(/ /g, "_"))}`,
+      source: "Wikipedia",
+    }));
+  } catch {
+    return [];
+  }
+}
+
+// ─── WEB SEARCH ─── DDG HTML + DDG Lite + Wikipedia ───
 async function searchWeb(query: string): Promise<SearchResult[]> {
   const results: SearchResult[] = [];
+  const seen = new Set<string>();
+  const pushUnique = (r: SearchResult) => {
+    if (seen.has(r.url)) return;
+    seen.add(r.url);
+    results.push(r);
+  };
 
-  // 1. DuckDuckGo HTML scrape (primary — reliable, real results)
+  // 1. DuckDuckGo HTML scrape (primary — real web results)
   const ddgResults = await searchDdgHtml(query);
-  results.push(...ddgResults);
+  ddgResults.forEach(pushUnique);
 
   // 1b. DuckDuckGo Lite (fallback when HTML scrape is blocked, e.g. on CDN IPs)
   if (results.length < 4) {
     const liteResults = await searchDdgLite(query);
-    for (const r of liteResults) {
-      if (!results.some((x) => x.url === r.url)) results.push(r);
-    }
+    liteResults.forEach(pushUnique);
   }
 
-  // 1c. Wikipedia opensearch suggestions (supplement)
+  // 1c. Wikipedia full-text search (guaranteed results on every network)
+  const wikiFulltext = await searchWikipediaFulltext(query);
+  wikiFulltext.forEach(pushUnique);
+
+  // 1d. Wikipedia opensearch suggestions (supplement)
   const wikiSuggestions = await searchWikipediaSuggestions(query);
-  for (const r of wikiSuggestions) {
-    if (!results.some((x) => x.url === r.url)) results.push(r);
-  }
+  wikiSuggestions.forEach(pushUnique);
 
   // 2. Wikipedia
   try {
