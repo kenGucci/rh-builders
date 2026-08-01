@@ -50,7 +50,7 @@ export async function GET() {
         fee: feeEth,
         status: (tx.status as string) || "ok",
         method: (tx.method as string) || "Transfer",
-        block: Number(tx.block || 0),
+        block: Number(tx.block_number || 0),
         timestamp: (tx.timestamp as string) || "",
         type: isContractCreation ? "contract_creation" : isTokenTransfer ? "token_transfer" : "coin_transfer",
         tokenInfo,

@@ -6,7 +6,7 @@ import {
   BarChart3, DollarSign, Zap, Clock, Flame, X,
   ChevronRight, Loader2, Wifi, Shield, Wallet, Globe, Lock, Layers,
   ChevronDown, ExternalLink, Info, CircleDollarSign, ArrowUpDown,
-  Newspaper, LogOut, Users as UsersIcon,
+  Newspaper, LogOut, Users as UsersIcon, Boxes,
 } from "lucide-react";
 import ConnectWalletButton from "@/components/ConnectWalletButton";
 import SwapPanel from "@/components/SwapPanel";
@@ -95,6 +95,44 @@ interface MarketSummary {
   lastUpdated: string;
 }
 
+interface OnchainStats {
+  totalBlocks: number;
+  totalTransactions: number;
+  totalAddresses: number;
+  avgBlockTime: number;
+  gasPrices: Record<string, number>;
+  coinPrice: number;
+  fees24h: number;
+}
+
+interface OnchainBlock {
+  height: number;
+  hash: string;
+  timestamp: string;
+  txCount: number;
+  gasUsed: string;
+  gasLimit: string;
+  size: number;
+  baseFeePerGas: string;
+  miner: string;
+}
+
+interface OnchainTx {
+  hash: string;
+  from: string;
+  fromName: string | null;
+  to: string;
+  toName: string | null;
+  value: number;
+  fee: number;
+  status: string;
+  method: string;
+  block: number;
+  timestamp: string;
+  type: "contract_creation" | "token_transfer" | "coin_transfer";
+  token: { symbol: string | null; name: string | null; icon: string | null; amount: number } | null;
+}
+
 function formatPrice(p: number): string {
   if (p >= 10000) return `$${p.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
   if (p >= 100) return `$${p.toFixed(2)}`;
@@ -118,6 +156,40 @@ function formatMarketCap(cap: number | null): string {
   if (cap >= 1e9) return `$${(cap / 1e9).toFixed(2)}B`;
   if (cap >= 1e6) return `$${(cap / 1e6).toFixed(2)}M`;
   return `$${cap.toLocaleString()}`;
+}
+
+function timeAgo(iso: string | number): string {
+  if (!iso) return "—";
+  const ts = typeof iso === "number" ? iso * 1000 : Date.parse(iso);
+  if (isNaN(ts)) return "—";
+  const diff = Math.max(0, Date.now() - ts);
+  const s = Math.floor(diff / 1000);
+  if (s < 5) return "just now";
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
+function shortAddr(a: string): string {
+  if (!a) return "—";
+  return `${a.slice(0, 6)}…${a.slice(-4)}`;
+}
+
+function formatCount(n: number): string {
+  if (n >= 1e9) return `${(n / 1e9).toFixed(2)}B`;
+  if (n >= 1e6) return `${(n / 1e6).toFixed(2)}M`;
+  if (n >= 1e3) return `${(n / 1e3).toFixed(1)}K`;
+  return n.toLocaleString();
+}
+
+function formatGasPrices(gasPrices: Record<string, number>): string {
+  const fast = gasPrices.fast || gasPrices.average || gasPrices.slow;
+  if (!fast) return "—";
+  if (fast >= 1) return `${fast.toFixed(1)} Gwei`;
+  return `${(fast * 1000).toFixed(0)} nGwei`;
 }
 
 function MiniSparkline({ data, positive }: { data: number[]; positive: boolean }) {
@@ -593,6 +665,10 @@ export default function MarketPage() {
   const [ecosystemApps, setEcosystemApps] = useState<EcosystemApp[]>([]);
   const [ecosystemLoading, setEcosystemLoading] = useState(true);
   const [ecosystemCategory, setEcosystemCategory] = useState("All");
+  const [onchainStats, setOnchainStats] = useState<OnchainStats | null>(null);
+  const [onchainBlocks, setOnchainBlocks] = useState<OnchainBlock[]>([]);
+  const [onchainTxs, setOnchainTxs] = useState<OnchainTx[]>([]);
+  const [onchainUpdated, setOnchainUpdated] = useState<Date | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -669,6 +745,18 @@ export default function MarketPage() {
     } catch {} finally { setEcosystemLoading(false); }
   }, []);
 
+  const fetchOnchain = useCallback(async () => {
+    try {
+      const res = await fetch("/api/onchain");
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.stats) setOnchainStats(data.stats);
+      if (Array.isArray(data.blocks)) setOnchainBlocks(data.blocks);
+      if (Array.isArray(data.transactions)) setOnchainTxs(data.transactions);
+      setOnchainUpdated(new Date(data.lastUpdated || Date.now()));
+    } catch {}
+  }, []);
+
   const fetchWalletTokens = useCallback(async () => {
     if (!address) return;
     try {
@@ -717,8 +805,8 @@ export default function MarketPage() {
   }, []);
 
   const fetchAll = useCallback(async () => {
-    await Promise.all([fetchStockTokens(), fetchWatchlist(), fetchMovers(), fetchTxns(), fetchEcosystem(), fetchWalletTokens(), fetchNews(), fetchXAccounts()]);
-  }, [fetchStockTokens, fetchWatchlist, fetchMovers, fetchTxns, fetchEcosystem, fetchWalletTokens, fetchNews, fetchXAccounts]);
+    await Promise.all([fetchStockTokens(), fetchWatchlist(), fetchMovers(), fetchTxns(), fetchEcosystem(), fetchOnchain(), fetchWalletTokens(), fetchNews(), fetchXAccounts()]);
+  }, [fetchStockTokens, fetchWatchlist, fetchMovers, fetchTxns, fetchEcosystem, fetchOnchain, fetchWalletTokens, fetchNews, fetchXAccounts]);
 
   useEffect(() => {
     setLoading(true);
@@ -1228,21 +1316,185 @@ export default function MarketPage() {
         )}
       </div>
 
-      {/* Ecosystem — Real Data */}
-      <div className="bg-gradient-to-br from-[var(--surface)] to-[var(--accent)]/5 border border-[var(--border)] rounded-2xl p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Layers size={18} className="text-[var(--accent)]" />
-          <h2 className="text-lg font-bold text-[var(--foreground)]">See what&apos;s onchain</h2>
-          {!ecosystemLoading && ecosystemApps.length > 0 && (
-            <span className="ml-auto text-[9px] text-green-400 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-400 live-blink" />
-              {ecosystemApps.length} apps
-            </span>
+      {/* See what's onchain — Real Chain Dashboard */}
+      <div className="space-y-4">
+        <div className="bg-gradient-to-br from-[var(--surface)] to-[var(--accent)]/5 border border-[var(--border)] rounded-2xl p-6">
+          <div className="flex items-center gap-2 mb-1">
+            <Layers size={18} className="text-[var(--accent)]" />
+            <h2 className="text-lg font-bold text-[var(--foreground)]">See what&apos;s onchain</h2>
+            {onchainStats && (
+              <span className="ml-auto text-[9px] text-green-400 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400 live-blink" />
+                LIVE {onchainStats.totalBlocks > 0 ? `block #${onchainStats.totalBlocks.toLocaleString()}` : ""}
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-[var(--text-muted)] mb-5 max-w-lg">
+            Live blocks and transactions from Robinhood Chain, running 24/7. Every hash, block, and transfer is real and verifiable on Blockscout.
+          </p>
+
+          {/* Chain Metrics */}
+          {onchainStats ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+              {[
+                { label: "Blocks mined", value: formatCount(onchainStats.totalBlocks), sub: "all time" },
+                { label: "Transactions", value: formatCount(onchainStats.totalTransactions), sub: "all time" },
+                { label: "Addresses", value: formatCount(onchainStats.totalAddresses), sub: "onchain" },
+                { label: "Avg block time", value: onchainStats.avgBlockTime ? `${(onchainStats.avgBlockTime / 1000).toFixed(1)}s` : "—", sub: "per block" },
+                { label: "Gas (fast)", value: formatGasPrices(onchainStats.gasPrices), sub: "live" },
+                { label: "RH price", value: onchainStats.coinPrice ? `$${onchainStats.coinPrice.toFixed(2)}` : "—", sub: "24/7" },
+              ].map((m) => (
+                <div key={m.label} className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-3">
+                  <div className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">{m.label}</div>
+                  <div className="text-sm font-bold text-[var(--foreground)]">{m.value}</div>
+                  <div className="text-[9px] text-[var(--text-muted)] mt-0.5">{m.sub}</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="h-[68px] rounded-xl animate-shimmer" style={{ background: "var(--surface)" }} />
+              ))}
+            </div>
           )}
+
+          {/* Live Blocks + Transactions */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Blocks */}
+            <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
+                <span className="text-xs font-bold text-[var(--foreground)] flex items-center gap-2">
+                  <Boxes size={13} className="text-[var(--accent)]" /> Latest Blocks
+                </span>
+                <span className="text-[9px] text-green-400 flex items-center gap-1">
+                  <span className="w-1 h-1 rounded-full bg-green-400 live-blink" /> live
+                </span>
+              </div>
+              <div className="divide-y divide-[var(--border-subtle)] max-h-[340px] overflow-y-auto">
+                {onchainBlocks.length > 0 ? onchainBlocks.map((b) => (
+                  <a
+                    key={b.hash}
+                    href={`https://robinhoodchain.blockscout.com/block/${b.height}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 px-4 py-2.5 hover:bg-[var(--accent)]/5 transition-colors"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-[var(--accent)]/10 border border-[var(--accent)]/20 flex items-center justify-center flex-shrink-0">
+                      <Boxes size={14} className="text-[var(--accent)]" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-semibold text-[var(--foreground)]">#{b.height.toLocaleString()}</div>
+                      <div className="text-[9px] text-[var(--text-muted)]">
+                        {b.txCount} txs · {timeAgo(b.timestamp)} · {b.size} bytes
+                      </div>
+                    </div>
+                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-[var(--surface)] border border-[var(--border)] text-[var(--text-muted)] font-mono">
+                      {shortAddr(b.miner)}
+                    </span>
+                  </a>
+                )) : (
+                  <div className="px-4 py-8 text-center text-xs text-[var(--text-muted)]">Waiting for live blocks…</div>
+                )}
+              </div>
+            </div>
+
+            {/* Transactions */}
+            <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
+                <span className="text-xs font-bold text-[var(--foreground)] flex items-center gap-2">
+                  <Activity size={13} className="text-blue-400" /> Latest Transactions
+                </span>
+                <span className="text-[9px] text-green-400 flex items-center gap-1">
+                  <span className="w-1 h-1 rounded-full bg-green-400 live-blink" /> 24/7
+                </span>
+              </div>
+              <div className="divide-y divide-[var(--border-subtle)] max-h-[340px] overflow-y-auto">
+                {onchainTxs.length > 0 ? onchainTxs.map((tx) => (
+                  <a
+                    key={tx.hash}
+                    href={`https://robinhoodchain.blockscout.com/tx/${tx.hash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 px-4 py-2.5 hover:bg-[var(--accent)]/5 transition-colors"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center flex-shrink-0">
+                      {tx.type === "token_transfer" ? (
+                        <CircleDollarSign size={14} className="text-blue-400" />
+                      ) : tx.type === "contract_creation" ? (
+                        <Boxes size={14} className="text-purple-400" />
+                      ) : (
+                        <Activity size={14} className="text-green-400" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-semibold text-[var(--foreground)]">{tx.method}</span>
+                        {tx.status !== "ok" && <span className="text-[8px] px-1 py-0.5 rounded bg-red-500/10 text-red-400">{tx.status}</span>}
+                      </div>
+                      <div className="text-[9px] text-[var(--text-muted)] font-mono truncate">
+                        {shortAddr(tx.from)} <ArrowUpRight size={8} className="inline text-[var(--text-muted)]" /> {shortAddr(tx.to)}
+                      </div>
+                      {tx.token && tx.token.symbol && (
+                        <div className="text-[9px] text-[var(--text-muted)]">
+                          {tx.token.amount >= 1000 ? tx.token.amount.toLocaleString(undefined, { maximumFractionDigits: 0 }) : tx.token.amount} {tx.token.symbol}
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-[10px] font-bold text-[var(--foreground)]">
+                        {tx.value > 0 ? `${tx.value < 0.001 ? tx.value.toFixed(6) : tx.value.toFixed(4)} ETH` : "—"}
+                      </div>
+                      <div className="text-[9px] text-[var(--text-muted)]">{timeAgo(tx.timestamp)}</div>
+                    </div>
+                  </a>
+                )) : (
+                  <div className="px-4 py-8 text-center text-xs text-[var(--text-muted)]">Waiting for live transactions…</div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between mt-4">
+            <span className="text-[10px] text-[var(--text-muted)]">
+              {onchainUpdated ? `Synced ${timeAgo(onchainUpdated.toISOString())} · auto-refresh 15s` : "Syncing…"}
+            </span>
+            <div className="flex gap-3">
+              <a
+                href="https://robinhoodchain.blockscout.com/blocks"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-xs text-[var(--accent)] hover:underline"
+              >
+                All blocks <ArrowUpRight size={11} />
+              </a>
+              <a
+                href="https://robinhoodchain.blockscout.com/txs"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-xs text-[var(--accent)] hover:underline"
+              >
+                All transactions <ArrowUpRight size={11} />
+              </a>
+            </div>
+          </div>
         </div>
-        <p className="text-xs text-[var(--text-muted)] mb-4 max-w-lg">
-          New apps are always launching on Robinhood Chain. Explore apps for trading, lending, borrowing, and more.
-        </p>
+
+        {/* Ecosystem — Real Data */}
+        <div className="bg-gradient-to-br from-[var(--surface)] to-[var(--accent)]/5 border border-[var(--border)] rounded-2xl p-6">
+          <div className="flex items-center gap-2 mb-1">
+            <Layers size={18} className="text-[var(--accent)]" />
+            <h2 className="text-lg font-bold text-[var(--foreground)]">Explore the ecosystem</h2>
+            {!ecosystemLoading && ecosystemApps.length > 0 && (
+              <span className="ml-auto text-[9px] text-green-400 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400 live-blink" />
+                {ecosystemApps.length} apps
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-[var(--text-muted)] mb-4 max-w-lg">
+            New apps are always launching on Robinhood Chain. Explore apps for trading, lending, borrowing, and more.
+          </p>
 
         {/* Category Filter */}
         {!ecosystemLoading && ecosystemApps.length > 0 && (
@@ -1332,6 +1584,7 @@ export default function MarketPage() {
             </a>
           </div>
         )}
+        </div>
       </div>
 
       {/* FAQ */}
@@ -1491,14 +1744,6 @@ function TxnsFeed({ txns, loading }: { txns: LiveTxn[]; loading: boolean }) {
       })}
     </div>
   );
-}
-
-function timeAgo(ts: number): string {
-  const diff = Math.floor(Date.now() / 1000) - ts;
-  if (diff < 60) return "just now";
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
 }
 
 function formatFollowers(n: number | null): string {
