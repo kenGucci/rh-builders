@@ -12,7 +12,7 @@ const apiRatelimit = redis ? new Ratelimit({ redis, limiter: Ratelimit.slidingWi
 const STATIC_CSP = [
   "default-src 'self'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://pbs.twimg.com https://abs.twimg.com https://robinhoodchain.blockscout.com https://en.wikipedia.org https://upload.wikimedia.org https://i.ytimg.com https://*.ytimg.com https://unavatar.io https://*.unavatar.io https://images.ctfassets.net https://www.google.com https://*.google.com",
+  "img-src 'self' data: blob: https://pbs.twimg.com https://abs.twimg.com https://robinhoodchain.blockscout.com https://en.wikipedia.org https://upload.wikimedia.org https://i.ytimg.com https://*.ytimg.com https://unavatar.io https://*.unavatar.io https://images.ctfassets.net https://www.google.com https://*.google.com https://s.yimg.com https://*.yimg.com",
   "font-src 'self'",
   "connect-src 'self' https://robinhoodchain.blockscout.com https://rpc.mainnet.chain.robinhood.com https://financialmodelingprep.com https://eth.blockscout.com https://polygon.blockscout.com https://arbitrum.blockscout.com https://optimism.blockscout.com https://base.blockscout.com https://bsc.blockscout.com https://publish.twitter.com https://api.twitter.com https://api.duckduckgo.com https://html.duckduckgo.com https://en.wikipedia.org https://news.google.com https://nominatim.openstreetmap.org https://vid.puffyan.us https://inv.nadeko.net https://www.youtube.com https://query1.finance.yahoo.com https://query2.finance.yahoo.com https://li.quest",
   "frame-ancestors 'none'",

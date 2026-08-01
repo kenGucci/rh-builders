@@ -6,12 +6,34 @@ import {
   BarChart3, DollarSign, Zap, Clock, Flame, X,
   ChevronRight, Loader2, Wifi, Shield, Wallet, Globe, Lock, Layers,
   ChevronDown, ExternalLink, Info, CircleDollarSign, ArrowUpDown,
+  Newspaper, LogOut, Users as UsersIcon,
 } from "lucide-react";
 import ConnectWalletButton from "@/components/ConnectWalletButton";
 import SwapPanel from "@/components/SwapPanel";
-import { useAccount, useBalance } from "wagmi";
+import { useAccount, useBalance, useDisconnect } from "wagmi";
 import { formatUnits } from "viem";
 import type { EcosystemApp } from "@/app/api/ecosystem/route";
+
+interface MarketNewsItem {
+  id: string;
+  title: string;
+  summary: string;
+  publisher: string;
+  link: string;
+  thumbnail: string | null;
+  symbol: string;
+  publishedAt: number;
+}
+
+interface XProfile {
+  handle: string;
+  profileUrl: string;
+  displayName: string;
+  avatarUrl: string | null;
+  description: string | null;
+  followers: number | null;
+  verified: boolean;
+}
 
 interface StockToken {
   symbol: string;
@@ -575,8 +597,13 @@ export default function MarketPage() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { address, isConnected } = useAccount();
+  const { disconnect } = useDisconnect();
   const { data: ethBalance } = useBalance({ address });
   const [walletTokens, setWalletTokens] = useState<{ symbol: string; balance: string }[]>([]);
+  const [marketNews, setMarketNews] = useState<MarketNewsItem[]>([]);
+  const [newsLoading, setNewsLoading] = useState(true);
+  const [newsUpdated, setNewsUpdated] = useState<Date | null>(null);
+  const [xAccounts, setXAccounts] = useState<XProfile[]>([]);
 
   const fetchStockTokens = useCallback(async () => {
     try {
@@ -653,9 +680,45 @@ export default function MarketPage() {
     } catch {}
   }, [address]);
 
+  const fetchNews = useCallback(async () => {
+    try {
+      const res = await fetch("/api/market-news");
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      if (data.news) {
+        setMarketNews(data.news);
+        setNewsUpdated(new Date(data.updatedAt || Date.now()));
+      }
+    } catch {} finally { setNewsLoading(false); }
+  }, []);
+
+  const fetchXAccounts = useCallback(async () => {
+    const handles = ["robinhood", "CNBC", "MarketWatch", "WSJMarkets", "Stocktwits", "Nasdaq"];
+    const results = await Promise.allSettled(
+      handles.map((h) => fetch(`/api/twitter?handle=${h}`).then((r) => r.json()))
+    );
+    const profiles: XProfile[] = [];
+    for (const r of results) {
+      if (r.status !== "fulfilled") continue;
+      const d = r.value;
+      if (d && !d.error) {
+        profiles.push({
+          handle: d.handle,
+          profileUrl: d.profileUrl,
+          displayName: d.displayName || d.handle,
+          avatarUrl: d.avatarUrl || null,
+          description: d.description || null,
+          followers: d.followers || null,
+          verified: d.verified || false,
+        });
+      }
+    }
+    setXAccounts(profiles);
+  }, []);
+
   const fetchAll = useCallback(async () => {
-    await Promise.all([fetchStockTokens(), fetchWatchlist(), fetchMovers(), fetchTxns(), fetchEcosystem(), fetchWalletTokens()]);
-  }, [fetchStockTokens, fetchWatchlist, fetchMovers, fetchTxns, fetchEcosystem, fetchWalletTokens]);
+    await Promise.all([fetchStockTokens(), fetchWatchlist(), fetchMovers(), fetchTxns(), fetchEcosystem(), fetchWalletTokens(), fetchNews(), fetchXAccounts()]);
+  }, [fetchStockTokens, fetchWatchlist, fetchMovers, fetchTxns, fetchEcosystem, fetchWalletTokens, fetchNews, fetchXAccounts]);
 
   useEffect(() => {
     setLoading(true);
@@ -1041,6 +1104,42 @@ export default function MarketPage() {
         </div>
       )}
 
+      {/* Market News — live 24/7 */}
+      <section className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6" aria-label="Market news">
+        <div className="flex items-center gap-2 mb-1">
+          <Newspaper size={18} className="text-[var(--accent)]" />
+          <h2 className="text-lg font-bold text-[var(--foreground)]">Market News</h2>
+          {newsUpdated && (
+            <span className="ml-auto flex items-center gap-1 text-[9px] text-green-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400 live-blink" />
+              Live · updated {newsUpdated.toLocaleTimeString()}
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-[var(--text-muted)] mb-4 max-w-lg">
+          The latest headlines for the stocks and ETFs behind our Stock Tokens — refreshed in real time, 24/7.
+        </p>
+        <StockNewsFeed news={marketNews} loading={newsLoading} />
+      </section>
+
+      {/* On X — real market voices */}
+      <section className="bg-gradient-to-br from-[var(--surface)] to-[var(--accent)]/5 border border-[var(--border)] rounded-2xl p-6" aria-label="Market on X">
+        <div className="flex items-center gap-2 mb-1">
+          <UsersIcon size={18} className="text-[var(--accent)]" />
+          <h2 className="text-lg font-bold text-[var(--foreground)]">On X</h2>
+          {xAccounts.length > 0 && (
+            <span className="ml-auto flex items-center gap-1 text-[9px] text-green-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400 live-blink" />
+              Live profiles
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-[var(--text-muted)] mb-4 max-w-lg">
+          Follow the market conversation. Live profiles pulled straight from X for the accounts moving the stock world.
+        </p>
+        <XAccountsGrid accounts={xAccounts} />
+      </section>
+
       {/* Wallet Connection + Trading */}
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6">
         <div className="flex items-center gap-2 mb-4">
@@ -1092,6 +1191,20 @@ export default function MarketPage() {
                   <div className="text-[10px] text-[var(--text-muted)] mb-1">Tokens</div>
                   <div className="text-xs font-semibold text-[var(--foreground)]">{walletTokens.length > 0 ? walletTokens.length : "—"}</div>
                 </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-1.5 text-[10px] text-[var(--text-muted)]">
+                  <Wifi size={12} className="text-[var(--accent)]" />
+                  <span>Connected to Robinhood Chain · wallet ready for real swaps</span>
+                </div>
+                <button
+                  onClick={() => disconnect()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-[10px] font-medium text-red-400 hover:bg-red-500/20 transition-colors"
+                >
+                  <LogOut size={11} />
+                  Disconnect
+                </button>
               </div>
 
               {walletTokens.length > 0 && (
@@ -1376,6 +1489,140 @@ function TxnsFeed({ txns, loading }: { txns: LiveTxn[]; loading: boolean }) {
           </a>
         );
       })}
+    </div>
+  );
+}
+
+function timeAgo(ts: number): string {
+  const diff = Math.floor(Date.now() / 1000) - ts;
+  if (diff < 60) return "just now";
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+}
+
+function formatFollowers(n: number | null): string {
+  if (!n) return "—";
+  if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
+  if (n >= 1e3) return `${(n / 1e3).toFixed(1)}K`;
+  return n.toLocaleString();
+}
+
+function StockNewsFeed({ news, loading }: { news: MarketNewsItem[]; loading: boolean }) {
+  if (loading && news.length === 0) return (
+    <div className="space-y-2">
+      {[1,2,3,4].map(i => <div key={i} className="h-14 rounded-xl animate-shimmer" style={{ background: "var(--bg-card)" }} />)}
+    </div>
+  );
+
+  if (news.length === 0) return (
+    <div className="text-center py-10">
+      <Newspaper size={24} className="mx-auto text-[var(--text-muted)] mb-2" />
+      <p className="text-xs text-[var(--text-muted)]">No news available right now.</p>
+    </div>
+  );
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {news.map((item) => (
+        <a
+          key={item.id}
+          href={item.link}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group flex items-start gap-3 bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-xl p-3 hover:border-[var(--accent)]/25 hover:shadow-[0_0_20px_var(--accent-glow)] transition-all duration-200"
+        >
+          {item.thumbnail ? (
+            <img
+              src={item.thumbnail}
+              alt=""
+              className="w-16 h-16 rounded-lg object-cover flex-shrink-0 bg-[var(--surface)]"
+              loading="lazy"
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+            />
+          ) : (
+            <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-[var(--accent)]/15 to-[var(--accent)]/5 border border-[var(--accent)]/10 flex items-center justify-center flex-shrink-0">
+              <span className="text-[9px] font-bold text-[var(--accent)]">{item.symbol.replace("-USD", "")}</span>
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <div className="text-xs font-semibold text-[var(--foreground)] leading-snug group-hover:text-[var(--accent)] transition-colors line-clamp-2">
+              {item.title}
+            </div>
+            <div className="flex items-center gap-2 mt-1.5 text-[9px] text-[var(--text-muted)]">
+              <span className="text-[var(--accent)] font-medium">{item.symbol}</span>
+              <span>·</span>
+              <span className="truncate">{item.publisher}</span>
+              <span>·</span>
+              <span className="flex-shrink-0">{timeAgo(item.publishedAt)}</span>
+            </div>
+          </div>
+        </a>
+      ))}
+    </div>
+  );
+}
+
+function XAccountsGrid({ accounts }: { accounts: XProfile[] }) {
+  if (accounts.length === 0) return (
+    <div className="text-center py-8">
+      <UsersIcon size={24} className="mx-auto text-[var(--text-muted)] mb-2" />
+      <p className="text-xs text-[var(--text-muted)]">Loading live X profiles...</p>
+    </div>
+  );
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      {accounts.map((acc) => (
+        <a
+          key={acc.handle}
+          href={acc.profileUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-xl p-4 hover:border-[var(--accent)]/25 hover:shadow-[0_0_20px_var(--accent-glow)] transition-all duration-200"
+        >
+          <div className="flex items-center gap-3 mb-2">
+            {acc.avatarUrl ? (
+              <img
+                src={acc.avatarUrl}
+                alt={acc.displayName}
+                className="w-10 h-10 rounded-full object-cover border border-[var(--border)]"
+                loading="lazy"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--accent)] to-emerald-400 flex items-center justify-center">
+                <span className="text-black font-black text-sm">{acc.displayName.slice(0, 1).toUpperCase()}</span>
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold text-[var(--foreground)] truncate group-hover:text-[var(--accent)] transition-colors">
+                  {acc.displayName}
+                </span>
+                {acc.verified && (
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" className="text-[var(--accent)] flex-shrink-0" aria-label="Verified">
+                    <path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4a5.03 5.03 0 0 0-5-5c-.495 0-.965.084-1.4.238A3.823 3.823 0 0 0 10.59.5a5.03 5.03 0 0 0-5 5c0 .495.084.965.238 1.4A3.823 3.823 0 0 0 1.5 12.5c0 1.58.875 2.95 2.148 3.6-.154.435-.238.905-.238 1.4a5.03 5.03 0 0 0 5 5c.495 0 .965-.084 1.4-.238a3.823 3.823 0 0 0 3.6 2.148c1.58 0 2.95-.875 3.6-2.148.435.154.905.238 1.4.238a5.03 5.03 0 0 0 5-5c0-.495-.084-.965-.238-1.4.273-.65.238-2.02.238-2.6z" />
+                  </svg>
+                )}
+              </div>
+              <div className="text-[9px] text-[var(--text-muted)]">@{acc.handle}</div>
+            </div>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-[var(--text-muted)] group-hover:text-[var(--accent)] flex-shrink-0">
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+            </svg>
+          </div>
+          {acc.description && (
+            <p className="text-[10px] text-[var(--text-muted)] leading-relaxed line-clamp-2 mb-2">{acc.description}</p>
+          )}
+          <div className="flex items-center gap-3 text-[9px] text-[var(--text-muted)] pt-2 border-t border-[var(--border-subtle)]">
+            <span className="flex items-center gap-1">
+              <UsersIcon size={9} className="text-[var(--accent)]" />
+              <span className="font-semibold text-[var(--foreground)]">{formatFollowers(acc.followers)}</span> followers
+            </span>
+            <span className="ml-auto text-[var(--accent)] font-medium">View on X</span>
+          </div>
+        </a>
+      ))}
     </div>
   );
 }
