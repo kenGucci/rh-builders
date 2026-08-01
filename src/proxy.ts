@@ -40,6 +40,26 @@ function buildCSP(isDev: boolean) {
   return [...STATIC_CSP, `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`].join("; ");
 }
 
+const API_CACHE: { prefix: string; value: string }[] = [
+  { prefix: "/api/market-news", value: "s-maxage=60, stale-while-revalidate=120" },
+  { prefix: "/api/market", value: "s-maxage=5, stale-while-revalidate=10" },
+  { prefix: "/api/onchain", value: "s-maxage=15, stale-while-revalidate=30" },
+  { prefix: "/api/twitter", value: "s-maxage=300, stale-while-revalidate=600" },
+  { prefix: "/api/ecosystem", value: "s-maxage=3600, stale-while-revalidate=7200" },
+  { prefix: "/api/stock-tokens", value: "s-maxage=60, stale-while-revalidate=120" },
+  { prefix: "/api/live-activity", value: "s-maxage=10, stale-while-revalidate=30" },
+];
+
+function setApiCacheHeader(response: NextResponse, pathname: string) {
+  if (!pathname.startsWith("/api/")) return;
+  for (const rule of API_CACHE) {
+    if (pathname.startsWith(rule.prefix)) {
+      response.headers.set("Cache-Control", rule.value);
+      return;
+    }
+  }
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -78,6 +98,7 @@ export async function proxy(request: NextRequest) {
 
   const response = NextResponse.next();
   setHeaders(response);
+  setApiCacheHeader(response, pathname);
   const isDev = request.nextUrl.hostname === "localhost" || request.nextUrl.hostname === "127.0.0.1";
   response.headers.set("Content-Security-Policy", buildCSP(isDev));
   return response;
