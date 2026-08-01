@@ -6,11 +6,26 @@ import { ArrowUpRight } from "lucide-react";
 
 interface Result {
   type: string;
+  matchType?: string;
   address: string | null;
   label: string | null;
   token_symbol?: string | null;
   creator?: string | null;
+  twitter?: string | null;
   message?: string | null;
+}
+
+function resultUrl(r: Result): string | null {
+  if (r.type === "x") {
+    const handle = r.twitter || r.label || (r.address ? r.address.replace(/^@/, "") : "");
+    return handle ? `/x/${encodeURIComponent(handle)}` : null;
+  }
+  if (!r.address) return null;
+  if (r.matchType === "project" && r.creator) return `/builder/${r.creator}?ca=${r.address}`;
+  if (r.matchType === "x" || (r.type === "token" && !r.creator)) return `/builder/${r.address}?tab=xaccount`;
+  if (r.matchType === "wallet" || r.type === "address") return `/builder/${r.address}?tab=claims`;
+  if (r.type === "contract") return `/builder/${r.address}?tab=claims`;
+  return `/builder/${r.address}`;
 }
 
 export default function HeaderSearch({ className = "" }: { className?: string }) {
@@ -44,12 +59,9 @@ export default function HeaderSearch({ className = "" }: { className?: string })
   }, []);
 
   const navigate = (r: Result) => {
-    if (!r.address) return;
-    if (r.type === "token" && r.creator) {
-      router.push(`/builder/${r.creator}?ca=${r.address}`);
-    } else {
-      router.push(`/builder/${r.address}`);
-    }
+    const url = resultUrl(r);
+    if (!url) return;
+    router.push(url);
     setOpen(false);
     setQuery("");
   };

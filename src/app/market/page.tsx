@@ -667,6 +667,7 @@ export default function MarketPage() {
   const [ecosystemApps, setEcosystemApps] = useState<EcosystemApp[]>([]);
   const [ecosystemLoading, setEcosystemLoading] = useState(true);
   const [ecosystemCategory, setEcosystemCategory] = useState("All");
+  const [ecosystemUpdatedAt, setEcosystemUpdatedAt] = useState<Date | null>(null);
   const [onchainStats, setOnchainStats] = useState<OnchainStats | null>(null);
   const [onchainBlocks, setOnchainBlocks] = useState<OnchainBlock[]>([]);
   const [onchainTxs, setOnchainTxs] = useState<OnchainTx[]>([]);
@@ -744,6 +745,7 @@ export default function MarketPage() {
       const res = await fetch("/api/ecosystem");
       const data = await res.json();
       if (data.apps) setEcosystemApps(data.apps);
+      if (data.updatedAt) setEcosystemUpdatedAt(new Date(data.updatedAt));
     } catch {} finally { setEcosystemLoading(false); }
   }, []);
 
@@ -1509,13 +1511,19 @@ export default function MarketPage() {
             {!ecosystemLoading && ecosystemApps.length > 0 && (
               <span className="ml-auto text-[9px] text-green-400 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-400 live-blink" />
-                {ecosystemApps.length} apps
+                {ecosystemApps.length} apps live
               </span>
             )}
           </div>
-          <p className="text-xs text-[var(--text-muted)] mb-4 max-w-lg">
+          <p className="text-xs text-[var(--text-muted)] mb-1 max-w-lg">
             New apps are always launching on Robinhood Chain. Explore apps for trading, lending, borrowing, and more.
           </p>
+          {ecosystemUpdatedAt && (
+            <p className="text-[9px] text-[var(--text-muted)] mb-4">
+              Live data synced from the Robinhood Chain ecosystem · updated{" "}
+              <span className="text-[var(--accent)]">{timeAgo(ecosystemUpdatedAt.toISOString())} ago</span>
+            </p>
+          )}
 
         {/* Category Filter */}
         {!ecosystemLoading && ecosystemApps.length > 0 && (

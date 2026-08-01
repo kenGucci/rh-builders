@@ -4,6 +4,7 @@ import { useState } from "react";
 import Sidebar from "@/components/Sidebar";
 import ThemeSwitcher from "@/components/ThemeSwitcher";
 import HeaderSearch from "@/components/HeaderSearch";
+import WallBot from "@/components/WallBot";
 import { Menu, ExternalLink } from "lucide-react";
 
 export default function Shell({ children }: { children: React.ReactNode }) {
@@ -57,6 +58,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+      <WallBot />
     </div>
   );
 }

@@ -78,7 +78,8 @@ export default function BuilderProfileClient() {
   const searchParams = useSearchParams();
   const address = (params.address as string).toLowerCase();
   const caParam = searchParams.get("ca")?.toLowerCase() || null;
-  const [activeTab, setActiveTab] = useState<Tab>("xaccount");
+  const tabParam = searchParams.get("tab") as Tab | null;
+  const [activeTab, setActiveTab] = useState<Tab>(tabParam && ["xaccount", "claims", "activity"].includes(tabParam) ? tabParam : "xaccount");
   const [data, setData] = useState<AddressData | null>(null);
   const [copied, setCopied] = useState(false);
   const [tweet, setTweet] = useState<TweetData | null>(null);

@@ -54,6 +54,7 @@ export default function LiveTransactions() {
   const [txs, setTxs] = useState<RecentTx[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [countdown, setCountdown] = useState(12);
 
   async function load() {
     try {
@@ -62,6 +63,7 @@ export default function LiveTransactions() {
       const data = await res.json();
       setTxs(data.transactions || []);
       setLastUpdate(new Date());
+      setCountdown(12);
     } catch {
     } finally {
       setLoading(false);
@@ -71,7 +73,11 @@ export default function LiveTransactions() {
   useEffect(() => {
     load();
     const interval = setInterval(load, 12000);
-    return () => clearInterval(interval);
+    const tick = setInterval(() => setCountdown((c) => (c > 0 ? c - 1 : 12)), 1000);
+    return () => {
+      clearInterval(interval);
+      clearInterval(tick);
+    };
   }, []);
 
   if (loading) {
@@ -88,13 +94,24 @@ export default function LiveTransactions() {
     <div>
       {lastUpdate && (
         <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-1.5 text-[11px] text-[var(--text-muted)]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] live-blink" />
-            Live feed
+          <div className="flex items-center gap-2 text-[11px] text-[var(--text-muted)]">
+            <span className="px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 text-[9px] font-bold tracking-widest flex items-center gap-1">
+              <span className="w-1 h-1 rounded-full bg-red-400 live-blink" />
+              LIVE
+            </span>
+            <span>auto-refresh in {countdown}s</span>
           </div>
-          <div className="flex items-center gap-1.5 text-[10px] text-[var(--text-muted)]">
+          <div className="flex items-center gap-2 text-[10px] text-[var(--text-muted)]">
             <Clock size={10} />
             {lastUpdate.toLocaleTimeString()}
+            <button
+              onClick={load}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[var(--bg-card)] border border-[var(--border-subtle)] hover:text-[var(--accent)] hover:border-[var(--accent)]/20 transition-all"
+              aria-label="Refresh live transactions now"
+            >
+              <RotateCw size={10} className={loading ? "animate-spin" : ""} />
+              Refresh
+            </button>
           </div>
         </div>
       )}

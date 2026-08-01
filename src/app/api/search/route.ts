@@ -32,21 +32,34 @@ function normalize(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
-function searchRegistry(query: string): { address: string; label: string } | null {
+function searchRegistry(query: string): {
+  address: string | null;
+  label: string;
+  matchType: "x" | "wallet";
+  twitter: string | null;
+} | null {
   const q = normalize(query.replace(/^@/, ""));
   for (const b of builders.builders) {
-    if (!b.address || !/^0x[a-fA-F0-9]{40}$/.test(b.address)) continue;
+    const twitterNorm = b.twitter ? normalize(b.twitter) : "";
+    const isXHandleMatch = twitterNorm !== "" && (twitterNorm === q || q.includes(twitterNorm) || twitterNorm.includes(q));
+    if (!isXHandleMatch && (!b.address || !/^0x[a-fA-F0-9]{40}$/.test(b.address))) continue;
     const fields = [b.name, b.twitter, b.ens, b.address, ...(b.tags || [])].filter(Boolean) as string[];
-    if (
+    const matched =
+      isXHandleMatch ||
       fields.some(
         (f) =>
           normalize(f) === q ||
           normalize(f).includes(q) ||
           q.includes(normalize(f))
-      )
-    ) {
-      return { address: b.address, label: b.name || b.twitter || b.ens || "" };
-    }
+      );
+    if (!matched) continue;
+    const validAddr = b.address && /^0x[a-fA-F0-9]{40}$/.test(b.address);
+    return {
+      address: validAddr ? b.address : null,
+      label: b.name || b.twitter || b.ens || "",
+      matchType: isXHandleMatch ? "x" : "wallet",
+      twitter: b.twitter || null,
+    };
   }
   return null;
 }
@@ -62,6 +75,7 @@ interface BlockscoutSearchItem {
 
 async function searchBlockscout(query: string): Promise<{
   type: string;
+  matchType: string;
   address: string;
   label: string | null;
   token_symbol?: string | null;
@@ -98,6 +112,7 @@ async function searchBlockscout(query: string): Promise<{
 
     return {
       type: "token",
+      matchType: addrData?.creator_address_hash ? "project" : "token",
       address: addr.toLowerCase(),
       label: best.name || best.symbol || query,
       token_symbol: best.symbol ?? null,
@@ -119,6 +134,7 @@ async function searchBlockscout(query: string): Promise<{
 
   return {
     type: best.type === "address" ? "address" : "contract",
+    matchType: best.type === "address" ? "wallet" : "contract",
     address: addr.toLowerCase(),
     label: best.name || null,
   };
@@ -133,6 +149,7 @@ async function resolveTokenCA(address: string) {
 
     return {
       type: "token",
+      matchType: addrData?.creator_address_hash ? "project" : "token",
       address: address.toLowerCase(),
       label: tokenInfo.name || tokenInfo.symbol || null,
       token_symbol: tokenInfo.symbol || null,
@@ -171,6 +188,7 @@ export async function GET(request: NextRequest) {
     if (stockToken) {
       const result = {
         type: "token",
+        matchType: "token",
         address: stockToken.tokenAddress.toLowerCase(),
         label: stockToken.name,
         token_symbol: stockToken.symbol,
@@ -192,6 +210,7 @@ export async function GET(request: NextRequest) {
         } else {
           result = {
             type: "contract",
+            matchType: "contract",
             address: data.hash.toLowerCase(),
             label: data.name || data.token?.name || null,
             token_symbol: data.token?.symbol || null,
@@ -201,6 +220,7 @@ export async function GET(request: NextRequest) {
       } else {
         result = {
           type: "address",
+          matchType: "wallet",
           address: data.hash.toLowerCase(),
           label: data.name || null,
         };
@@ -210,6 +230,7 @@ export async function GET(request: NextRequest) {
     } catch {
       const fallback = {
         type: "address",
+        matchType: "wallet",
         address: trimmed.toLowerCase(),
         label: null,
       };
@@ -222,8 +243,10 @@ export async function GET(request: NextRequest) {
   const registryMatch = searchRegistry(trimmed);
   if (registryMatch) {
     const result = {
-      type: "address",
-      address: registryMatch.address.toLowerCase(),
+      type: registryMatch.address ? "address" : "x",
+      matchType: registryMatch.matchType,
+      twitter: registryMatch.twitter,
+      address: registryMatch.address ? registryMatch.address.toLowerCase() : null,
       label: registryMatch.label,
     };
     cachedSet(cacheKey, result);
@@ -235,6 +258,7 @@ export async function GET(request: NextRequest) {
   if (stockToken) {
     const result = {
       type: "token",
+      matchType: "token",
       address: stockToken.tokenAddress.toLowerCase(),
       label: stockToken.name,
       token_symbol: stockToken.symbol,
@@ -252,6 +276,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(result);
     }
   } catch {}
+
+  // X handle (not in local registry) — e.g. @handle, or a bare handle containing "_"
+  const bare = trimmed.replace(/^@/, "");
+  const looksLikeHandle = /^@[a-zA-Z0-9_]{1,15}$/.test(trimmed) || (bare.includes("_") && /^[a-zA-Z0-9_]{2,15}$/.test(bare));
+  if (looksLikeHandle) {
+    const xResult = {
+      type: "x",
+      matchType: "x",
+      address: null,
+      twitter: bare,
+      label: bare,
+    };
+    cachedSet(cacheKey, xResult);
+    return NextResponse.json(xResult);
+  }
 
   const result = {
     type: "unknown",

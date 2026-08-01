@@ -6,11 +6,13 @@ import { ArrowUpRight } from "lucide-react";
 
 interface SearchResult {
   type: string;
+  matchType?: string;
   address: string | null;
   label: string | null;
   token_symbol?: string | null;
   token_name?: string | null;
   creator?: string | null;
+  twitter?: string | null;
   message?: string | null;
   token_info?: {
     name: string;
@@ -18,6 +20,25 @@ interface SearchResult {
     holders_count: number;
     total_supply: string;
   } | null;
+}
+
+function resultUrl(s: SearchResult): string | null {
+  if (s.type === "x") {
+    const handle = (s.twitter as string | undefined) || s.label || (s.address ? s.address.replace(/^@/, "") : "");
+    return handle ? `/x/${encodeURIComponent(handle)}` : null;
+  }
+  if (!s.address) return null;
+  if (s.matchType === "project" && s.creator) {
+    return `/builder/${s.creator}?ca=${s.address}`;
+  }
+  if (s.matchType === "x" || (s.type === "token" && !s.creator)) {
+    return `/builder/${s.address}?tab=xaccount`;
+  }
+  if (s.matchType === "wallet" || s.type === "address") {
+    return `/builder/${s.address}?tab=claims`;
+  }
+  if (s.type === "contract") return `/builder/${s.address}?tab=claims`;
+  return `/builder/${s.address}`;
 }
 
 export default function SearchBar({ compact = false, value, onValueChange }: { compact?: boolean; value?: string; onValueChange?: (v: string) => void }) {
@@ -49,11 +70,8 @@ export default function SearchBar({ compact = false, value, onValueChange }: { c
       const res = await fetch(`/api/search?q=${encodeURIComponent(q.trim())}`);
       const data = await res.ok ? await res.json() : {};
       if (data.address && data.type !== "unknown") {
-        if (data.type === "token" && data.creator) {
-          router.push(`/builder/${data.creator}?ca=${data.address}`);
-        } else {
-          router.push(`/builder/${data.address}`);
-        }
+        const url = resultUrl(data);
+        if (url) router.push(url);
       }
     } catch {}
   };
@@ -145,19 +163,13 @@ export default function SearchBar({ compact = false, value, onValueChange }: { c
   const pickSuggestion = (s: SearchResult) => {
     setShowSuggestions(false);
     setSearchResult(null);
-    if (s.type === "token" && s.creator) {
-      router.push(`/builder/${s.creator}?ca=${s.address}`);
-    } else if (s.type === "token" || s.type === "address" || s.type === "contract") {
-      router.push(`/builder/${s.address}`);
-    }
+    const url = resultUrl(s);
+    if (url) router.push(url);
   };
 
   const openResult = (s: SearchResult) => {
-    if (s.type === "token" && s.creator) {
-      router.push(`/builder/${s.creator}?ca=${s.address}`);
-    } else if (s.type === "token" || s.type === "address" || s.type === "contract") {
-      router.push(`/builder/${s.address}`);
-    }
+    const url = resultUrl(s);
+    if (url) router.push(url);
   };
 
   if (compact) {
@@ -275,7 +287,7 @@ export default function SearchBar({ compact = false, value, onValueChange }: { c
                     </div>
                   </div>
                   <div className="text-[10px] text-[var(--text-muted)] uppercase flex-shrink-0">
-                    {s.type}
+                    {s.matchType || s.type}
                   </div>
                 </button>
               ))}
