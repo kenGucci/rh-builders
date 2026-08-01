@@ -1,10 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import builders from "@/lib/builders.json";
+import { findStockToken } from "@/lib/stock-tokens";
 
 const BLOCKSCOUT_API_V2 = "https://robinhoodchain.blockscout.com/api/v2";
 
-async function apiFetch(url: string) {
-  const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+// ─── In-memory cache ───
+const cache = new Map<string, { data: unknown; expires: number }>();
+const CACHE_TTL = 5 * 60 * 1000;
+
+function cachedGet(key: string) {
+  const hit = cache.get(key);
+  if (hit && hit.expires > Date.now()) return hit.data;
+  return undefined;
+}
+
+function cachedSet(key: string, data: unknown) {
+  cache.set(key, { data, expires: Date.now() + CACHE_TTL });
+  if (cache.size > 500) {
+    const oldest = cache.keys().next().value;
+    if (oldest) cache.delete(oldest);
+  }
+}
+
+async function apiFetch(url: string, timeoutMs = 5000) {
+  const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
   if (!res.ok) throw new Error(`Blockscout API error: ${res.status}`);
   return res.json();
 }
@@ -59,11 +78,11 @@ async function searchBlockscout(query: string): Promise<{
   creator?: string | null;
 } | null> {
   const data = await apiFetch(
-    `${BLOCKSCOUT_API_V2}/search?q=${encodeURIComponent(query)}`
+    `${BLOCKSCOUT_API_V2}/search?q=${encodeURIComponent(query)}`,
+    6000
   );
 
   const items: BlockscoutSearchItem[] = data.items || [];
-
   if (items.length === 0) return null;
 
   const best = items[0];
@@ -71,19 +90,11 @@ async function searchBlockscout(query: string): Promise<{
   if (!addr) return null;
 
   if (best.type === "token" || best.token_type) {
-    let tokenInfo: {
-      name: string; symbol: string; decimals: string; total_supply: string;
-      holders_count: number; circulating_market_cap: string | null; exchange_rate: string | null;
-    } | null = null;
-    try {
-      tokenInfo = await apiFetch(`${BLOCKSCOUT_API_V2}/tokens/${addr.toLowerCase()}`);
-    } catch {}
-
-    let creator: string | null = null;
-    try {
-      const addrData = await apiFetch(`${BLOCKSCOUT_API_V2}/addresses/${addr.toLowerCase()}`);
-      creator = addrData.creator_address_hash ?? null;
-    } catch {}
+    // Enrich token + resolve creator in parallel (both bounded by the same 5s timeout)
+    const [tokenInfo, addrData] = await Promise.all([
+      apiFetch(`${BLOCKSCOUT_API_V2}/tokens/${addr.toLowerCase()}`).catch(() => null),
+      apiFetch(`${BLOCKSCOUT_API_V2}/addresses/${addr.toLowerCase()}`).catch(() => null),
+    ]);
 
     return {
       type: "token",
@@ -91,29 +102,23 @@ async function searchBlockscout(query: string): Promise<{
       label: best.name || best.symbol || query,
       token_symbol: best.symbol ?? null,
       token_name: best.name ?? null,
-      token_info: tokenInfo ? {
-        name: tokenInfo.name,
-        symbol: tokenInfo.symbol,
-        decimals: tokenInfo.decimals,
-        total_supply: tokenInfo.total_supply,
-        holders_count: tokenInfo.holders_count,
-        market_cap: tokenInfo.circulating_market_cap,
-        exchange_rate: tokenInfo.exchange_rate,
-      } : null,
-      creator,
-    };
-  }
-
-  if (best.type === "address" || best.is_smart_contract_address) {
-    return {
-      type: "address",
-      address: addr.toLowerCase(),
-      label: best.name || null,
+      token_info: tokenInfo
+        ? {
+            name: tokenInfo.name,
+            symbol: tokenInfo.symbol,
+            decimals: tokenInfo.decimals,
+            total_supply: tokenInfo.total_supply,
+            holders_count: tokenInfo.holders_count,
+            market_cap: tokenInfo.circulating_market_cap,
+            exchange_rate: tokenInfo.exchange_rate,
+          }
+        : null,
+      creator: addrData?.creator_address_hash ?? null,
     };
   }
 
   return {
-    type: "address",
+    type: best.type === "address" ? "address" : "contract",
     address: addr.toLowerCase(),
     label: best.name || null,
   };
@@ -121,13 +126,10 @@ async function searchBlockscout(query: string): Promise<{
 
 async function resolveTokenCA(address: string) {
   try {
-    const tokenInfo = await apiFetch(`${BLOCKSCOUT_API_V2}/tokens/${address.toLowerCase()}`);
-
-    let creator = null;
-    try {
-      const addrData = await apiFetch(`${BLOCKSCOUT_API_V2}/addresses/${address.toLowerCase()}`);
-      creator = addrData.creator_address_hash || null;
-    } catch {}
+    const [tokenInfo, addrData] = await Promise.all([
+      apiFetch(`${BLOCKSCOUT_API_V2}/tokens/${address.toLowerCase()}`),
+      apiFetch(`${BLOCKSCOUT_API_V2}/addresses/${address.toLowerCase()}`).catch(() => null),
+    ]);
 
     return {
       type: "token",
@@ -144,7 +146,7 @@ async function resolveTokenCA(address: string) {
         market_cap: tokenInfo.circulating_market_cap,
         exchange_rate: tokenInfo.exchange_rate,
       },
-      creator,
+      creator: addrData?.creator_address_hash || null,
     };
   } catch {
     return null;
@@ -158,62 +160,105 @@ export async function GET(request: NextRequest) {
   }
 
   const trimmed = q.trim();
+  const cacheKey = trimmed.toLowerCase();
+  const cached = cachedGet(cacheKey);
+  if (cached) return NextResponse.json(cached);
 
-  // Direct wallet or contract address (0x...{40})
+  // Direct wallet or contract address (0x...{40}) — fast path, single bounded call
   if (/^0x[a-fA-F0-9]{40}$/.test(trimmed)) {
+    // Known Stock Token address — resolve instantly without hitting Blockscout
+    const stockToken = findStockToken(trimmed);
+    if (stockToken) {
+      const result = {
+        type: "token",
+        address: stockToken.tokenAddress.toLowerCase(),
+        label: stockToken.name,
+        token_symbol: stockToken.symbol,
+        token_name: stockToken.name,
+      };
+      cachedSet(cacheKey, result);
+      return NextResponse.json(result);
+    }
     try {
       const data = await apiFetch(
-        `${BLOCKSCOUT_API_V2}/addresses/${trimmed.toLowerCase()}`
+        `${BLOCKSCOUT_API_V2}/addresses/${trimmed.toLowerCase()}`,
+        4000
       );
+      let result: Record<string, unknown>;
       if (data.is_contract) {
         const tokenResult = await resolveTokenCA(trimmed);
         if (tokenResult) {
-          return NextResponse.json(tokenResult);
+          result = tokenResult;
+        } else {
+          result = {
+            type: "contract",
+            address: data.hash.toLowerCase(),
+            label: data.name || data.token?.name || null,
+            token_symbol: data.token?.symbol || null,
+            token_name: data.token?.name || null,
+          };
         }
-        return NextResponse.json({
-          type: "contract",
+      } else {
+        result = {
+          type: "address",
           address: data.hash.toLowerCase(),
-          label: data.name || data.token?.name || null,
-          token_symbol: data.token?.symbol || null,
-          token_name: data.token?.name || null,
-        });
+          label: data.name || null,
+        };
       }
-      return NextResponse.json({
-        type: "address",
-        address: data.hash.toLowerCase(),
-        label: data.name || null,
-      });
+      cachedSet(cacheKey, result);
+      return NextResponse.json(result);
     } catch {
-      return NextResponse.json({
+      const fallback = {
         type: "address",
         address: trimmed.toLowerCase(),
         label: null,
-      });
+      };
+      cachedSet(cacheKey, fallback);
+      return NextResponse.json(fallback);
     }
   }
 
-  // Check local builder registry
+  // Check local builder registry (instant)
   const registryMatch = searchRegistry(trimmed);
   if (registryMatch) {
-    return NextResponse.json({
+    const result = {
       type: "address",
       address: registryMatch.address.toLowerCase(),
       label: registryMatch.label,
-    });
+    };
+    cachedSet(cacheKey, result);
+    return NextResponse.json(result);
+  }
+
+  // Check local Stock Token registry (instant) — matches symbol or contract address
+  const stockToken = findStockToken(trimmed);
+  if (stockToken) {
+    const result = {
+      type: "token",
+      address: stockToken.tokenAddress.toLowerCase(),
+      label: stockToken.name,
+      token_symbol: stockToken.symbol,
+      token_name: stockToken.name,
+    };
+    cachedSet(cacheKey, result);
+    return NextResponse.json(result);
   }
 
   // Search Blockscout for anything matching the query (tokens, addresses, Twitter handles)
   try {
     const result = await searchBlockscout(trimmed);
     if (result) {
+      cachedSet(cacheKey, result);
       return NextResponse.json(result);
     }
   } catch {}
 
-  return NextResponse.json({
+  const result = {
     type: "unknown",
     address: null,
     label: null,
     message: `No results found for "${trimmed}". Try a wallet address, token name, or contract address (CA).`,
-  });
+  };
+  cachedSet(cacheKey, result);
+  return NextResponse.json(result);
 }

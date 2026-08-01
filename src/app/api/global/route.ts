@@ -25,11 +25,78 @@ interface SearchResponse {
 
 const PEXELS_API_KEY = process.env.PEXELS_API_KEY || "";
 
-// ─── WEB SEARCH ─── Wikipedia + DuckDuckGo API + DDG Lite ───
+const UA =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
+
+// ─── In-memory cache ───
+const cache = new Map<string, { data: unknown; expires: number }>();
+const CACHE_TTL = 5 * 60 * 1000;
+
+function cachedGet(key: string) {
+  const hit = cache.get(key);
+  if (hit && hit.expires > Date.now()) return hit.data;
+  return undefined;
+}
+
+function cachedSet(key: string, data: unknown) {
+  cache.set(key, { data, expires: Date.now() + CACHE_TTL });
+  if (cache.size > 500) {
+    const oldest = cache.keys().next().value;
+    if (oldest) cache.delete(oldest);
+  }
+}
+
+function decodeEntities(s: string): string {
+  return s
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&#0?39;/g, "'")
+    .replace(/&nbsp;/g, " ");
+}
+
+// ─── DuckDuckGo HTML scrape (reliable web results) ───
+async function searchDdgHtml(query: string): Promise<SearchResult[]> {
+  try {
+    const res = await fetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`, {
+      signal: AbortSignal.timeout(9000),
+      headers: { "User-Agent": UA, "Accept-Language": "en-US,en;q=0.9" },
+    });
+    if (!res.ok) return [];
+    const html = await res.text();
+
+    const anchors = [...html.matchAll(/<a[^>]*class="result__a"[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/g)].slice(0, 12);
+    const snippets = [...html.matchAll(/<a[^>]*class="result__snippet"[^>]*>([\s\S]*?)<\/a>/g)];
+    const resultUrls = [...html.matchAll(/<a[^>]*class="result__url"[^>]*>([\s\S]*?)<\/a>/g)];
+
+    return anchors.map((m, i) => {
+      const rawHref = decodeEntities(m[1]);
+      const uddg = rawHref.match(/[?&]uddg=([^&]+)/)?.[1];
+      const url = uddg ? decodeURIComponent(uddg) : rawHref.replace(/^\/\//, "https://");
+      return {
+        id: `ddg-${i}-${query}`,
+        title: decodeEntities(m[2].replace(/<[^>]*>/g, "")),
+        description: decodeEntities((snippets[i]?.[1] || "").replace(/<[^>]*>/g, "")).slice(0, 240),
+        url,
+        source: decodeEntities((resultUrls[i]?.[1] || "").replace(/<[^>]*>/g, "")).trim() || new URL(url).hostname.replace("www.", ""),
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
+// ─── WEB SEARCH ─── DDG HTML + Wikipedia + DuckDuckGo Instant Answer ───
 async function searchWeb(query: string): Promise<SearchResult[]> {
   const results: SearchResult[] = [];
 
-  // 1. Wikipedia
+  // 1. DuckDuckGo HTML scrape (primary — reliable, real results)
+  const ddgResults = await searchDdgHtml(query);
+  results.push(...ddgResults);
+
+  // 2. Wikipedia
   try {
     const res = await fetch(
       `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)}`,
@@ -50,7 +117,7 @@ async function searchWeb(query: string): Promise<SearchResult[]> {
     }
   } catch {}
 
-  // 2. DuckDuckGo Instant Answer API
+  // 3. DuckDuckGo Instant Answer API
   try {
     const res = await fetch(
       `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`,
@@ -201,11 +268,39 @@ async function searchNews(query: string): Promise<SearchResult[]> {
   return results.slice(0, 15);
 }
 
-// ─── IMAGES SEARCH ─── Pexels API + DuckDuckGo + Wikipedia ───
+// ─── IMAGES SEARCH ─── Pexels API + Wikimedia Commons + DuckDuckGo ───
+async function searchCommons(query: string): Promise<SearchResult[]> {
+  try {
+    const res = await fetch(
+      `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(query)}&gsrnamespace=6&gsrlimit=12&prop=imageinfo&iiprop=url&iiurlwidth=320&format=json&origin=*`,
+      { signal: AbortSignal.timeout(9000), headers: { "User-Agent": UA } }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    const pages = data?.query?.pages || {};
+    const out: SearchResult[] = [];
+    for (const page of Object.values(pages) as Array<{ title?: string; imageinfo?: Array<{ thumburl?: string; url?: string }> }>) {
+      const ii = page.imageinfo?.[0];
+      if (!ii?.thumburl) continue;
+      out.push({
+        id: `commons-${page.title}`,
+        title: (page.title || query).replace(/^File:/, "").replace(/\.[a-zA-Z0-9]+$/, "").replace(/_/g, " "),
+        description: "Wikimedia Commons",
+        url: ii.url || ii.thumburl,
+        source: "Wikimedia Commons",
+        thumbnail: ii.thumburl,
+      });
+    }
+    return out.slice(0, 12);
+  } catch {
+    return [];
+  }
+}
+
 async function searchImages(query: string): Promise<SearchResult[]> {
   const results: SearchResult[] = [];
 
-  // 1. Pexels API (primary)
+  // 1. Pexels API (primary, when key present)
   if (PEXELS_API_KEY) {
     try {
       const res = await fetch(
@@ -231,7 +326,13 @@ async function searchImages(query: string): Promise<SearchResult[]> {
     } catch {}
   }
 
-  // 2. DuckDuckGo image search (fallback)
+  // 2. Wikimedia Commons (reliable, no key needed)
+  if (results.length === 0) {
+    const commons = await searchCommons(query);
+    results.push(...commons);
+  }
+
+  // 3. DuckDuckGo image search (fallback)
   if (results.length === 0) {
     try {
       const res = await fetch(
@@ -261,7 +362,7 @@ async function searchImages(query: string): Promise<SearchResult[]> {
     } catch {}
   }
 
-  // 3. Wikipedia images (final fallback)
+  // 4. Wikipedia images (final fallback)
   if (results.length === 0) {
     try {
       const res = await fetch(
@@ -512,6 +613,12 @@ export async function GET(request: NextRequest) {
 
   const startTime = Date.now();
 
+  const cacheKey = `${category}:${q.trim().toLowerCase()}`;
+  const cached = cachedGet(cacheKey) as SearchResponse | undefined;
+  if (cached) {
+    return NextResponse.json({ ...cached, searchTime: 0, cached: true });
+  }
+
   try {
     const handler = searchHandlers[category];
     const results = await handler(q.trim());
@@ -525,6 +632,7 @@ export async function GET(request: NextRequest) {
       searchTime,
     };
 
+    cachedSet(cacheKey, response);
     return NextResponse.json(response);
   } catch {
     return NextResponse.json({

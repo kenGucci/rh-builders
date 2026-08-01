@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Sidebar from "@/components/Sidebar";
 import ThemeSwitcher from "@/components/ThemeSwitcher";
+import HeaderSearch from "@/components/HeaderSearch";
 import { Menu, ExternalLink } from "lucide-react";
 
 export default function Shell({ children }: { children: React.ReactNode }) {
@@ -34,19 +35,22 @@ export default function Shell({ children }: { children: React.ReactNode }) {
                 <span className="text-[var(--accent)] font-mono">4663</span>
               </div>
             </div>
-            <nav className="flex items-center gap-2" aria-label="Actions">
-              <ThemeSwitcher compact />
-              <a
-                href="https://robinhoodchain.blockscout.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--surface)] border border-[var(--border-subtle)] text-[11px] text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)]/20 transition-all font-medium"
-                aria-label="Open Robinhood Chain Blockscout Explorer in a new tab"
-              >
-                Explorer
-                <ExternalLink size={10} aria-hidden="true" />
-              </a>
-            </nav>
+            <div className="flex items-center gap-2 flex-1 justify-end">
+              <HeaderSearch className="hidden md:block" />
+              <nav className="flex items-center gap-2" aria-label="Actions">
+                <ThemeSwitcher compact />
+                <a
+                  href="https://robinhoodchain.blockscout.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--surface)] border border-[var(--border-subtle)] text-[11px] text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)]/20 transition-all font-medium"
+                  aria-label="Open Robinhood Chain Blockscout Explorer in a new tab"
+                >
+                  Explorer
+                  <ExternalLink size={10} aria-hidden="true" />
+                </a>
+              </nav>
+            </div>
           </div>
         </header>
         <main className="p-3 sm:p-4 md:p-6" role="main" id="main-content">

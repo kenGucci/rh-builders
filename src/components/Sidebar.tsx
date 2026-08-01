@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import HeaderSearch from "@/components/HeaderSearch";
 
 interface NavItem {
   href: string;
@@ -142,6 +143,11 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
           <div className="font-bold text-[13px] leading-tight tracking-tight">THE WALL</div>
           <div className="text-[10px] text-[var(--text-muted)] leading-tight mt-0.5">Robinhood Chain</div>
         </div>
+      </div>
+
+      {/* Search (mobile drawer only — header covers desktop) */}
+      <div className="px-3 mb-1 md:hidden">
+        <HeaderSearch />
       </div>
 
       {/* Nav */}

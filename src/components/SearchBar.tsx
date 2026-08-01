@@ -192,15 +192,16 @@ export default function SearchBar({ compact = false, value, onValueChange }: { c
               placeholder="Search CA, X handle, or wallet..."
               className="flex-1 bg-transparent px-2.5 py-2 text-sm text-[var(--text)] placeholder-[var(--text-muted)]"
             />
-            {isControlled && currentValue && (
+            {isControlled && currentValue ? (
               <button
-                type="submit"
-                disabled={loading}
-                className="px-3 py-2 text-xs text-[var(--accent)] hover:text-[var(--text)] transition-colors"
+                type="button"
+                onClick={() => onValueChange!("")}
+                className="px-3 py-2 text-xs text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+                aria-label="Clear search"
               >
-                {loading ? <span className="inline-block w-3.5 h-3.5 border-2 border-[var(--accent)]/20 border-t-[var(--accent)] rounded-full animate-spin" /> : "Go"}
+                ✕
               </button>
-            )}
+            ) : null}
             {!isControlled && (
               <button
                 type="submit"
