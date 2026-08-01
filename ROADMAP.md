@@ -1,12 +1,14 @@
 # THE WALL RH Roadmap
 
-> Building the ultimate analytics platform for Robinhood Chain (4663)
+> Building the ultimate analytics + Stock Token platform for Robinhood Chain (4663)
+
+**Official X:** [@officialWALLrh](https://x.com/officialWALLrh) · **Live:** [rh-builders.vercel.app](https://rh-builders.vercel.app)
 
 ---
 
 ## Phase 1 — Foundation ✅
 
-- [x] Project setup (Next.js 15, React 19, Tailwind CSS v4, TypeScript)
+- [x] Project setup (Next.js 16, React 19, Tailwind CSS v4, TypeScript)
 - [x] Dark/light mode with 8 accent themes + custom color picker
 - [x] 82-language i18n with region-based filtering
 - [x] PWA support (installable on mobile & desktop)
@@ -36,11 +38,12 @@
 - [x] Blockscout V2 integration (on-chain data, token transfers, balance history)
 - [x] DexScreener integration (DEX pairs, volume, liquidity, price changes)
 - [x] Financial Modeling Prep integration (stock & crypto market data)
+- [x] Yahoo Finance integration (primary quotes + 24/7 market news)
 - [x] DuckDuckGo, YouTube, OpenStreetMap search (Global page)
 - [x] X/Twitter profile scraping & oembed integration
 - [x] Supabase database (users, auth, sessions)
 - [x] JWT authentication with PBKDF2 hashing
-- [x] 35+ API route handlers
+- [x] 40+ API route handlers
 
 ---
 
@@ -54,7 +57,35 @@
 
 ---
 
-## Phase 5 — Coming Soon
+## Phase 5 — Stock Token Marketplace ✅
+
+- [x] Stock Tokens page — 90+ 1:1-backed tokens (NVDA, AAPL, TSLA, QQQ, …) with real quotes
+- [x] Live board, watchlist, gainers/losers/movers with sparklines
+- [x] Real-time stock market quotes 24/7 (Yahoo Finance primary + FMP fallback)
+- [x] Detail modal with 52-week range, volume, market cap, PE, and live 5s refresh
+- [x] **Market News 24/7** — Latest headlines per symbol, cached 60s
+- [x] **On X** — Live market-voice profiles (@robinhood, @CNBC, @MarketWatch, @WSJMarkets, @Stocktwits, @Nasdaq)
+- [x] **See what's onchain** — Real-time chain dashboard (live blocks, live transactions, chain stats) 24/7
+- [x] Real wallet connect + disconnect (RainbowKit: MetaMask / WalletConnect / Coinbase)
+- [x] Real token balances from Blockscout per wallet
+- [x] Real on-chain swaps via LI.FI (ETH → Stock Tokens, etc.), tx links to Blockscout
+- [x] Ecosystem apps grid (live from Robinhood Chain ecosystem)
+
+---
+
+## Phase 6 — Performance & Publishing ✅
+
+- [x] Critical-path rendering (page paints before slow feeds load)
+- [x] Staggered refresh intervals (15s/30s/60s/300s) to cut network chatter
+- [x] Lazy-loaded swap panel (bundle split)
+- [x] CDN cache headers on hot APIs via middleware (5s–1h)
+- [x] About Us page with full site guide for all pages
+- [x] SEO fixes (metadata, sitemap, robots, OG image)
+- [x] Official X account [@officialWALLrh](https://x.com/officialWALLrh) featured on Team page
+
+---
+
+## Phase 7 — Coming Soon
 
 ### Notifications & Alerts
 - [ ] Price alert system (email / push / X DM)
@@ -77,6 +108,7 @@
 - [ ] Contract audit status integration
 
 ### Social & Community
+- [ ] Official X announcements & market updates pipeline
 - [ ] Builder Following system (follow/unfollow)
 - [ ] Activity feed (followed builders)
 - [ ] Comment system on builder profiles
@@ -89,6 +121,12 @@
 - [ ] Anti-rug score display
 - [ ] Liquidity lock verification
 - [ ] Launch calendar / upcoming tokens
+
+### Stock Token Expansion
+- [ ] More stock tokens + index tokens
+- [ ] Fractional trading on-chain
+- [ ] Yield & borrow against Stock Tokens ("Unlock more opportunities")
+- [ ] On-chain Stock Token order book
 
 ### API & Integrations
 - [ ] Public API for developers
@@ -105,7 +143,7 @@
 
 ---
 
-## Phase 6 — Long-Term Vision
+## Phase 8 — Long-Term Vision
 
 - [ ] Governance dashboard (on-chain proposals)
 - [ ] DeFi yield tracker
