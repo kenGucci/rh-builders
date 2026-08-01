@@ -88,13 +88,80 @@ async function searchDdgHtml(query: string): Promise<SearchResult[]> {
   }
 }
 
-// ─── WEB SEARCH ─── DDG HTML + Wikipedia + DuckDuckGo Instant Answer ───
+// ─── DuckDuckGo Lite scrape (reliable fallback for web results) ───
+async function searchDdgLite(query: string): Promise<SearchResult[]> {
+  try {
+    const res = await fetch(`https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(query)}`, {
+      signal: AbortSignal.timeout(9000),
+      headers: { "User-Agent": UA, "Accept-Language": "en-US,en;q=0.9" },
+    });
+    if (!res.ok) return [];
+    const html = await res.text();
+
+    const anchors = [...html.matchAll(/<a[^>]*class='?result-link'?[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/g)].slice(0, 12);
+    const snippets = [...html.matchAll(/<td class='result-snippet'>([\s\S]*?)<\/td>/g)];
+
+    return anchors.map((m, i) => {
+      const rawHref = decodeEntities(m[1]);
+      const uddg = rawHref.match(/[?&]uddg=([^&]+)/)?.[1];
+      const url = uddg ? decodeURIComponent(uddg) : rawHref.replace(/^\/\//, "https://");
+      return {
+        id: `ddgl-${i}-${query}`,
+        title: decodeEntities(m[2].replace(/<[^>]*>/g, "")),
+        description: decodeEntities((snippets[i]?.[1] || "").replace(/<[^>]*>/g, "")).slice(0, 240),
+        url,
+        source: new URL(url).hostname.replace("www.", ""),
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
+// ─── Wikipedia opensearch suggestions (supplement) ───
+async function searchWikipediaSuggestions(query: string): Promise<SearchResult[]> {
+  try {
+    const res = await fetch(
+      `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(query)}&limit=8&format=json`,
+      { signal: AbortSignal.timeout(6000) }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    const titles: string[] = data[1] || [];
+    const urls: string[] = data[3] || [];
+    return titles.map((title, i) => ({
+      id: `wiki-sug-${i}-${query}`,
+      title,
+      description: `Wikipedia article — ${title}`,
+      url: urls[i] || `https://en.wikipedia.org/wiki/${encodeURIComponent(title.replace(/ /g, "_"))}`,
+      source: "Wikipedia",
+    }));
+  } catch {
+    return [];
+  }
+}
+
+// ─── WEB SEARCH ─── DDG HTML + DDG Lite + Wikipedia + DuckDuckGo Instant Answer ───
 async function searchWeb(query: string): Promise<SearchResult[]> {
   const results: SearchResult[] = [];
 
   // 1. DuckDuckGo HTML scrape (primary — reliable, real results)
   const ddgResults = await searchDdgHtml(query);
   results.push(...ddgResults);
+
+  // 1b. DuckDuckGo Lite (fallback when HTML scrape is blocked, e.g. on CDN IPs)
+  if (results.length < 4) {
+    const liteResults = await searchDdgLite(query);
+    for (const r of liteResults) {
+      if (!results.some((x) => x.url === r.url)) results.push(r);
+    }
+  }
+
+  // 1c. Wikipedia opensearch suggestions (supplement)
+  const wikiSuggestions = await searchWikipediaSuggestions(query);
+  for (const r of wikiSuggestions) {
+    if (!results.some((x) => x.url === r.url)) results.push(r);
+  }
 
   // 2. Wikipedia
   try {
