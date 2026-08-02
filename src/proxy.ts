@@ -49,7 +49,7 @@ const API_CACHE: { prefix: string; value: string }[] = [
   { prefix: "/api/stock-tokens", value: "s-maxage=60, stale-while-revalidate=120" },
   { prefix: "/api/live-activity", value: "s-maxage=10, stale-while-revalidate=30" },
   { prefix: "/api/global", value: "s-maxage=300, stale-while-revalidate=600" },
-  { prefix: "/api/search", value: "s-maxage=60, stale-while-revalidate=300" },
+  { prefix: "/api/search", value: "s-maxage=120, stale-while-revalidate=300" },
 ];
 
 function setApiCacheHeader(response: NextResponse, pathname: string) {

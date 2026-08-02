@@ -15,7 +15,7 @@ export default function TeamPage() {
   return (
     <div className="space-y-10 fade-in max-w-3xl">
       <div>
-        <h1 className="text-2xl font-bold">Team</h1>
+        <h1 className="text-2xl font-bold">Community</h1>
         <p className="text-xs text-[var(--text-muted)] mt-1">
           Real X profiles only — the people and official channels behind THE WALL
         </p>
@@ -36,10 +36,10 @@ export default function TeamPage() {
         <XProfileCard handle={OFFICIAL_HANDLE} official />
       </section>
 
-      {/* Team Members */}
+      {/* Community Members */}
       <section className="space-y-3">
         <div className="flex items-center gap-2">
-          <h2 className="text-lg font-bold text-[var(--foreground)]">Team Members</h2>
+          <h2 className="text-lg font-bold text-[var(--foreground)]">Community Members</h2>
           <span className="ml-auto text-[9px] px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/20 font-medium flex items-center gap-1">
             <span className="w-1 h-1 rounded-full bg-green-400 live-blink" />
             Live · Real X

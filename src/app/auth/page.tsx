@@ -115,7 +115,10 @@ function AuthContent() {
         {/* Footer */}
         <footer className="text-center space-y-1" role="contentinfo">
           <p className="text-xs text-[var(--text-muted)]">
-            By signing in, you agree to our Terms of Service and Privacy Policy
+            By signing in, you agree to our{" "}
+            <a href="/legal/terms" className="text-[var(--accent)] hover:underline">Terms of Use</a>{" "}
+            and{" "}
+            <a href="/legal/privacy" className="text-[var(--accent)] hover:underline">Privacy Policy</a>
           </p>
           <p className="text-[11px] opacity-40">
             Secured with PBKDF2 hashing and JWT encryption. Data never leaves the server.

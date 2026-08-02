@@ -1,14 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import ThemeSwitcher from "@/components/ThemeSwitcher";
 import HeaderSearch from "@/components/HeaderSearch";
 import WallBot from "@/components/WallBot";
 import { Menu, ExternalLink } from "lucide-react";
 
+const HIDE_SEARCH_PATHS = new Set(["/settings", "/team", "/about", "/global", "/builder"]);
+
 export default function Shell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const pathname = usePathname();
+  const showHeaderSearch = !HIDE_SEARCH_PATHS.has(pathname);
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -37,7 +42,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
               </div>
             </div>
             <div className="flex items-center gap-2 flex-1 justify-end">
-              <HeaderSearch className="hidden md:block" />
+              {showHeaderSearch && <HeaderSearch className="hidden md:block" />}
               <nav className="flex items-center gap-2" aria-label="Actions">
                 <ThemeSwitcher compact />
                 <a

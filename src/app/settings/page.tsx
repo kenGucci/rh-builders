@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useI18n, languages, type Language } from "@/lib/i18n";
 import {
   MessageSquare, ThumbsUp, ThumbsDown, Users, Star,
-  RefreshCw, Search, Filter, ExternalLink, Clock, Globe,
+  RefreshCw, Search, Filter, ExternalLink, Clock, Globe, Scale,
 } from "lucide-react";
 
 const themes = [
@@ -467,6 +467,36 @@ export default function SettingsPage() {
                 </div>
               </div>
             </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Legal Section */}
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6">
+        <div className="flex items-center gap-2.5 mb-1">
+          <Scale size={18} className="text-[var(--accent)]" />
+          <div>
+            <h2 className="text-sm font-medium">Legal</h2>
+            <p className="text-[10px] text-[var(--text-muted)]">Terms, cookies, and privacy — all live and up to date.</p>
+          </div>
+        </div>
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {[
+            { href: "/legal/terms", title: "Terms of Use", desc: "The rules for using THE WALL" },
+            { href: "/legal/cookies", title: "Cookie Policy", desc: "How cookies and storage are used" },
+            { href: "/legal/privacy", title: "Privacy Policy", desc: "What information we collect" },
+          ].map((l) => (
+            <a
+              key={l.href}
+              href={l.href}
+              className="group bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--accent)]/30 hover:shadow-[0_0_16px_var(--accent-glow)] transition-all"
+            >
+              <div className="text-xs font-semibold text-[var(--foreground)] group-hover:text-[var(--accent)] transition-colors flex items-center gap-1.5">
+                {l.title}
+                <ExternalLink size={10} className="text-[var(--text-muted)] opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+              <p className="text-[10px] text-[var(--text-muted)] mt-1">{l.desc}</p>
+            </a>
           ))}
         </div>
       </div>

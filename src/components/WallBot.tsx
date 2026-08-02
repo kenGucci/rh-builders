@@ -280,7 +280,7 @@ export default function WallBot() {
       if (intent.startsWith("nav-")) {
         const known: Record<string, { href: string; label: string; name: string }> = {
           "nav-market": { href: "/market", label: "Opening the Market…", name: "Market" },
-          "nav-team": { href: "/team", label: "Opening the Team page…", name: "Team" },
+          "nav-team": { href: "/team", label: "Opening the Community page…", name: "Community" },
           "nav-dashboard": { href: "/", label: "Opening the Dashboard…", name: "Dashboard" },
           "nav-global": { href: "/global", label: "Opening Global search…", name: "Global" },
           "nav-builder": { href: "/builder", label: "Opening Builders…", name: "Builders" },

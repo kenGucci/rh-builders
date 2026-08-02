@@ -41,6 +41,10 @@ function resultUrl(s: SearchResult): string | null {
   return `/builder/${s.address}`;
 }
 
+// Client-side query cache — repeat searches resolve instantly
+const queryCache = new Map<string, { result: SearchResult | null; expires: number }>();
+const CACHE_TTL = 5 * 60 * 1000;
+
 export default function SearchBar({ compact = false, value, onValueChange }: { compact?: boolean; value?: string; onValueChange?: (v: string) => void }) {
   const isControlled = value !== undefined;
   const [query, setQuery] = useState("");
@@ -87,8 +91,20 @@ export default function SearchBar({ compact = false, value, onValueChange }: { c
     const trimmed = q.trim();
 
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(trimmed)}`);
-      const data = await res.ok ? await res.json() : {};
+      const key = trimmed.toLowerCase();
+      const cached = queryCache.get(key);
+      let data: SearchResult;
+      if (cached && cached.expires > Date.now() && cached.result) {
+        data = cached.result;
+      } else {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(trimmed)}`);
+        data = await res.ok ? await res.json() : {};
+        queryCache.set(key, { result: data, expires: Date.now() + CACHE_TTL });
+        if (queryCache.size > 200) {
+          const oldest = queryCache.keys().next().value;
+          if (oldest) queryCache.delete(oldest);
+        }
+      }
 
       if (data.type === "unknown" || !data.address) {
         setSearchResult({

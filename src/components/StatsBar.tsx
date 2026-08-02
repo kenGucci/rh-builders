@@ -126,7 +126,7 @@ export default function StatsBar({ address, tokenBalance, totalRewards }: { addr
       )}
 
       {/* Live indicator */}
-      <div className="flex items-center gap-2 text-[10px] text-[var(--text-muted)]" role="status" aria-label="Live data from Blockscout on Robinhood Chain">
+      <div className="flex items-center gap-2 text-[10px] text-[var(--text-muted)]" role="status" aria-label="Live on-chain stats for Robinhood Chain">
         <span className="w-1.5 h-1.5 rounded-full bg-green-400 live-blink" aria-hidden="true" />
         <span className="text-green-400 font-medium">LIVE</span>
         <span>· Robinhood Chain (4663)</span>

@@ -28,6 +28,10 @@ function resultUrl(r: Result): string | null {
   return `/builder/${r.address}`;
 }
 
+// Client-side query cache — repeat searches resolve instantly (no network round-trip)
+const queryCache = new Map<string, { result: Result | null; expires: number }>();
+const CACHE_TTL = 5 * 60 * 1000;
+
 export default function HeaderSearch({ className = "" }: { className?: string }) {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
@@ -73,12 +77,26 @@ export default function HeaderSearch({ className = "" }: { className?: string })
       setOpen(false);
       return [];
     }
+    const key = trimmed.toLowerCase();
+    const cached = queryCache.get(key);
+    if (cached && cached.expires > Date.now()) {
+      const items: Result[] = cached.result ? [cached.result] : [];
+      setResults(items);
+      setOpen(true);
+      return items;
+    }
     setLoading(true);
     try {
       const res = await fetch(`/api/search?q=${encodeURIComponent(trimmed)}`);
       const data = await res.json();
-      const items: Result[] =
-        data && data.address ? [{ ...data, id: data.address }] : [];
+      const result: Result | null =
+        data && data.address ? { ...data, id: data.address } : data && data.type === "x" ? data : null;
+      queryCache.set(key, { result, expires: Date.now() + CACHE_TTL });
+      if (queryCache.size > 200) {
+        const oldest = queryCache.keys().next().value;
+        if (oldest) queryCache.delete(oldest);
+      }
+      const items: Result[] = result ? [result] : [];
       setResults(items);
       setOpen(true);
       return items;

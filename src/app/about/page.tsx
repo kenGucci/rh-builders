@@ -3,7 +3,7 @@
 import Link from "next/link";
 import {
   LayoutDashboard, Users, LineChart, Search, Settings2, Info,
-  ArrowRight, Activity, Sparkles, Wallet, Shield, Zap, Globe, Layers, Database,
+  ArrowRight, Activity, Sparkles, Wallet, Shield, Layers,
   Palette, Rocket, RefreshCw, MousePointerClick, Boxes,
 } from "lucide-react";
 
@@ -24,7 +24,7 @@ const features = [
     icon: LineChart,
     title: "Market Data",
     description:
-      "Live stock and crypto quotes powered by Financial Modeling Prep and Yahoo Finance, plus a real on-chain swap panel.",
+      "Live stock and crypto quotes, plus a real on-chain swap panel.",
   },
   {
     icon: Wallet,
@@ -36,7 +36,7 @@ const features = [
     icon: Search,
     title: "Global Search",
     description:
-      "One search box for the whole web: news, images, videos, and maps via DuckDuckGo, YouTube, Wikipedia, and OpenStreetMap.",
+      "One search box for the whole web: news, images, videos, and maps.",
   },
   {
     icon: Shield,
@@ -110,22 +110,22 @@ const pages = [
       "Connect your wallet and use the built-in Swap panel to trade tokens on-chain.",
     ],
     howItWorks:
-      "Quotes stream from Yahoo Finance as the primary source with Financial Modeling Prep as fallback. Stock Token metadata comes from the /api/stock-tokens endpoint, and swaps execute through LI.FI on Robinhood Chain.",
+      "Quotes stream in live from the market API, Stock Token metadata comes from the /api/stock-tokens endpoint, and swaps execute through LI.FI on Robinhood Chain.",
   },
   {
     href: "/team",
-    title: "Team",
+    title: "Community",
     badge: "People",
     icon: Users,
     summary:
-      "Meet the people behind THE WALL, with their profile and live X/Twitter data pulled straight from the network.",
+      "Meet the people behind THE WALL, with their profiles and live X/Twitter data.",
     howToUse: [
-      "See the team banner, avatar, bio, and follower stats.",
-      "Use the Follow on X button to keep up with the team's updates.",
+      "See the banner, avatar, bio, and follower stats.",
+      "Use the Follow on X button to keep up with updates.",
       "Click through the profile links, location, and join date for context.",
     ],
     howItWorks:
-      "The page fetches the live X/Twitter profile via the /api/twitter endpoint (page scrape + oembed) and renders the account's real banner, avatar, description, and stats.",
+      "The page fetches the live X/Twitter profile via the /api/twitter endpoint and renders the account's real banner, avatar, description, and stats.",
   },
   {
     href: "/settings",
@@ -347,25 +347,6 @@ export default function AboutPage() {
               </div>
             </article>
           ))}
-        </div>
-      </section>
-
-      {/* Data sources */}
-      <section aria-label="Data sources">
-        <h2 className="text-xl font-bold mb-4">Where the data comes from</h2>
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Database size={15} className="text-[var(--accent)]" />
-            <span className="text-sm font-semibold">Powered by</span>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-xs text-[var(--text-muted)]">
-            <span className="flex items-center gap-2"><Globe size={12} className="text-[var(--accent)]" /> Blockscout — on-chain data</span>
-            <span className="flex items-center gap-2"><LineChart size={12} className="text-[var(--accent)]" /> DexScreener — DEX pairs & volume</span>
-            <span className="flex items-center gap-2"><Zap size={12} className="text-[var(--accent)]" /> Yahoo Finance + FMP — quotes</span>
-            <span className="flex items-center gap-2"><Search size={12} className="text-[var(--accent)]" /> DuckDuckGo / YouTube / OSM — search</span>
-            <span className="flex items-center gap-2"><Globe size={12} className="text-[var(--accent)]" /> X / Twitter — profiles & KOLs</span>
-            <span className="flex items-center gap-2"><Shield size={12} className="text-[var(--accent)]" /> Supabase — accounts & sessions</span>
-          </div>
         </div>
       </section>
 

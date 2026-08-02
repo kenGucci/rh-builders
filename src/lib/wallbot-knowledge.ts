@@ -55,9 +55,9 @@ export const KB_GROUPS: KBGroup[] = [
       },
       {
         id: "nav-team",
-        keywords: ["team", "who", "about us", "company", "founder", "official"],
+        keywords: ["team", "community", "who", "about us", "company", "founder", "official", "members"],
         emoji: "🤝",
-        text: "The Team (/team) page showcases only real, live X profiles — the official THE WALL X account (@officialWALLrh) and the engineering lead. All data is fetched live from X, with followers, join date, location, and verification.",
+        text: "The Community page (/team) showcases only real, live X profiles — the official THE WALL X account (@officialWALLrh) and the lead. All data is fetched live from X, with followers, join date, location, and verification.",
         link: TEAM,
       },
       {
@@ -79,6 +79,13 @@ export const KB_GROUPS: KBGroup[] = [
         keywords: ["x profile", "x account", "twitter profile", "profile", "handle", "@", "x.com"],
         emoji: "🐦",
         text: "Search any X handle (like @officialWALLrh) from any search bar and it opens a live X profile page with the banner, avatar, description, followers, following, location, and verification — all fetched live from X.",
+      },
+      {
+        id: "nav-legal",
+        keywords: ["legal", "terms", "privacy", "cookie", "cookies", "terms of use", "privacy policy", "cookie policy", "policy"],
+        emoji: "⚖️",
+        text: "All legal documents are live and linked from Settings → Legal: Terms of Use, Cookie Policy, and Privacy Policy. Each has its own page with the latest revision date.",
+        link: { href: "/settings", label: "Open Settings → Legal" },
       },
     ],
   },
@@ -319,7 +326,7 @@ export const QUICK_REPLIES = [
   { label: "Latest transactions ⚡", intent: "transactions" },
   { label: "Chain stats 📊", intent: "stats" },
   { label: "Open Market 🏦", intent: "nav-market" },
-  { label: "Team 🤝", intent: "nav-team" },
+  { label: "Community 🤝", intent: "nav-team" },
 ];
 
 export function normalizeText(s: string): string {

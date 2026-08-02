@@ -33,9 +33,7 @@ export default function BuildersPage() {
           <div>
             <h1 className="text-xl font-semibold">Builders[Dev]</h1>
             <p className="text-sm text-[var(--text-muted)]">
-              Top trending coins by volume and market cap on Robinhood Chain.{" "}
-              Live DEX data from DexScreener, on-chain stats from Blockscout.
-              Chain ID 4663.
+              Top trending coins by volume and market cap on Robinhood Chain. Chain ID 4663.
             </p>
           </div>
         </div>

@@ -5,6 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import HeaderSearch from "@/components/HeaderSearch";
 
+const HIDE_SEARCH_PATHS = new Set(["/settings", "/team", "/about", "/global", "/builder"]);
+
 interface NavItem {
   href: string;
   label: string;
@@ -61,7 +63,7 @@ const links: NavItem[] = [
   },
   {
     href: "/team",
-    label: "Team",
+    label: "Community",
     icon: (
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -146,9 +148,11 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
       </div>
 
       {/* Search (mobile drawer only — header covers desktop) */}
-      <div className="px-3 mb-1 md:hidden">
-        <HeaderSearch />
-      </div>
+      {!HIDE_SEARCH_PATHS.has(pathname) && (
+        <div className="px-3 mb-1 md:hidden">
+          <HeaderSearch />
+        </div>
+      )}
 
       {/* Nav */}
       <nav className="flex-1 px-3 space-y-0.5 mt-3 overflow-y-auto" aria-label="Navigation">
