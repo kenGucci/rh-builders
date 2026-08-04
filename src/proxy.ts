@@ -8,7 +8,7 @@ const redis = process.env.UPSTASH_REDIS_REST_URL
   : null;
 
 const ratelimit = redis ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(60, "60s"), analytics: true }) : null;
-const authRatelimit = redis ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(10, "60s"), analytics: true }) : null;
+const authRatelimit = redis ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(30, "60s"), analytics: true }) : null;
 
 const STATIC_CSP = [
   "default-src 'self'",
@@ -100,7 +100,8 @@ export async function proxy(request: NextRequest) {
 
   const isApi = pathname.startsWith("/api/");
   const isAuth = pathname.startsWith("/api/auth/");
-  if (ratelimit && (isApi || isAuth)) {
+  const isXAuth = pathname.startsWith("/api/auth/x");
+  if (ratelimit && (isApi || isAuth) && !isXAuth) {
     try {
       const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
         || request.headers.get("x-real-ip")
