@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
-import { ArrowRightLeft, Wallet, AlertTriangle, ShieldCheck, ExternalLink, TrendingUp, Coins, Activity, FileCode } from "lucide-react";
+import { ArrowRightLeft, Wallet, AlertTriangle, ShieldCheck, ExternalLink, TrendingUp, Coins, FileCode } from "lucide-react";
 
 interface Stats {
   totalTransactions: number;

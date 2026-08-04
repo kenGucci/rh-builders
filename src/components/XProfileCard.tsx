@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { ExternalLink, MapPin, Calendar, Link as LinkIcon, Shield, MessageSquare } from "lucide-react";
 
 const X_BRAND = (
@@ -55,9 +56,11 @@ export function formatFollowers(n: number | null): string {
 export default function XProfileCard({
   handle,
   official,
+  minimal,
 }: {
   handle: string;
   official?: boolean;
+  minimal?: boolean;
 }) {
   const [profile, setProfile] = useState<XProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -113,10 +116,11 @@ export default function XProfileCard({
       {/* Banner */}
       <div className={`relative overflow-hidden ${official ? "h-44 sm:h-56" : "h-40 sm:h-52"}`}>
         {profile.bannerUrl ? (
-          <img
+          <Image
             src={profile.bannerUrl}
             alt="Profile banner"
-            className="w-full h-full object-cover"
+            fill
+            className="object-cover"
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-[var(--accent)]/25 via-[var(--accent)]/5 to-transparent" />
@@ -138,9 +142,11 @@ export default function XProfileCard({
       <div className="px-6 pb-6 -mt-14 relative">
         <div className="flex items-end gap-4 mb-4">
           {profile.avatar ? (
-            <img
+            <Image
               src={profile.avatar}
               alt={profile.displayName}
+              width={official ? 112 : 96}
+              height={official ? 112 : 96}
               className={`rounded-full border-4 border-[var(--surface)] object-cover shadow-lg ${official ? "w-28 h-28" : "w-24 h-24"}`}
             />
           ) : (
@@ -169,18 +175,22 @@ export default function XProfileCard({
         </div>
         <div className="text-sm text-[var(--text-muted)] mb-3">@{handle}</div>
 
-        {profile.description ? (
+        {!minimal && profile.description ? (
           <p className="text-xs text-[var(--text-muted)] mb-3 max-w-xl">{profile.description}</p>
         ) : null}
 
         {/* Stats */}
         <div className="flex flex-wrap items-center gap-4 text-xs text-[var(--text-muted)]">
-          <span className="flex items-center gap-1.5">
-            <span className="font-semibold text-[var(--foreground)]">{formatFollowers(profile.followers)}</span> Followers
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="font-semibold text-[var(--foreground)]">{formatFollowers(profile.following)}</span> Following
-          </span>
+          {!minimal && (
+            <span className="flex items-center gap-1.5">
+              <span className="font-semibold text-[var(--foreground)]">{formatFollowers(profile.followers)}</span> Followers
+            </span>
+          )}
+          {!minimal && (
+            <span className="flex items-center gap-1.5">
+              <span className="font-semibold text-[var(--foreground)]">{formatFollowers(profile.following)}</span> Following
+            </span>
+          )}
           {profile.location && (
             <span className="flex items-center gap-1.5">
               <MapPin size={12} />
@@ -204,15 +214,17 @@ export default function XProfileCard({
               Joined {profile.joinDate}
             </span>
           )}
-          <a
-            href={tweetUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-[var(--accent)] hover:underline"
-          >
-            <MessageSquare size={12} />
-            Posts
-          </a>
+          {!minimal && (
+            <a
+              href={tweetUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-[var(--accent)] hover:underline"
+            >
+              <MessageSquare size={12} />
+              Posts
+            </a>
+          )}
         </div>
       </div>
     </div>

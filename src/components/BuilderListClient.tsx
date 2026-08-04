@@ -2,6 +2,7 @@
 
 import SearchBar from "@/components/SearchBar";
 import Link from "next/link";
+import Image from "next/image";
 import AddressAvatar from "@/components/AddressAvatar";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import {
@@ -157,10 +158,6 @@ export default function BuilderListClient({ builders }: { builders: Builder[] })
     () => enrichedBuilders.filter((b) => (b.tags || []).includes("anti-rug")).length,
     [enrichedBuilders]
   );
-  const analyticsCount = useMemo(
-    () => enrichedBuilders.filter((b) => (b.tags || []).includes("analytics")).length,
-    [enrichedBuilders]
-  );
 
   const tagCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -174,7 +171,7 @@ export default function BuilderListClient({ builders }: { builders: Builder[] })
 
   const filtered = useMemo(() => {
     const q = filter.toLowerCase();
-    let list = q
+    const list = q
       ? enrichedBuilders.filter((b) => {
           const fields = [b.name, b.twitter, b.ens, b.address, ...(b.tags || [])].filter(Boolean).map((f) => f!.toLowerCase());
           return fields.some((f) => f.includes(q));
@@ -282,9 +279,11 @@ export default function BuilderListClient({ builders }: { builders: Builder[] })
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2.5 min-w-0">
                       {imageUrl ? (
-                        <img
+                        <Image
                           src={imageUrl}
                           alt={name}
+                          width={36}
+                          height={36}
                           className="w-9 h-9 rounded-full border border-[var(--border)] object-cover bg-[var(--surface)]"
                           onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden"); }}
                         />

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import Image from "next/image";
 import AddressAvatar from "@/components/AddressAvatar";
 import { Gift, Coins, ExternalLink } from "lucide-react";
 
@@ -168,7 +169,7 @@ export default function ClaimHistory({ address }: { address: string }) {
           {groupedClaims.map(([symbol, items]) => (
             <div key={symbol} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[10px]" role="listitem" aria-label={`${symbol}: ${items.length} transfers`}>
               {items[0].token_icon ? (
-                <img src={items[0].token_icon} alt={`${symbol} token icon`} className="w-3.5 h-3.5 rounded-full" />
+                <Image src={items[0].token_icon} alt={`${symbol} token icon`} width={14} height={14} className="w-3.5 h-3.5 rounded-full" />
               ) : (
                 <Coins size={10} className="text-[var(--accent)]" aria-hidden="true" />
               )}
@@ -192,7 +193,7 @@ export default function ClaimHistory({ address }: { address: string }) {
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5 min-w-0 flex-1">
                 {c.token_icon ? (
-                  <img src={c.token_icon} alt={`${c.token_symbol} token icon`} className="w-8 h-8 rounded-full border border-[var(--border)] flex-shrink-0" />
+                  <Image src={c.token_icon} alt={`${c.token_symbol} token icon`} width={32} height={32} className="w-8 h-8 rounded-full border border-[var(--border)] flex-shrink-0" />
                 ) : (
                   <div className="w-8 h-8 rounded-full bg-[var(--accent)]/10 border border-[var(--accent)]/20 flex items-center justify-center text-xs font-bold text-[var(--accent)] flex-shrink-0" aria-hidden="true">
                     {c.token_symbol?.slice(0, 2) || "?"}

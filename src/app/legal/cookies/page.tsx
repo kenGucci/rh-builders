@@ -20,7 +20,7 @@ export default function CookiesPage() {
         {
           heading: "2. Cookies We Use",
           paragraphs: [
-            "Preferences — we remember your selected theme (light/dark), accent color, interface language, and Wall Bot voice and conversation settings so your choices persist between visits.",
+            "Preferences — we remember your selected theme (light/dark), accent color, and interface language so your choices persist between visits.",
             "Security — rate-limiting and anti-abuse measures use transient technical data to protect the service.",
             "Functional — we may store a short-lived token when you sign in to keep your session active.",
           ],
@@ -34,7 +34,7 @@ export default function CookiesPage() {
         {
           heading: "4. Managing Cookies",
           paragraphs: [
-            "You can clear cookies and site data at any time through your browser settings. Doing so will reset your preferences (theme, language, and assistant settings).",
+            "You can clear cookies and site data at any time through your browser settings. Doing so will reset your preferences (theme and language).",
           ],
         },
         {

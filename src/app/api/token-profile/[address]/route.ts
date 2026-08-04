@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { findStockToken, stockLogoUrl } from "@/lib/stock-tokens";
 
 const DEXSCREENER_API = "https://api.dexscreener.com";
 const BLOCKSCOUT_V2 = "https://robinhoodchain.blockscout.com/api/v2";
@@ -108,11 +109,14 @@ export async function GET(
     // Get profile info from first pair
     const firstPair = robinhoodPairs[0];
 
+    const stockToken = findStockToken(addr);
+    const stockImage = stockToken ? stockLogoUrl(stockToken.symbol) : null;
+
     const profile: TokenProfile = {
       name: firstPair?.baseToken?.name || bsResult?.name || "Unknown",
       symbol: firstPair?.baseToken?.symbol || bsResult?.symbol || "???",
       address: addr,
-      imageUrl: firstPair?.info?.imageUrl || bsResult?.icon_url || null,
+      imageUrl: stockImage || firstPair?.info?.imageUrl || bsResult?.icon_url || null,
       websites: firstPair?.info?.websites || [],
       socials: firstPair?.info?.socials || [],
       description: bsResult?.description || null,

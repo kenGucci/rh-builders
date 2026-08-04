@@ -20,7 +20,7 @@ interface BuilderLight {
 }
 
 const statsCache = new Map<string, { data: BuilderLight[]; ts: number }>();
-const CACHE_TTL = 30_000;
+const CACHE_TTL = 60_000;
 
 async function fetchBuilderStats(address: string): Promise<Partial<BuilderLight>> {
   try {
@@ -30,8 +30,6 @@ async function fetchBuilderStats(address: string): Promise<Partial<BuilderLight>
     const balanceEth = (Number(rawBalance) / 1e18).toFixed(4);
     const coinPrice = Number(data.coin_price || 0);
     const balanceUsd = (Number(balanceEth) * coinPrice).toFixed(2);
-
-    const tokenObj = data.token as Record<string, unknown> | undefined;
 
     return {
       balanceEth,

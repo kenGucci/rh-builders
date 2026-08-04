@@ -22,7 +22,7 @@ function cachedSet(key: string, data: unknown) {
   }
 }
 
-async function apiFetch(url: string, timeoutMs = 5000) {
+async function apiFetch(url: string, timeoutMs = 15000) {
   const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
   if (!res.ok) throw new Error(`Blockscout API error: ${res.status}`);
   return res.json();
@@ -143,8 +143,8 @@ async function searchBlockscout(query: string): Promise<{
 async function resolveTokenCA(address: string) {
   try {
     const [tokenInfo, addrData] = await Promise.all([
-      apiFetch(`${BLOCKSCOUT_API_V2}/tokens/${address.toLowerCase()}`),
-      apiFetch(`${BLOCKSCOUT_API_V2}/addresses/${address.toLowerCase()}`).catch(() => null),
+      apiFetch(`${BLOCKSCOUT_API_V2}/tokens/${address.toLowerCase()}`, 8000),
+      apiFetch(`${BLOCKSCOUT_API_V2}/addresses/${address.toLowerCase()}`, 6000).catch(() => null),
     ]);
 
     return {
@@ -198,9 +198,53 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(result);
     }
     try {
+      // Fast classification via the /search endpoint (answers in ~1s) instead of
+      // the /addresses/{hash} endpoint which can take 3-10s and time out.
+      const searchData = await apiFetch(`${BLOCKSCOUT_API_V2}/search?q=${trimmed}`, 8000);
+      const items: BlockscoutSearchItem[] = searchData.items || [];
+      const best =
+        items.find((i) => i.address_hash?.toLowerCase() === trimmed.toLowerCase()) ||
+        items[0];
+
+      if (best?.address_hash) {
+        const addr = best.address_hash.toLowerCase();
+        if (best.type === "token" || best.token_type) {
+          const tokenResult = await resolveTokenCA(addr);
+          if (tokenResult) {
+            cachedSet(cacheKey, tokenResult);
+            return NextResponse.json(tokenResult);
+          }
+        }
+        if (best.is_smart_contract_address) {
+          const tokenResult = await resolveTokenCA(addr);
+          if (tokenResult) {
+            cachedSet(cacheKey, tokenResult);
+            return NextResponse.json(tokenResult);
+          }
+          const result = {
+            type: "contract" as const,
+            matchType: "contract" as const,
+            address: addr,
+            label: best.name || null,
+            token_symbol: best.symbol ?? null,
+            token_name: best.name ?? null,
+          };
+          cachedSet(cacheKey, result);
+          return NextResponse.json(result);
+        }
+        const result = {
+          type: "address" as const,
+          matchType: "wallet" as const,
+          address: addr,
+          label: best.name || null,
+        };
+        cachedSet(cacheKey, result);
+        return NextResponse.json(result);
+      }
+
       const data = await apiFetch(
         `${BLOCKSCOUT_API_V2}/addresses/${trimmed.toLowerCase()}`,
-        4000
+        15000
       );
       let result: Record<string, unknown>;
       if (data.is_contract) {

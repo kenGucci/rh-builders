@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const V1 = "https://robinhoodchain.blockscout.com/api";
-const V2 = "https://robinhoodchain.blockscout.com/api/v2";
 
 async function apiFetch(url: string) {
   const res = await fetch(url, { signal: AbortSignal.timeout(15000) });

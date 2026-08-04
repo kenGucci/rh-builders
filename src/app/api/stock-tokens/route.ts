@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { STOCK_TOKENS } from "@/lib/stock-tokens";
+import { STOCK_TOKENS, stockLogoUrl } from "@/lib/stock-tokens";
+import { getCompanyProfile } from "@/lib/company-profiles";
 
 const CHAIN_INFO = {
   name: "Robinhood Chain",
@@ -7,6 +8,10 @@ const CHAIN_INFO = {
   blockExplorer: "robinhoodchain.blockscout.com",
   nativeCurrency: "ETH",
 };
+
+function withProfile(token: (typeof STOCK_TOKENS)[number]) {
+  return { ...token, logo: stockLogoUrl(token.symbol), profile: getCompanyProfile(token.symbol) };
+}
 
 export async function GET(request: NextRequest) {
   const action = request.nextUrl.searchParams.get("action") || "list";
@@ -17,7 +22,7 @@ export async function GET(request: NextRequest) {
     if (action === "detail" && symbol) {
       const token = STOCK_TOKENS.find((t) => t.symbol === symbol.toUpperCase());
       if (!token) return NextResponse.json({ error: "Token not found" }, { status: 404 });
-      return NextResponse.json({ token, chain: CHAIN_INFO }, { headers: { "Cache-Control": "s-maxage=60, stale-while-revalidate=120" } });
+      return NextResponse.json({ token: withProfile(token), chain: CHAIN_INFO }, { headers: { "Cache-Control": "s-maxage=60, stale-while-revalidate=120" } });
     }
 
     let tokens = [...STOCK_TOKENS];
@@ -29,7 +34,7 @@ export async function GET(request: NextRequest) {
     const totalTvl = STOCK_TOKENS.reduce((sum, t) => sum + t.tvl, 0);
 
     return NextResponse.json({
-      tokens,
+      tokens: tokens.map(withProfile),
       sectors,
       chain: CHAIN_INFO,
       summary: {

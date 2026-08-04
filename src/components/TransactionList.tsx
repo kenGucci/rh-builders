@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import AddressAvatar from "@/components/AddressAvatar";
 import { ArrowUpRight, ArrowDownRight, ExternalLink, Clock, Flag } from "lucide-react";
 
 interface Tx {

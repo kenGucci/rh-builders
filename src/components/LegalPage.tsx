@@ -6,6 +6,12 @@ interface Section {
   paragraphs: string[];
 }
 
+const legalNav = [
+  { href: "/legal/terms", label: "Terms of Use" },
+  { href: "/legal/privacy", label: "Privacy Policy" },
+  { href: "/legal/cookies", label: "Cookie Policy" },
+];
+
 export default function LegalPage({
   title,
   updated,
@@ -50,7 +56,19 @@ export default function LegalPage({
         </section>
       ))}
 
-      <div className="text-center text-[10px] text-[var(--text-muted)] py-4 border-t border-[var(--border-subtle)]">
+      <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 py-4 border-t border-[var(--border-subtle)]" aria-label="Legal pages">
+        {legalNav.map((l) => (
+          <Link
+            key={l.href}
+            href={l.href}
+            className="text-[10px] text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
+          >
+            {l.label}
+          </Link>
+        ))}
+      </nav>
+
+      <div className="text-center text-[10px] text-[var(--text-muted)] pb-4">
         <p>THE WALL · Robinhood Chain (Chain ID 4663)</p>
       </div>
     </div>

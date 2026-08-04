@@ -1,6 +1,7 @@
 "use client";
 
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import Image from "next/image";
 
 export default function ConnectWalletButton({ compact }: { compact?: boolean }) {
   return (
@@ -45,7 +46,7 @@ export default function ConnectWalletButton({ compact }: { compact?: boolean }) 
                 {chain.hasIcon && (
                   <div className="w-4 h-4 rounded-full bg-[var(--accent)]/20 flex items-center justify-center">
                     {chain.iconUrl && (
-                      <img alt={chain.name ?? "Chain icon"} className="w-3 h-3" src={chain.iconUrl} />
+                      <Image alt={chain.name ?? "Chain icon"} className="w-3 h-3" src={chain.iconUrl} width={12} height={12} unoptimized />
                     )}
                   </div>
                 )}

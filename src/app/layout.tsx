@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import "./globals.css";
 import Shell from "@/components/Shell";
 import { I18nProvider } from "@/lib/i18n";
@@ -84,15 +85,17 @@ export const viewport: Viewport = {
   maximumScale: 5,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const nonce = (await headers()).get("x-nonce") || undefined;
   return (
     <html lang="en" className="dark">
       <head>
         <script
+          nonce={nonce}
           dangerouslySetInnerHTML={{
             __html: `
 window.addEventListener("error",function(e){if(e.message&&e.message.includes("Cannot redefine property: ethereum")){e.preventDefault();e.stopPropagation()}});

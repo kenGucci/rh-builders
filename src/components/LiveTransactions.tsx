@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowUpRight, ArrowDownRight, ExternalLink, Clock, Zap, RotateCw } from "lucide-react";
+import Image from "next/image";
+import { ArrowUpRight, ExternalLink, Clock, Zap, RotateCw } from "lucide-react";
 
 interface RecentTx {
   hash: string;
@@ -144,7 +145,7 @@ export default function LiveTransactions() {
                   <RotateCw size={14} className="text-red-400" />
                 ) : isToken ? (
                   tx.tokenInfo?.icon ? (
-                    <img src={tx.tokenInfo.icon} alt="" className="w-4 h-4 rounded-full" />
+                    <Image src={tx.tokenInfo.icon} alt="" width={16} height={16} className="w-4 h-4 rounded-full" />
                   ) : (
                     <Zap size={14} />
                   )

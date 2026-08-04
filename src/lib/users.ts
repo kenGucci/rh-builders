@@ -1,17 +1,23 @@
 import { getSupabaseServer } from "./supabase-server";
-import { hashPassword, verifyPassword } from "./auth";
+import { verifyPassword, randomSecret } from "./auth";
 
 export interface User {
   id: string;
   email: string;
   name?: string;
-  avatar_url?: string;
+  x_handle?: string;
   provider?: string;
   role?: string;
   created_at?: string;
-  updated_at?: string;
   password?: string;
-  walletAddress?: string;
+  wallet_address?: string;
+}
+
+export const X_EMAIL_PREFIX = "x:";
+export const X_EMAIL_DOMAIN = "@x.oauth";
+
+export function xEmailFor(xUserId: string): string {
+  return `${X_EMAIL_PREFIX}${xUserId}${X_EMAIL_DOMAIN}`;
 }
 
 export async function authenticateUser(email: string, password: string): Promise<User | null> {
@@ -59,13 +65,35 @@ export async function findUserByEmail(email: string): Promise<User | null> {
   return data;
 }
 
-export async function upsertUser(user: {
+export async function createUser(user: {
   id: string;
   email: string;
   name?: string;
-  avatar_url?: string;
-  provider?: string;
-  role?: string;
+  passwordHash: string;
+}): Promise<User | null> {
+  const supabase = getSupabaseServer();
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from("users")
+    .insert({
+      id: user.id,
+      email: user.email.toLowerCase(),
+      name: user.name || null,
+      password: user.passwordHash,
+      provider: "email",
+    })
+    .select()
+    .single();
+
+  if (error) return null;
+  return data;
+}
+
+export async function upsertXUser(user: {
+  xUserId: string;
+  name: string;
+  x_handle: string;
 }): Promise<User | null> {
   const supabase = getSupabaseServer();
   if (!supabase) return null;
@@ -74,13 +102,12 @@ export async function upsertUser(user: {
     .from("users")
     .upsert(
       {
-        id: user.id,
-        email: user.email.toLowerCase(),
+        id: `x_${user.xUserId}`,
+        email: xEmailFor(user.xUserId),
         name: user.name,
-        avatar_url: user.avatar_url,
-        provider: user.provider,
-        role: user.role,
-        updated_at: new Date().toISOString(),
+        provider: "x",
+        x_handle: user.x_handle.toLowerCase().replace(/^@/, ""),
+        password: randomSecret(),
       },
       { onConflict: "id" }
     )
@@ -92,21 +119,7 @@ export async function upsertUser(user: {
 }
 
 export function sanitizeUser(user: User) {
-  const { password, ...safe } = user;
+  const safe = { ...user };
+  delete safe.password;
   return safe;
-}
-
-export async function linkWallet(userId: string, walletAddress: string): Promise<User | null> {
-  const supabase = getSupabaseServer();
-  if (!supabase) return null;
-
-  const { data, error } = await supabase
-    .from("users")
-    .update({ walletAddress: walletAddress.toLowerCase(), updated_at: new Date().toISOString() })
-    .eq("id", userId)
-    .select()
-    .single();
-
-  if (error) return null;
-  return data;
 }

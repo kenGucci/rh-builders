@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { useAccount, useSendTransaction, useWriteContract, useBalance, useWaitForTransactionReceipt } from "wagmi";
-import { parseEther, formatUnits } from "viem";
+import { useAccount, useSendTransaction, useSwitchChain, useWriteContract, useBalance, useWaitForTransactionReceipt } from "wagmi";
+import { formatUnits } from "viem";
 import { ArrowUpDown, ArrowDown, Loader2, AlertTriangle, CheckCircle, ExternalLink } from "lucide-react";
 
 interface StockToken {
@@ -20,8 +20,11 @@ const TOKEN_DECIMALS: Record<string, number> = {
   COIN: 18, PLTR: 18, SOFI: 18, NFLX: 18,
 };
 
+const ROBINHOOD_CHAIN_ID = 4663;
+
 export default function SwapPanel({ tokens }: SwapPanelProps) {
-  const { address, isConnected } = useAccount();
+  const { address, chainId, isConnected } = useAccount();
+  const { switchChainAsync } = useSwitchChain();
   const { data: ethBalance } = useBalance({ address });
 
   const [sellToken, setSellToken] = useState("ETH");
@@ -91,7 +94,7 @@ export default function SwapPanel({ tokens }: SwapPanelProps) {
     } catch (err) {
       setQuote((prev) => ({ ...prev, loading: false, error: err instanceof Error ? err.message : "Failed to get quote" }));
     }
-  }, [sellAmount, address, buyTokenAddr, sellToken, buyToken]);
+  }, [sellAmount, address, buyTokenAddr, sellTokenAddr, sellToken, buyToken]);
 
   useEffect(() => {
     const timer = setTimeout(fetchQuote, 500);
@@ -107,6 +110,19 @@ export default function SwapPanel({ tokens }: SwapPanelProps) {
     setSwapHash(undefined);
 
     try {
+      if (chainId && chainId !== ROBINHOOD_CHAIN_ID) {
+        setNotification({ type: "error", message: "Switch your wallet to Robinhood Chain before swapping" });
+        return;
+      }
+
+      if (sellToken === "ETH" && ethBalance && quote.tx.value) {
+        const required = BigInt(quote.tx.value);
+        if (ethBalance.value < required) {
+          setNotification({ type: "error", message: `Insufficient ETH on Robinhood Chain — you need at least ${Number(formatUnits(required, ethBalance.decimals)).toFixed(6)} ETH` });
+          return;
+        }
+      }
+
       if (needsApproval) {
         setNotification({ type: "info", message: `Approving ${sellToken} for swap...` });
         const decimals = getTokenDecimals(sellToken);
@@ -144,6 +160,7 @@ export default function SwapPanel({ tokens }: SwapPanelProps) {
         to: quote.tx.to as `0x${string}`,
         data: quote.tx.data as `0x${string}`,
         value: BigInt(quote.tx.value || "0"),
+        chainId: ROBINHOOD_CHAIN_ID,
       });
       setSwapHash(hash);
       setNotification({
@@ -165,6 +182,33 @@ export default function SwapPanel({ tokens }: SwapPanelProps) {
   if (!isConnected) return null;
 
   const isProcessing = isApproving || isSwapping;
+
+  if (chainId && chainId !== ROBINHOOD_CHAIN_ID) {
+    return (
+      <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-4">
+        <h3 className="text-xs font-semibold text-[var(--foreground)] mb-3 flex items-center gap-1.5">
+          <ArrowUpDown size={12} className="text-[var(--accent)]" />
+          Swap
+        </h3>
+        <div className="flex flex-col items-center gap-3 py-4 text-center">
+          <AlertTriangle size={18} className="text-yellow-400" />
+          <p className="text-xs text-[var(--text-muted)]">
+            Your wallet is on chain {chainId}. Swaps execute on Robinhood Chain (4663) with real ETH.
+          </p>
+          <button
+            onClick={async () => {
+              try {
+                await switchChainAsync({ chainId: ROBINHOOD_CHAIN_ID });
+              } catch {}
+            }}
+            className="px-4 py-2 rounded-lg bg-[var(--accent)] text-black text-xs font-bold hover:opacity-90 transition-opacity"
+          >
+            Switch to Robinhood Chain
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-4">

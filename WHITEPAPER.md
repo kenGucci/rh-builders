@@ -27,7 +27,7 @@
 
 ## 1. Executive Summary
 
-**THE WALL** is a comprehensive, real-time analytics dashboard and **Stock Token marketplace** built exclusively for the **Robinhood Chain** ecosystem. It provides builders, investors, analysts, and community members with a single, powerful interface to monitor on-chain activity, track builders and Key Opinion Leaders (KOLs), analyze token markets, swap Stock Tokens on-chain, and stay informed 24/7 — all without leaving the platform.
+**THE WALL** is a comprehensive, real-time analytics dashboard and **Stock Token marketplace** built exclusively for the **Robinhood Chain** ecosystem. It provides builders, investors, analysts, and community members with a single, powerful interface to monitor on-chain activity, track builders and X/Twitter voices, analyze token markets, swap Stock Tokens on-chain, and stay informed 24/7 — all without leaving the platform.
 
 Robinhood Chain (Chain ID `4663`) is an emerging blockchain network with a growing ecosystem of builders, tokens, and decentralized applications. THE WALL exists to bring transparency, discoverability, and analytics to this ecosystem at a critical stage of its growth.
 
@@ -38,7 +38,7 @@ The platform is built with **Next.js 16**, **React 19**, **TypeScript**, and **S
 - 40+ API endpoints
 - Real-time market quotes, market news, and on-chain data running 24/7
 - Real wallet connect/disconnect and real on-chain swaps via LI.FI
-- 82 supported languages
+- 80 supported languages
 - 8 customizable accent themes
 - Enterprise-grade security with rate limiting and CSP
 
@@ -51,7 +51,7 @@ The Robinhood Chain ecosystem, like many emerging blockchains, suffers from **fr
 - **No centralized dashboard** — Users must juggle Blockscout explorers, DexScreener, social media, and various tools to get a complete picture.
 - **Builder opacity** — There is no easy way to discover who is building on Robinhood Chain, what they've deployed, or how active they are.
 - **Token discovery is manual** — Finding new or trending tokens requires constant monitoring of multiple sources.
-- **KOL influence is untracked** — Key Opinion Leaders drive attention and liquidity, but their on-chain footprint is invisible.
+- **Influencer footprints are scattered** — Key Opinion Leaders drive attention and liquidity, but their on-chain footprint and social presence live in separate places.
 - **Language barriers** — Most crypto analytics tools are English-only, excluding a significant portion of the global community.
 - **Poor mobile experience** — Existing tools are desktop-first and not optimized for mobile users who make up the majority of crypto participants.
 
@@ -67,7 +67,7 @@ THE WALL solves these problems by providing a **unified, real-time analytics pla
 
 1. **Single Source of Truth** — All Robinhood Chain data in one place, updated in real time.
 2. **Builder-First** — Spotlight the people building the ecosystem, not just the tokens.
-3. **Global by Default** — 82 languages from day one, not an afterthought.
+3. **Global by Default** — 80 languages from day one, not an afterthought.
 4. **Mobile-Native** — PWA installable on any device, responsive from the ground up.
 5. **Transparent** — Open data, clear metrics, no hidden agendas.
 
@@ -77,13 +77,13 @@ THE WALL solves these problems by providing a **unified, real-time analytics pla
 |---------|-----------|-------------|----------|
 | Robinhood Chain focus | Partial | Partial | **Exclusive** |
 | Builder tracking | Basic | No | **Full profiles + leaderboard** |
-| KOL analytics | No | No | **Top 50 with social data** |
+| Community & X profiles | No | No | **Live X profiles + official accounts** |
 | Stock Tokens (1:1-backed) | No | No | **90+ with real quotes + swaps** |
 | 24/7 market news | No | No | **Live headlines per symbol** |
 | Real on-chain swaps | No | No | **LI.FI via any wallet** |
 | Multi-source search | No | No | **Web, News, Images, Video, Maps** |
 | Token discovery | Explorer | Dex pairs | **Unified with creator info** |
-| i18n | Limited | Limited | **82 languages** |
+| i18n | Limited | Limited | **80 languages** |
 | Customizable UI | No | No | **8 themes + custom colors** |
 
 ---
@@ -117,14 +117,13 @@ The Builders section is the backbone of THE WALL, tracking every deployer and ac
 - X/Twitter profile link when available
 - Activity timeline
 
-### 4.3 KOL Hub
+### 4.3 Community & X Profiles
 
-The KOL Hub tracks the Top 50 Key Opinion Leaders in the Robinhood Chain ecosystem.
+Every X/Twitter handle resolves to a live profile page (`/x/[handle]`), and the Community page (`/team`) features the official THE WALL account and lead developer with real, live data.
 
-- **Podium Display** — Top 3 KOLs featured prominently
-- **Social Integration** — X/Twitter handles, follower counts, profile images
-- **On-Chain Metrics** — Wallet balances, token holdings, transaction activity
-- **Ranking System** — Composite score based on social influence and on-chain activity
+- **Live X Profiles** — Banner, avatar, description, follower counts, join date, location, and verification, all fetched live from X
+- **Official Accounts** — @officialWALLrh (official) and @suggestionii (lead developer) with Follow buttons
+- **Search Integration** — Type any X handle into a search bar to open its live profile instantly
 
 ### 4.4 Stock Token Marketplace
 
@@ -176,7 +175,7 @@ A multi-source search engine built into the platform:
 
 ### 4.8 Settings & Customization
 
-- **82 Languages** — Full i18n with region-based filtering
+- **80 Languages** — Full i18n with region-based filtering
 - **8 Accent Themes** — Green, Red, Blue, Yellow, Purple, Black, Cyan, Pink
 - **Custom Color Picker** — Create your own accent color
 - **Dark/Light Mode** — System-preference aware with manual toggle
@@ -338,7 +337,7 @@ THE WALL implements multiple layers of security:
 
 ## 8. Internationalization
 
-THE WALL supports **82 languages** from launch, with region-based filtering and persistent language preferences.
+THE WALL supports **80 languages** from launch, with region-based filtering and persistent language preferences.
 
 ### Supported Languages (Partial List)
 
@@ -396,11 +395,11 @@ English, Spanish, French, German, Portuguese, Chinese (Simplified & Traditional)
 - Builder leaderboard and profiles
 - Block explorer integration
 - Authentication system
-- i18n (82 languages)
+- i18n (80 languages)
 
 ### Phase 2 — Analytics ✅
 
-- KOL Hub with social integration
+- Community & X profile pages
 - Market data (crypto + stocks)
 - Token explorer with DexScreener
 - Global multi-source search
@@ -447,7 +446,7 @@ THE WALL is built by a small, focused team passionate about Robinhood Chain and 
 
 ## 12. Conclusion
 
-THE WALL is not just another blockchain explorer — it is a **purpose-built analytics ecosystem and Stock Token marketplace** for Robinhood Chain. By unifying on-chain data, builder profiles, KOL tracking, market analytics, Stock Tokens, and global search into a single, beautiful, multilingual platform, we are creating the infrastructure that Robinhood Chain needs to grow.
+THE WALL is not just another blockchain explorer — it is a **purpose-built analytics ecosystem and Stock Token marketplace** for Robinhood Chain. By unifying on-chain data, builder profiles, community tracking, market analytics, Stock Tokens, and global search into a single, beautiful, multilingual platform, we are creating the infrastructure that Robinhood Chain needs to grow.
 
 The problem is clear: fragmented information slows down ecosystems. The solution is THE WALL — one platform, every metric, every builder, every token, in every language. And with real on-chain swaps, real wallet support, and market data streaming 24/7, THE WALL turns browsing into doing.
 

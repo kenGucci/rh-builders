@@ -12,6 +12,24 @@ interface SwapQuoteParams {
   slippage: string;
 }
 
+const tokensCache = new Map<string, { data: unknown; ts: number }>();
+const TOKENS_TTL = 300_000;
+
+async function getTokens(chainId: string): Promise<unknown[]> {
+  const key = `tokens:${chainId}`;
+  const cached = tokensCache.get(key);
+  if (cached && Date.now() - cached.ts < TOKENS_TTL) return cached.data as unknown[];
+
+  const res = await fetch(`${LI_FI_API}/tokens?chain=${chainId}`, {
+    headers: { "Accept": "application/json" },
+  });
+  if (!res.ok) return [];
+  const data = await res.json();
+  const tokens = data?.tokens?.[chainId] || [];
+  tokensCache.set(key, { data: tokens, ts: Date.now() });
+  return tokens;
+}
+
 export async function GET(request: NextRequest) {
   const action = request.nextUrl.searchParams.get("action") || "quote";
 
@@ -48,15 +66,7 @@ export async function GET(request: NextRequest) {
 
     if (action === "tokens") {
       const chainId = request.nextUrl.searchParams.get("chainId") || "4663";
-      const res = await fetch(`${LI_FI_API}/tokens?chain=${chainId}`, {
-        headers: { "Accept": "application/json" },
-        next: { revalidate: 300 },
-      });
-      if (!res.ok) {
-        return NextResponse.json({ error: "Failed to fetch tokens" }, { status: 502 });
-      }
-      const data = await res.json();
-      const tokens = data?.tokens?.[chainId] || [];
+      const tokens = await getTokens(chainId);
       return NextResponse.json({ tokens });
     }
 

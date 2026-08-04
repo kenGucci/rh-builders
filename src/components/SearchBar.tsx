@@ -27,13 +27,10 @@ function resultUrl(s: SearchResult): string | null {
     const handle = (s.twitter as string | undefined) || s.label || (s.address ? s.address.replace(/^@/, "") : "");
     return handle ? `/x/${encodeURIComponent(handle)}` : null;
   }
+  if (s.type === "token" && s.address) {
+    return `/token/${s.address}`;
+  }
   if (!s.address) return null;
-  if (s.matchType === "project" && s.creator) {
-    return `/builder/${s.creator}?ca=${s.address}`;
-  }
-  if (s.matchType === "x" || (s.type === "token" && !s.creator)) {
-    return `/builder/${s.address}?tab=xaccount`;
-  }
   if (s.matchType === "wallet" || s.type === "address") {
     return `/builder/${s.address}?tab=claims`;
   }
@@ -67,18 +64,6 @@ export default function SearchBar({ compact = false, value, onValueChange }: { c
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
-
-  const handleNavigate = async (q: string) => {
-    if (!q.trim()) return;
-    try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(q.trim())}`);
-      const data = await res.ok ? await res.json() : {};
-      if (data.address && data.type !== "unknown") {
-        const url = resultUrl(data);
-        if (url) router.push(url);
-      }
-    } catch {}
-  };
 
   const handleSearch = async (q: string) => {
     if (!q.trim()) return;

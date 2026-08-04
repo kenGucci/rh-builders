@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { v2Fetch, v1Fetch } from "@/lib/blockscout";
+import { v2Fetch, v1Fetch, v2RecentlyFailed } from "@/lib/blockscout";
 
 interface DevReward {
   tokenAddress: string;
@@ -90,6 +90,10 @@ export async function GET(request: NextRequest) {
     ]);
 
     if (tokenData.status === "rejected" || !tokenData.value) {
+      const tokenPath = `/tokens/${tokenAddrLower}`;
+      if (v2RecentlyFailed(tokenPath)) {
+        return NextResponse.json({ error: "Token data temporarily unavailable (upstream rate limited)" }, { status: 503 });
+      }
       return NextResponse.json({ error: "Token not found" }, { status: 404 });
     }
 
@@ -202,12 +206,13 @@ export async function GET(request: NextRequest) {
       reward = calcRewardForToken(tokenAddrLower, tData, allTransfers, creatorAddress);
     }
 
-    let allDeployedTokens: TokenLaunch[] = [];
-    let previousLaunches: TokenLaunch[] = [];
+    const allDeployedTokens: TokenLaunch[] = [];
+    const previousLaunches: TokenLaunch[] = [];
     if (creatorAddress) {
       try {
         const launches = allTransfers;
         const seen = new Set<string>();
+        const candidates: { tAddr: string; transfer: Record<string, unknown> }[] = [];
 
         for (const l of launches) {
           const fromAddr = (l.from as Record<string, unknown>)?.hash as string;
@@ -218,29 +223,34 @@ export async function GET(request: NextRequest) {
           if (fromAddr?.toLowerCase() !== creatorAddress.toLowerCase()) continue;
 
           seen.add(tAddr);
+          candidates.push({ tAddr, transfer: l });
+          if (candidates.length >= 50) break;
+        }
 
-          let tokenInfo: Record<string, unknown> | null = null;
-          try {
-            tokenInfo = await v2Fetch(`/tokens/${tAddr}`) as Record<string, unknown>;
-          } catch {
-            tokenInfo = null;
-          }
+        const tokenInfos = await Promise.allSettled(
+          candidates.map(({ tAddr }) => v2Fetch(`/tokens/${tAddr}`) as Promise<Record<string, unknown>>)
+        );
+
+        candidates.forEach(({ tAddr, transfer }, i) => {
+          const tokenInfo = tokenInfos[i].status === "fulfilled"
+            ? tokenInfos[i].value
+            : null;
 
           // Calculate reward for this specific token
           const tokenReward = tAddr === tokenAddrLower
             ? reward
-            : calcRewardForToken(tAddr, tokenInfo || (tToken as Record<string, unknown>) || {}, allTransfers, creatorAddress);
+            : calcRewardForToken(tAddr, tokenInfo || (transfer.token as Record<string, unknown>) || {}, allTransfers, creatorAddress);
 
           const launchEntry: TokenLaunch = {
             tokenAddress: tAddr,
-            tokenName: (tokenInfo?.name as string) || (tToken?.name as string) || "Unknown",
-            tokenSymbol: (tokenInfo?.symbol as string) || (tToken?.symbol as string) || "???",
-            tokenIcon: (tokenInfo?.icon_url as string) || (tToken?.icon_url as string) || null,
+            tokenName: (tokenInfo?.name as string) || ((transfer.token as Record<string, unknown> | undefined)?.name as string) || "Unknown",
+            tokenSymbol: (tokenInfo?.symbol as string) || ((transfer.token as Record<string, unknown> | undefined)?.symbol as string) || "???",
+            tokenIcon: (tokenInfo?.icon_url as string) || ((transfer.token as Record<string, unknown> | undefined)?.icon_url as string) || null,
             tokenPrice: parseFloat((tokenInfo?.exchange_rate as string) || "0"),
             totalSupply: (tokenInfo?.total_supply as string) || "0",
             marketCap: (tokenInfo?.circulating_market_cap as string) || null,
             holdersCount: Number(tokenInfo?.holders_count || 0),
-            launchDate: (l.timestamp as string) || "",
+            launchDate: (transfer.timestamp as string) || "",
             reward: tokenReward ? {
               totalClaimed: tokenReward.totalClaimed,
               totalClaimedUsd: tokenReward.totalClaimedUsd,
@@ -256,9 +266,7 @@ export async function GET(request: NextRequest) {
           if (tAddr !== tokenAddrLower) {
             previousLaunches.push(launchEntry);
           }
-
-          if (allDeployedTokens.length >= 50) break;
-        }
+        });
       } catch (err) {
         console.error("[developer-rewards] Deployed tokens fetch failed:", err);
       }

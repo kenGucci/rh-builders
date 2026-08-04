@@ -2,13 +2,13 @@
   "builders": [
     {
       "address": "0x2FbAdbC261e78a94f3388423ce12fFbe48897777",
-      "name": "GITHUBOOD.FUN",
+      "name": "kenGucci",
       "twitter": "githubood_fun",
       "ens": "",
-      "description": "GitHub-verified token launchpad on Robinhood Chain requiring developers to authenticate via GitHub OAuth before deploying tokens.",
+      "description": "GitHub-verified builder on Robinhood Chain. All projects and code live on github.com/kenGucci.",
       "category": "Launchpad",
-      "website": "https://githubood.fun",
-      "github": "https://github.com/githubood",
+      "website": "https://github.com/kenGucci",
+      "github": "https://github.com/kenGucci",
       "logo": "",
       "foundingDate": "2025",
       "team": [],

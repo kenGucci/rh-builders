@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import {
-  LayoutDashboard, Users, LineChart, Search, Settings2, Info,
-  ArrowRight, Activity, Sparkles, Wallet, Shield, Layers,
+  LayoutDashboard, Users, LineChart, Settings2, Info,
+  ArrowRight, Activity, Sparkles, Wallet, Shield,
   Palette, Rocket, RefreshCw, MousePointerClick, Boxes,
 } from "lucide-react";
 
@@ -33,12 +33,6 @@ const features = [
       "Creator reward claims per token — claimed amount, claim count, and last claim — so you never miss what builders are earning.",
   },
   {
-    icon: Search,
-    title: "Global Search",
-    description:
-      "One search box for the whole web: news, images, videos, and maps.",
-  },
-  {
     icon: Shield,
     title: "On-Chain Transparency",
     description:
@@ -53,32 +47,17 @@ const pages = [
     badge: "Home",
     icon: LayoutDashboard,
     summary:
-      "The command center of THE WALL. The Dashboard shows you the health and activity of the entire Robinhood Chain at a glance.",
+      "The command center of THE WALL. The Dashboard shows you the health and activity of the entire Robinhood Chain at a glance — with a universal search bar and a real Invest with Stock Tokens section.",
     howToUse: [
+      "Use the search bar to look up any wallet (0x…), contract address (CA), X handle (@…), or Stock Token — results route straight to the matching profile.",
       "Scan the four live stat cards: Transactions, Blocks, Addresses, and Block Time — each with a sparkline of recent history.",
       "Read the ticker bar for ETH price, today's transactions, and current gas in Gwei.",
+      "Invest with Stock Tokens: browse all 90+ Stock Tokens with live prices, real stock charts, and Buy/Sell buttons that execute real on-chain trades from your wallet.",
       "Browse Top on-chain builders and click any card to jump straight into their profile.",
       "Watch the live transaction feed at the bottom and read the latest crypto news.",
-      "Use the global search bar at the top to jump to any wallet, token, or handle instantly.",
     ],
     howItWorks:
-      "The page polls /api/chain-stats every 15 seconds for real-time metrics from Blockscout, keeps a rolling history for the sparklines, and streams recent transactions and news through dedicated live components.",
-  },
-  {
-    href: "/global",
-    title: "Global Search",
-    badge: "Search Engine",
-    icon: Search,
-    summary:
-      "A complete search engine built into the app. Search the open web, news, images, videos, and maps without ever leaving the site.",
-    howToUse: [
-      "Type any query into the search box — it auto-focuses when the page loads.",
-      "Switch between Web, News, Images, Videos, and Maps tabs to change the result type.",
-      "Click a suggestion chip to run a curated search instantly.",
-      "Your last 10 searches are saved locally on your device for quick re-runs.",
-    ],
-    howItWorks:
-      "Each search is routed through the /api/global endpoint, which fans out to DuckDuckGo (web, images, news), YouTube (videos), Wikipedia (knowledge), and OpenStreetMap (maps), then merges the results into one clean list.",
+      "The page polls /api/chain-stats every 15 seconds for real-time metrics from Blockscout, keeps a rolling history for the sparklines, and streams recent transactions and news through dedicated live components. Search resolves against /api/search using Blockscout plus local registries. The Stock Tokens section fetches live quotes and historical chart data from /api/market and executes buys and sells on-chain via LI.FI.",
   },
   {
     href: "/builder",
@@ -86,10 +65,11 @@ const pages = [
     badge: "Core",
     icon: Rocket,
     summary:
-      "The builder hub. See top trending coins by volume and market cap on Robinhood Chain, then browse the full directory of builders, launchpads, and contracts.",
+      "The builder hub. Search the directory, see top trending coins by volume and market cap on Robinhood Chain, then browse the full list of builders, launchpads, and contracts.",
     howToUse: [
+      "Use the compact search bar to filter the developer list by name, X handle, wallet, or contract address.",
       "Start with the trending coins grid — live DEX data on volume, price changes, and market cap.",
-      "Scroll the full builder list and sort it, filter by tag or category, and search by wallet address, ENS, token contract, or X handle.",
+      "Scroll the full builder list and sort it by activity, balance, or last seen — or filter by tag and category.",
       "Click any builder to open their full profile page and dig into their activity.",
       "Spot launchpads and deployed tech from the overview panels at the top.",
     ],
@@ -102,15 +82,17 @@ const pages = [
     badge: "Trading",
     icon: LineChart,
     summary:
-      "Live stock and crypto market data, plus a real on-chain swap panel. Trade Stock Tokens backed by Robinhood Custody right from your wallet.",
+      "Live stock and crypto market data, plus a real on-chain swap panel. Track all 90+ Stock Tokens backed by Robinhood Custody and trade right from your wallet.",
     howToUse: [
-      "Browse 90+ Stock Tokens (NVDA, AAPL, QQQ, and more) and crypto pairs with live quotes.",
-      "Build a watchlist, then sort by Gainers, Losers, or Top Movers.",
+      "Use the symbol search to jump instantly to any Stock Token (NVDA, AAPL, QQQ, and more) or crypto pair.",
+      "Browse the 90+ Stock Tokens and crypto pairs with live quotes and real interactive stock charts, and build a watchlist.",
+      "Click Buy or Sell on any Stock Token to open the trade modal — it fetches a live LI.FI quote and executes a real on-chain transaction from your wallet.",
+      "Sort by Gainers, Losers, or Top Movers to follow the action.",
       "Open any asset for a detail modal with sparkline, volume, and market state (open / pre / after / closed).",
       "Connect your wallet and use the built-in Swap panel to trade tokens on-chain.",
     ],
     howItWorks:
-      "Quotes stream in live from the market API, Stock Token metadata comes from the /api/stock-tokens endpoint, and swaps execute through LI.FI on Robinhood Chain.",
+      "Quotes stream in live from the market API, historical chart data is served via the chart action (Yahoo Finance OHLCV), Stock Token metadata comes from the /api/stock-tokens endpoint, and swaps execute through LI.FI on Robinhood Chain.",
   },
   {
     href: "/team",
@@ -118,14 +100,14 @@ const pages = [
     badge: "People",
     icon: Users,
     summary:
-      "Meet the people behind THE WALL, with their profiles and live X/Twitter data.",
+      "The official accounts behind THE WALL — the Official X account (@officialWALLrh) and the official GitHub builder, kenGucci.",
     howToUse: [
-      "See the banner, avatar, bio, and follower stats.",
-      "Use the Follow on X button to keep up with updates.",
-      "Click through the profile links, location, and join date for context.",
+      "See the Official X account with its real banner, avatar, location, website, and join date.",
+      "Use the Follow on X button to keep up with announcements.",
+      "Visit the Official Builder card and click Follow on GitHub to track every project, commit, and release at github.com/kenGucci.",
     ],
     howItWorks:
-      "The page fetches the live X/Twitter profile via the /api/twitter endpoint and renders the account's real banner, avatar, description, and stats.",
+      "The page fetches the live X/Twitter profile via the /api/twitter endpoint and renders the account's real banner, avatar, and details. The Official Builder links directly to github.com/kenGucci.",
   },
   {
     href: "/settings",
@@ -135,7 +117,7 @@ const pages = [
     summary:
       "Make THE WALL yours — language, theme, and feedback all in one place.",
     howToUse: [
-      "Switch the interface language from a list of 82 supported languages, or let region-based filtering suggest the right one.",
+      "Switch the interface language from a list of 80 supported languages, or let region-based filtering suggest the right one.",
       "Toggle dark / light mode.",
       "Send feedback on any page with a good / bad rating to help shape the product.",
     ],

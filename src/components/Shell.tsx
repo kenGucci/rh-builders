@@ -1,19 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { usePathname } from "next/navigation";
+import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 import ThemeSwitcher from "@/components/ThemeSwitcher";
-import HeaderSearch from "@/components/HeaderSearch";
-import WallBot from "@/components/WallBot";
+import CookieConsent from "@/components/CookieConsent";
 import { Menu, ExternalLink } from "lucide-react";
 
-const HIDE_SEARCH_PATHS = new Set(["/settings", "/team", "/about", "/global", "/builder"]);
+const legalLinks = [
+  { href: "/legal/terms", label: "Terms of Use" },
+  { href: "/legal/privacy", label: "Privacy Policy" },
+  { href: "/legal/cookies", label: "Cookie Policy" },
+];
 
 export default function Shell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const pathname = usePathname();
-  const showHeaderSearch = !HIDE_SEARCH_PATHS.has(pathname);
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -42,7 +43,6 @@ export default function Shell({ children }: { children: React.ReactNode }) {
               </div>
             </div>
             <div className="flex items-center gap-2 flex-1 justify-end">
-              {showHeaderSearch && <HeaderSearch className="hidden md:block" />}
               <nav className="flex items-center gap-2" aria-label="Actions">
                 <ThemeSwitcher compact />
                 <a
@@ -62,8 +62,30 @@ export default function Shell({ children }: { children: React.ReactNode }) {
         <main className="p-3 sm:p-4 md:p-6" role="main" id="main-content">
           {children}
         </main>
+        <footer
+          className="px-4 md:px-6 py-4 border-t border-[var(--border-subtle)] no-print"
+          role="contentinfo"
+          aria-label="Legal and site information"
+        >
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 max-w-[1200px] mx-auto">
+            <div className="text-[10px] text-[var(--text-muted)]">
+              THE WALL · Robinhood Chain (Chain ID 4663)
+            </div>
+            <nav className="flex items-center gap-4" aria-label="Legal pages">
+              {legalLinks.map((l) => (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  className="text-[10px] text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
+                >
+                  {l.label}
+                </Link>
+              ))}
+            </nav>
+          </div>
+        </footer>
       </div>
-      <WallBot />
+      <CookieConsent />
     </div>
   );
 }

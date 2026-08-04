@@ -57,13 +57,6 @@ function applyTheme(accent: string, gradient: string[]) {
   root.style.setProperty("--accent-glow", hexToRgba(accent, 0.25));
   root.style.setProperty("--gradient-from", gradient[0]);
   root.style.setProperty("--gradient-to", gradient[1]);
-
-  document.querySelectorAll<HTMLElement>(".gradient-text").forEach((el) => {
-    el.style.background = `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})`;
-    el.style.webkitBackgroundClip = "text";
-    el.style.webkitTextFillColor = "transparent";
-    el.style.backgroundClip = "text";
-  });
 }
 
 function applyColorMode(mode: "dark" | "light") {

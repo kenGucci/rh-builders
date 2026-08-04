@@ -1,13 +1,13 @@
 "use client";
 
 import { useParams, useSearchParams } from "next/navigation";
-import Link from "next/link";
+import Image from "next/image";
 import StatsBar from "@/components/StatsBar";
 import ClaimHistory from "@/components/ClaimHistory";
 import TransactionList from "@/components/TransactionList";
 import TokenXAccount from "@/components/TokenXAccount";
 import AddressAvatar from "@/components/AddressAvatar";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect } from "react";
 import { ArrowLeft, Copy, ExternalLink, Layers, User, Coins, Wallet, History, CheckCircle, XCircle, ArrowUpRight, Clock, BarChart3 } from "lucide-react";
 import builders from "@/lib/builders.json";
 
@@ -245,9 +245,11 @@ export default function BuilderProfileClient() {
       <div className="space-y-4">
         <div className="flex items-start gap-4">
           {tweet?.avatarUrl ? (
-            <img
+            <Image
               src={tweet.avatarUrl}
               alt={builder?.name || "Profile"}
+              width={64}
+              height={64}
               className="w-16 h-16 rounded-full border-2 border-[var(--accent)]/30 flex-shrink-0 object-cover"
               onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
             />
@@ -290,7 +292,7 @@ export default function BuilderProfileClient() {
               <div className="mt-2 space-y-1">
                 <div className="flex items-center gap-3">
                   {tokenBalance.tokenIcon && (
-                    <img src={tokenBalance.tokenIcon} alt={tokenBalance.tokenSymbol} className="w-6 h-6 rounded-full border border-[var(--border)]" />
+                    <Image src={tokenBalance.tokenIcon} alt={tokenBalance.tokenSymbol} width={24} height={24} className="w-6 h-6 rounded-full border border-[var(--border)]" />
                   )}
                   <span className="text-lg font-bold gradient-text">
                     {tokenBalance.holderBalance} ${tokenBalance.tokenSymbol}
@@ -360,9 +362,11 @@ export default function BuilderProfileClient() {
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl overflow-hidden">
             <div className="flex items-center gap-3 p-4 border-b border-[var(--border)]">
               {tweet?.avatarUrl ? (
-                <img
+                <Image
                   src={tweet.avatarUrl}
                   alt={builder.twitter}
+                  width={48}
+                  height={48}
                   className="w-12 h-12 rounded-full border border-[var(--border)] object-cover"
                 />
               ) : (
@@ -522,7 +526,7 @@ export default function BuilderProfileClient() {
                 <div key={token.address} className="p-4 hover:bg-[var(--bg-card-hover)] transition-colors">
                   <div className="flex items-center gap-3 mb-3">
                     {token.icon ? (
-                      <img src={token.icon} alt={token.symbol} className="w-8 h-8 rounded-full border border-[var(--border)]" />
+                      <Image src={token.icon} alt={token.symbol} width={32} height={32} className="w-8 h-8 rounded-full border border-[var(--border)]" />
                     ) : (
                       <div className="w-8 h-8 rounded-full bg-[var(--accent)]/10 flex items-center justify-center text-xs font-bold text-[var(--accent)]">
                         {token.symbol?.slice(0, 1) || "?"}
@@ -692,7 +696,7 @@ export default function BuilderProfileClient() {
                 {devRewards.token && (
                   <div className="flex items-center gap-4 p-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border)]">
                     {devRewards.token.icon ? (
-                      <img src={devRewards.token.icon} alt={devRewards.token.symbol} className="w-12 h-12 rounded-xl border border-[var(--border)]" />
+                      <Image src={devRewards.token.icon} alt={devRewards.token.symbol} width={48} height={48} className="w-12 h-12 rounded-xl border border-[var(--border)]" />
                     ) : (
                       <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[var(--accent)]/20 to-[var(--accent)]/5 flex items-center justify-center text-lg font-bold text-[var(--accent)] border border-[var(--accent)]/20">
                         {devRewards.token.symbol?.slice(0, 2)}
@@ -771,7 +775,7 @@ export default function BuilderProfileClient() {
                       {devRewards.allDeployedTokens.map((launch) => (
                         <div key={launch.tokenAddress} className="flex items-center gap-3 p-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] hover:border-[var(--accent)]/30 transition-all">
                           {launch.tokenIcon ? (
-                            <img src={launch.tokenIcon} alt={launch.tokenSymbol} className="w-10 h-10 rounded-full border border-[var(--border)]" />
+                            <Image src={launch.tokenIcon} alt={launch.tokenSymbol} width={40} height={40} className="w-10 h-10 rounded-full border border-[var(--border)]" />
                           ) : (
                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--accent)]/20 to-[var(--accent)]/5 flex items-center justify-center text-xs font-bold text-[var(--accent)] border border-[var(--accent)]/20">
                               {launch.tokenSymbol?.slice(0, 2)}
@@ -835,7 +839,7 @@ export default function BuilderProfileClient() {
                             className="flex items-center gap-3 p-2 rounded-lg hover:bg-[var(--bg-card-hover)] transition-colors"
                           >
                             {launch.tokenIcon && (
-                              <img src={launch.tokenIcon} alt={launch.tokenSymbol} className="w-7 h-7 rounded-full border border-[var(--border)]" />
+                              <Image src={launch.tokenIcon} alt={launch.tokenSymbol} width={28} height={28} className="w-7 h-7 rounded-full border border-[var(--border)]" />
                             )}
                             <div className="min-w-0 flex-1">
                               <div className="text-xs font-medium truncate">{launch.tokenName}</div>

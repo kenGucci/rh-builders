@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo } from "react";
+import { useRef, useMemo } from "react";
 
 interface SparklineProps {
   data: number[];

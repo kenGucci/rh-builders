@@ -5,8 +5,8 @@ import Link from "next/link";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   Layers, Clock, Zap, ArrowUpRight, Users, Activity,
-  TrendingUp, Fuel, Shield, Globe, BarChart3, ExternalLink,
-  ArrowRight, Sparkles, ChevronRight, Rocket, Eye, Terminal
+  Shield, Globe, BarChart3,
+  ArrowRight, Sparkles, ChevronRight, Rocket, Eye
 } from "lucide-react";
 import AddressAvatar from "@/components/AddressAvatar";
 import AnimatedCounter from "@/components/AnimatedCounter";
@@ -15,6 +15,7 @@ import dynamic from "next/dynamic";
 
 const LiveTransactions = dynamic(() => import("@/components/LiveTransactions"), { ssr: false });
 const NewsSection = dynamic(() => import("@/components/NewsSection").catch(() => ({ default: () => null })), { ssr: false });
+const StockTokensSection = dynamic(() => import("@/components/StockTokensSection"), { ssr: false });
 
 interface NetworkStats {
   totalBlocks: number;
@@ -291,6 +292,11 @@ export default function Home() {
           </div>
         </section>
 
+        {/* ── Invest with Stock Tokens ── */}
+        <div className="mb-20">
+          <StockTokensSection limit={6} />
+        </div>
+
         {/* ── Top On-Chain Builders ── */}
         <section className="mb-20 scroll-reveal" aria-label="Featured builders">
           <div className="flex items-end justify-between mb-8">
@@ -381,7 +387,7 @@ export default function Home() {
               {
                 step: "01",
                 title: "Search Any Address",
-                text: "Enter a wallet address, ENS name, token contract address, or Twitter handle into our search bar. THE WALL instantly conducts a comprehensive scan across the entire Robinhood Chain using Blockscout, intelligently matching your input against verified on-chain records to deliver accurate and instant results.",
+                text: "Enter a wallet address, ENS name, token contract address, or X handle into our search bar. THE WALL instantly conducts a comprehensive scan across the entire Robinhood Chain using Blockscout, intelligently matching your input against verified on-chain records to deliver accurate and instant results.",
               },
               {
                 step: "02",

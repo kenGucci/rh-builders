@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   buildFullProfile,
   buildXOnlyProfile,
-  fetchAddressBalance,
-  fetchXProfile,
   type KOLProfile,
 } from "@/lib/kol-service";
 
@@ -52,10 +50,10 @@ const KOL_REGISTRY: KOLRegistryEntry[] = [
   },
   {
     address: "0x2FbAdbC261e78a94f3388423ce12fFbe48897777",
-    name: "GITHUBOOD.FUN",
+    name: "kenGucci",
     handle: "githubood_fun",
-    description: "GitHub-verified token launchpad — code-commit history meets on-chain reputation.",
-    tags: ["Launchpad", "GitHub", "Robinhood"],
+    description: "GitHub-verified builder — all projects and code live on github.com/kenGucci.",
+    tags: ["Builder", "GitHub", "Robinhood"],
     ethAddresses: [],
   },
   {
@@ -469,7 +467,7 @@ export async function GET(request: NextRequest) {
     paginated.map((kol) => buildProfileCached(kol, ethPrice))
   );
 
-  let profiles = registryProfiles
+  const profiles = registryProfiles
     .filter(
       (r): r is PromiseFulfilledResult<KOLProfile> =>
         r.status === "fulfilled" && r.value !== null

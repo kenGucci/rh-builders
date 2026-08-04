@@ -238,7 +238,6 @@ export async function fetchRecentTransactions(): Promise<KOLActivity[]> {
   const data = await cachedFetch(`${BLOCKSCOUT_V2}/main-page/transactions`, 30_000) as { items?: unknown[] } | null;
   if (!data) return [];
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const items = Array.isArray(data) ? data : (data.items || []);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return items.map((tx: any) => {
@@ -600,7 +599,6 @@ export async function buildKOLProfileFromRegistry(
 
   const totalTxs = allActivity.length;
   const tokenCount = allTokens.length;
-  const followers = xResult?.followers ?? 0;
 
   return {
     address: kol.address,

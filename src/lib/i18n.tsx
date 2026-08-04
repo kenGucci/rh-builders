@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 
 export interface Language {
   code: string;
@@ -1021,12 +1021,10 @@ const I18nContext = createContext<I18nContextValue>({
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<string>("en");
-  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("thewallrh_lang");
     setLangState(saved && translations[saved] ? saved : detectLanguage());
-    setReady(true);
   }, []);
 
   const setLang = useCallback((code: string) => {
@@ -1038,10 +1036,6 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     (key: string) => translations[lang]?.[key] ?? translations.en[key] ?? key,
     [lang],
   );
-
-  if (!ready) {
-    return <>{children}</>;
-  }
 
   return (
     <I18nContext.Provider value={{ lang, setLang, t }}>

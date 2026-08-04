@@ -39,15 +39,21 @@ async function fetchDexData(tokenAddress: string) {
 
 async function fetchCreatorRewards(address: string, tokenAddress: string) {
   try {
-    const addrData = await v2Fetch(`/addresses/${tokenAddress.toLowerCase()}`) as Record<string, unknown>;
-    const creatorAddress = addrData.creator_address_hash as string | null;
+    const [addrRes, tDataRes, transfersRes] = await Promise.allSettled([
+      v2Fetch(`/addresses/${tokenAddress.toLowerCase()}`) as Promise<Record<string, unknown>>,
+      v2Fetch(`/tokens/${tokenAddress.toLowerCase()}`) as Promise<Record<string, unknown>>,
+      v2Fetch(`/addresses/${address.toLowerCase()}/token-transfers`) as Promise<{ items?: Record<string, unknown>[] }>,
+    ]);
+
+    const addrData = addrRes.status === "fulfilled" ? addrRes.value : null;
+    const creatorAddress = addrData?.creator_address_hash as string | null;
     if (!creatorAddress || creatorAddress.toLowerCase() !== address.toLowerCase()) return null;
 
-    const tData = await v2Fetch(`/tokens/${tokenAddress.toLowerCase()}`) as Record<string, unknown>;
+    const tData = tDataRes.status === "fulfilled" ? tDataRes.value : {};
     const tokenPrice = parseFloat((tData.exchange_rate as string) || "0");
     const decimals = Number(tData.decimals || 18);
 
-    const transfersData = await v2Fetch(`/addresses/${address.toLowerCase()}/token-transfers`) as { items?: Record<string, unknown>[] };
+    const transfersData = transfersRes.status === "fulfilled" ? transfersRes.value : {};
     const transfers = transfersData.items || [];
     const walletLower = address.toLowerCase();
 
@@ -119,7 +125,7 @@ export async function GET(request: NextRequest) {
   const addrLower = address.toLowerCase();
 
   const [addressRes, tokensRes, txsRes, historyRes] = await Promise.allSettled([
-    v2Fetch(`/addresses/${addrLower}`),
+    v2Fetch(`/addresses/${addrLower}`, 60_000, 4),
     v2Fetch(`/addresses/${addrLower}/tokens?limit=20`),
     v2Fetch(`/addresses/${addrLower}/transactions?limit=10`),
     v2Fetch(`/addresses/${addrLower}/coin-balance-history?limit=30`),

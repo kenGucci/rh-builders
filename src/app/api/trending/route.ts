@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     const tokenData = await getRobinhoodTokens();
     const pairs = Array.from(tokenData.bestPerToken.values());
 
-    let sorted = pairs.filter((p) => {
+    const sorted = pairs.filter((p) => {
       if (period === "m5") return (p.volume?.m5 || 0) > 0;
       if (period === "h1") return (p.volume?.h1 || 0) > 0;
       if (period === "h6") return (p.volume?.h6 || 0) > 0;

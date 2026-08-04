@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { v2Fetch, v1Fetch } from "@/lib/blockscout";
+import { v2Fetch, v1Fetch, v2RecentlyFailed } from "@/lib/blockscout";
 
 export async function GET(request: NextRequest) {
   const address = request.nextUrl.searchParams.get("address");
@@ -22,6 +22,10 @@ export async function GET(request: NextRequest) {
     const balancesData = balancesRes.status === "fulfilled" ? balancesRes.value : null;
 
     if (!tokenData) {
+      const tokenPath = `/tokens/${tokenAddress.toLowerCase()}`;
+      if (v2RecentlyFailed(tokenPath)) {
+        return NextResponse.json({ error: "Token data temporarily unavailable (upstream rate limited)" }, { status: 503 });
+      }
       return NextResponse.json({ error: "Token not found" }, { status: 404 });
     }
 
@@ -50,7 +54,7 @@ export async function GET(request: NextRequest) {
         address: address.toLowerCase(),
         contractaddress: tokenAddress.toLowerCase(),
         page: "1",
-        offset: "1000",
+        offset: "200",
         sort: "desc",
       }) as Record<string, unknown>;
       if (Array.isArray(txData?.result)) {

@@ -14,7 +14,7 @@
 
 ## What is THE WALL RH?
 
-THE WALL RH is a full-stack platform for **Robinhood Chain** — combining a real-time on-chain analytics dashboard with a **Stock Token marketplace**. Track builders, tokens, KOLs, live market data, and real on-chain activity — all in one dark-mode dashboard with a polished UI.
+THE WALL RH is a full-stack platform for **Robinhood Chain** — combining a real-time on-chain analytics dashboard with a **Stock Token marketplace**. Track builders, tokens, live market data, and real on-chain activity — all in one dark-mode dashboard with a polished UI.
 
 ## Pages
 
@@ -39,20 +39,20 @@ The Stock Token marketplace — **90+ 1:1-backed Stock Tokens** (NVDA, AAPL, TSL
 - **Real swaps** — Connect your wallet (MetaMask / WalletConnect / Coinbase) to check balances, disconnect, and swap Stock Tokens directly on Robinhood Chain via LI.FI.
 - **Real on-chain txns** — Live DEX transactions from DexScreener and real chain transactions verified on Blockscout.
 
-### KOL Hub (`/kol`)
-Top 50 ranked Key Opinion Leaders leaderboard with podium display for top 3, PnL badges, follower counts, on-chain activity stats. Expandable detail panels with X profile, transaction history, and more.
-
 ### Team (`/team`)
 Team profile page with the **Official X account** ([@officialWALLrh](https://x.com/officialWALLrh)) plus the lead developer ([@suggestionii](https://x.com/suggestionii)) — live banner, avatar, bio, follower stats, and Follow buttons.
+
+### X Profile (`/x/[handle]`)
+Any X/Twitter handle resolves to a live profile page — banner, avatar, description, follower counts, location, and join date, all fetched live from X.
 
 ### About Us (`/about`)
 Full site guide covering every page with "How to use" and "How it works" walkthroughs.
 
 ### Settings (`/settings`)
-Language and theme configuration. Supports 82 languages with 12 fully translated (EN, ZH, ES, FR, DE, PT, AR, HI, JA, KO, RU, VI). 8 preset accent colors plus a custom hex color picker with live preview.
+Language and theme configuration. Supports 80 languages with 15 fully translated (EN, ZH, ES, FR, DE, PT, AR, HI, JA, KO, RU, VI, TR, TH, ID). 8 preset accent colors plus a custom hex color picker with live preview.
 
 ### Auth (`/auth`)
-Authentication via three methods: OTP email verification (6-digit code with auto-submit), password login, or X/Twitter OAuth 2.0. Secured with PBKDF2 hashing, JWT tokens, and OAuth PKCE.
+Email + password authentication, secured with PBKDF2 hashing and JWT tokens.
 
 ## Architecture
 
@@ -64,10 +64,11 @@ src/
 │   ├── auth/               # Authentication
 │   ├── builder/            # Builder list + detail pages
 │   ├── global/             # Global search engine
-│   ├── kol/                # KOL leaderboard
 │   ├── market/             # Stock Token marketplace + real-time on-chain dashboard
 │   ├── settings/           # Language & theme settings
 │   ├── team/               # Team + official X account
+│   ├── token/              # Token profile pages
+│   ├── x/                  # Live X profile pages
 │   └── api/                # 40+ API route handlers
 ├── components/             # Reusable UI components
 ├── lib/                    # Services, utilities, data
@@ -93,7 +94,7 @@ src/
   - [YouTube](https://youtube.com) — Video search
   - [Wikipedia](https://wikipedia.org) — Knowledge graph
   - [OpenStreetMap](https://openstreetmap.org) — Maps & geocoding
-  - [X/Twitter](https://x.com) — Social profiles & KOL data (page scrape + oembed + [unavatar.io](https://unavatar.io))
+  - [X/Twitter](https://x.com) — Social profiles & community data (page scrape + oembed + [unavatar.io](https://unavatar.io))
 - **Package Manager:** pnpm
 
 ## Features
@@ -103,7 +104,7 @@ src/
 - **Real on-chain dashboard** — Live blocks, live transactions, chain stats from Blockscout
 - **Wallet support** — Connect / disconnect via MetaMask, WalletConnect, Coinbase (RainbowKit), real token balances
 - **Dark/Light mode** — Toggle with 8 accent color themes + custom color picker
-- **82 languages** — Full i18n with region-based filtering
+- **80 languages** — Full i18n with region-based filtering
 - **PWA** — Installable as a standalone app on mobile and desktop
 - **Responsive** — Mobile-first with hamburger nav, slide-over sidebar
 - **Performance** — Critical-path rendering, lazy-loaded swap panel, CDN caching on hot APIs

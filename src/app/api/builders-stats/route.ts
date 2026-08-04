@@ -18,7 +18,7 @@ interface BuilderStats {
 }
 
 let cache: { data: Record<string, BuilderStats>; timestamp: number } | null = null;
-const CACHE_TTL = 30000;
+const CACHE_TTL = 60000;
 
 async function fetchBuilderStats(address: string): Promise<BuilderStats | null> {
   try {

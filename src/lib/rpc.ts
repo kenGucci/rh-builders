@@ -161,7 +161,6 @@ function decodeString(hex: string): string | null {
   try {
     const bytes = hexToBytes(hex);
     if (bytes.length < 64) return null;
-    const offset = parseInt(bytesToHex(bytes.slice(0, 32)), 16);
     const length = parseInt(bytesToHex(bytes.slice(32, 64)), 16);
     if (length === 0 || length > 200) return null;
     const strBytes = bytes.slice(64, 64 + length);

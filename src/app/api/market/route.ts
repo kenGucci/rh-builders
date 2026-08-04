@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const maxDuration = 60;
+export const runtime = "nodejs";
+
 const cacheHeaders = { headers: { "Cache-Control": "s-maxage=5, stale-while-revalidate=10" } };
 
 const FMP_BASE = "https://financialmodelingprep.com/api/v3";
@@ -8,6 +11,14 @@ const FMP_ENABLED = FMP_KEY && FMP_KEY !== "demo" && FMP_KEY.length > 5;
 
 const YAHOO_BASE = "https://query1.finance.yahoo.com";
 const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36";
+
+const YAHOO_SYMBOL_MAP: Record<string, string> = {
+  SATS: "ECHO",
+};
+
+function yahooSymbol(symbol: string): string {
+  return YAHOO_SYMBOL_MAP[symbol] || symbol;
+}
 
 interface MarketQuote {
   symbol: string;
@@ -38,6 +49,28 @@ interface SearchResult {
   name: string;
   type: string;
   exchange: string;
+}
+
+interface Candle {
+  time: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+interface ChartData {
+  symbol: string;
+  currency: string;
+  range: string;
+  interval: string;
+  candles: Candle[];
+  meta: {
+    regularMarketPrice: number | null;
+    chartPreviousClose: number | null;
+    marketState: string | null;
+  };
 }
 
 const CRYPTO_KEYWORDS = new Set([
@@ -116,7 +149,7 @@ async function yahooFetch(url: string): Promise<unknown> {
 async function yahooSparkline(symbol: string): Promise<number[]> {
   try {
     const data = await yahooFetch(
-      `${YAHOO_BASE}/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1w`
+      `${YAHOO_BASE}/v8/finance/chart/${encodeURIComponent(yahooSymbol(symbol))}?interval=1d&range=1w`
     );
     const mapped = mapYahooChart(data as Record<string, unknown>, symbol);
     return mapped?.sparkline || [];
@@ -128,7 +161,7 @@ async function yahooSparkline(symbol: string): Promise<number[]> {
 async function yahooQuote(symbol: string): Promise<MarketQuote | null> {
   try {
     const data = await yahooFetch(
-      `${YAHOO_BASE}/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1w`
+      `${YAHOO_BASE}/v8/finance/chart/${encodeURIComponent(yahooSymbol(symbol))}?interval=1d&range=1w`
     );
     const mapped = mapYahooChart(data as Record<string, unknown>, symbol);
     return mapped;
@@ -137,12 +170,97 @@ async function yahooQuote(symbol: string): Promise<MarketQuote | null> {
   }
 }
 
+const RANGE_INTERVALS: Record<string, { interval: string }> = {
+  "1d": { interval: "5m" },
+  "5d": { interval: "15m" },
+  "1mo": { interval: "1d" },
+  "3mo": { interval: "1d" },
+  "6mo": { interval: "1d" },
+  "1y": { interval: "1d" },
+  "2y": { interval: "1wk" },
+  "5y": { interval: "1wk" },
+  "max": { interval: "1mo" },
+};
+
+async function yahooChart(symbol: string, range: string): Promise<ChartData | null> {
+  try {
+    const conf = RANGE_INTERVALS[range] || RANGE_INTERVALS["3mo"];
+    const data = await yahooFetch(
+      `${YAHOO_BASE}/v8/finance/chart/${encodeURIComponent(yahooSymbol(symbol))}?interval=${conf.interval}&range=${range}&includePrePost=false`
+    );
+    const d = data as Record<string, unknown>;
+    const chartBlock = d.chart as Record<string, unknown> | undefined;
+    const result = (chartBlock?.result as Record<string, unknown>[] | undefined)?.[0];
+    if (!result) return null;
+
+    const meta = result.meta as Record<string, unknown>;
+    const timestamps = (result.timestamp as number[] | undefined) || [];
+    const quote = ((result.indicators as Record<string, unknown> | undefined)?.quote as Record<string, unknown>[] | undefined)?.[0] || {};
+
+    const opens = quote.open as (number | null)[] | undefined || [];
+    const highs = quote.high as (number | null)[] | undefined || [];
+    const lows = quote.low as (number | null)[] | undefined || [];
+    const closes = quote.close as (number | null)[] | undefined || [];
+    const volumes = quote.volume as (number | null)[] | undefined || [];
+
+    const candles: Candle[] = [];
+    for (let i = 0; i < timestamps.length; i++) {
+      const c = closes[i];
+      if (c == null) continue;
+      const o = opens[i] ?? c;
+      const h = highs[i] ?? c;
+      const l = lows[i] ?? c;
+      const v = volumes[i] ?? 0;
+      candles.push({ time: timestamps[i], open: o, high: h, low: l, close: c, volume: v });
+    }
+
+    return {
+      symbol: String(meta.symbol || symbol),
+      currency: String(meta.currency || "USD"),
+      range,
+      interval: conf.interval,
+      candles,
+      meta: {
+        regularMarketPrice: typeof meta.regularMarketPrice === "number" ? meta.regularMarketPrice : null,
+        chartPreviousClose: typeof meta.chartPreviousClose === "number" ? meta.chartPreviousClose : null,
+        marketState: typeof meta.marketState === "string" ? meta.marketState : null,
+      },
+    };
+  } catch {
+    return null;
+  }
+}
+
 async function yahooBatch(symbols: string[]): Promise<MarketQuote[]> {
   if (symbols.length === 0) return [];
-  const results = await Promise.allSettled(symbols.map((s) => yahooQuote(s)));
-  return results
-    .filter((r): r is PromiseFulfilledResult<MarketQuote> => r.status === "fulfilled" && r.value !== null)
-    .map((r) => r.value);
+  const results: (MarketQuote | null)[] = new Array(symbols.length).fill(null);
+  let cursor = 0;
+  const workerCount = Math.min(8, symbols.length);
+  const workers = Array.from({ length: workerCount }, async () => {
+    while (true) {
+      const idx = cursor++;
+      if (idx >= symbols.length) return;
+      results[idx] = await cachedYahooQuote(symbols[idx]);
+    }
+  });
+  await Promise.all(workers);
+  return results.filter((r): r is MarketQuote => r !== null);
+}
+
+async function yahooBatchCharts(symbols: string[], range: string): Promise<Record<string, ChartData>> {
+  const out: Record<string, ChartData> = {};
+  let cursor = 0;
+  const workerCount = Math.min(6, symbols.length);
+  const workers = Array.from({ length: workerCount }, async () => {
+    while (true) {
+      const idx = cursor++;
+      if (idx >= symbols.length) return;
+      const chart = await cachedYahooChart(symbols[idx], range);
+      if (chart && chart.candles.length > 0) out[symbols[idx]] = chart;
+    }
+  });
+  await Promise.all(workers);
+  return out;
 }
 
 async function yahooSearch(query: string): Promise<SearchResult[]> {
@@ -330,6 +448,46 @@ const NAME_MAP: Record<string, string> = {
   "BTC-USD": "Bitcoin", "ETH-USD": "Ethereum", "SOL-USD": "Solana", "DOGE-USD": "Dogecoin",
 };
 
+// ─── In-memory cache (charts, quotes, trades) to survive rapid-fire card loads ───
+const CACHE_TTL_MS = 60_000;
+const cache = new Map<string, { value: unknown; expires: number }>();
+
+function cacheGet<T>(key: string): T | null {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expires) {
+    cache.delete(key);
+    return null;
+  }
+  return entry.value as T;
+}
+
+function cacheSet(key: string, value: unknown, ttl = CACHE_TTL_MS) {
+  cache.set(key, { value, expires: Date.now() + ttl });
+  if (cache.size > 400) {
+    const now = Date.now();
+    for (const [k, v] of cache) if (now > v.expires) cache.delete(k);
+  }
+}
+
+async function cachedYahooChart(symbol: string, range: string): Promise<ChartData | null> {
+  const key = `chart:${symbol}:${range}`;
+  const cached = cacheGet<ChartData | null>(key);
+  if (cached !== null) return cached;
+  const chart = await yahooChart(symbol, range);
+  cacheSet(key, chart);
+  return chart;
+}
+
+async function cachedYahooQuote(symbol: string): Promise<MarketQuote | null> {
+  const key = `quote:${symbol}`;
+  const cached = cacheGet<MarketQuote | null>(key);
+  if (cached !== null) return cached;
+  const quote = await yahooQuote(symbol);
+  if (quote) cacheSet(key, quote);
+  return quote;
+}
+
 export async function GET(request: NextRequest) {
   const action = request.nextUrl.searchParams.get("action") || "quotes";
   const symbol = request.nextUrl.searchParams.get("symbol");
@@ -361,6 +519,22 @@ export async function GET(request: NextRequest) {
       if (!quote) quote = await fmpQuote(symbol);
       if (!quote) return NextResponse.json({ error: "Symbol not found" }, { status: 404 });
       return NextResponse.json({ quote }, cacheHeaders);
+    }
+
+    if (action === "chart" && symbol) {
+      const range = request.nextUrl.searchParams.get("range") || "3mo";
+      const chart = await cachedYahooChart(symbol, range);
+      if (!chart || chart.candles.length === 0) {
+        return NextResponse.json({ error: "No chart data" }, { status: 404 });
+      }
+      return NextResponse.json({ chart }, cacheHeaders);
+    }
+
+    if (action === "charts" && symbolsParam) {
+      const range = request.nextUrl.searchParams.get("range") || "3mo";
+      const syms = symbolsParam.split(",").filter(Boolean);
+      const charts = await yahooBatchCharts(syms, range);
+      return NextResponse.json({ charts }, cacheHeaders);
     }
 
     if (action === "batch" && symbolsParam) {
@@ -432,7 +606,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
-  } catch (error) {
+  } catch {
     return NextResponse.json({
       error: "Failed to fetch market data",
     }, { status: 500 });

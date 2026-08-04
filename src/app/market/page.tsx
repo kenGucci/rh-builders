@@ -2,19 +2,24 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import dynamic from "next/dynamic";
+import Image from "next/image";
+import Link from "next/link";
 import {
   TrendingUp, TrendingDown, RefreshCw, Search, ArrowUpRight, Activity,
-  BarChart3, DollarSign, Zap, Clock, Flame, X,
+  BarChart3, Zap, Clock, Flame, X,
   ChevronRight, Loader2, Wifi, Shield, Wallet, Globe, Lock, Layers,
-  ChevronDown, ExternalLink, Info, CircleDollarSign, ArrowUpDown,
-  Newspaper, LogOut, Users as UsersIcon, Boxes,
+  ChevronDown, ExternalLink, Info, CircleDollarSign,
+  Newspaper, LogOut, Users as UsersIcon, Boxes, Building2,
 } from "lucide-react";
 import ConnectWalletButton from "@/components/ConnectWalletButton";
+import StockLogo from "@/components/StockLogo";
 import { useAccount, useBalance, useDisconnect } from "wagmi";
 import { formatUnits } from "viem";
 import type { EcosystemApp } from "@/app/api/ecosystem/route";
 
 const SwapPanel = dynamic(() => import("@/components/SwapPanel"), { ssr: false });
+const StockChart = dynamic(() => import("@/components/StockChart"), { ssr: false });
+const TradeModal = dynamic(() => import("@/components/TradeModal"), { ssr: false });
 
 interface MarketNewsItem {
   id: string;
@@ -37,6 +42,13 @@ interface XProfile {
   verified: boolean;
 }
 
+interface SearchResult {
+  symbol: string;
+  name: string;
+  type: string;
+  exchange: string;
+}
+
 interface StockToken {
   symbol: string;
   name: string;
@@ -48,6 +60,28 @@ interface StockToken {
   tokenAddress: string;
   apy: number;
   tvl: number;
+  logo?: string;
+  profile: { symbol: string; industry: string; founded: string; headquarters: string; website: string; description: string } | null;
+}
+
+interface Candle {
+  time: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+interface StockTrade {
+  symbol: string;
+  name: string;
+  side: "buy" | "sell";
+  fromShort: string;
+  toShort: string;
+  amountFormatted: string;
+  timestamp: string;
+  txHash: string;
 }
 
 interface MarketQuote {
@@ -72,13 +106,6 @@ interface MarketQuote {
   exchange: string;
   timestamp: number;
   sparkline: number[];
-}
-
-interface SearchResult {
-  symbol: string;
-  name: string;
-  type: string;
-  exchange: string;
 }
 
 interface LiveTxn {
@@ -236,17 +263,55 @@ function MiniSparkline({ data, positive }: { data: number[]; positive: boolean }
   );
 }
 
-function StockTokenCard({ token, quote }: { token: StockToken; quote?: MarketQuote }) {
+function LiveStockTradesFeed({ trades }: { trades: StockTrade[] }) {
+  if (trades.length === 0) return null;
+  const fmtTime = (t: string) => {
+    const d = new Date(t);
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  };
+  return (
+    <div className="mb-6 rounded-2xl bg-[var(--surface)] border border-[var(--border-subtle)] overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-[var(--border-subtle)] bg-[var(--bg-card)]/40">
+        <span className="w-1.5 h-1.5 rounded-full bg-green-400 live-blink" />
+        <span className="text-[11px] font-semibold text-[var(--foreground)]">Live Stock Token Trades</span>
+        <span className="text-[9px] text-[var(--text-muted)]">real on-chain buys &amp; sells · Robinhood Chain</span>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-[var(--border-subtle)]/40">
+        {trades.map((t, i) => (
+          <a
+            key={`${t.txHash}-${i}`}
+            href={`https://robinhoodchain.blockscout.com/tx/${t.txHash}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2.5 px-3 py-2.5 bg-[var(--surface)] hover:bg-[var(--bg-card)] transition-colors"
+          >
+            <span className={`shrink-0 w-14 text-center text-[9px] font-bold rounded-md py-0.5 ${t.side === "buy" ? "bg-green-500/15 text-green-400" : "bg-red-500/15 text-red-400"}`}>
+              {t.side === "buy" ? "BUY" : "SELL"}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="text-[11px] font-bold text-[var(--foreground)]">{t.symbol}</div>
+              <div className="text-[9px] text-[var(--text-muted)] truncate">{t.fromShort} → {t.toShort}</div>
+            </div>
+            <div className="text-right shrink-0">
+              <div className="text-[10px] font-semibold text-[var(--foreground)]">{t.amountFormatted}</div>
+              <div className="text-[9px] text-[var(--text-muted)]">{fmtTime(t.timestamp)}</div>
+            </div>
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function StockTokenCard({ token, quote, chartData, onTrade }: { token: StockToken; quote?: MarketQuote; chartData?: Candle[]; onTrade: (mode: "buy" | "sell") => void }) {
   const [expanded, setExpanded] = useState(false);
   const positive = quote ? quote.changePercent >= 0 : true;
 
   return (
-    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 hover:border-[var(--accent)]/30 transition-all duration-300 hover:shadow-[0_0_30px_var(--accent-glow)]">
+    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 hover:border-[var(--accent)]/30 transition-all duration-300 hover:shadow-[0_0_30px_var(--accent-glow)] flex flex-col">
       <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--accent)]/20 to-[var(--accent)]/5 border border-[var(--accent)]/20 flex items-center justify-center">
-            <span className="text-sm font-bold text-[var(--accent)]">{token.symbol}</span>
-          </div>
+          <div className="flex items-center gap-3">
+          <StockLogo symbol={token.symbol} logo={token.logo} size={40} />
           <div>
             <div className="flex items-center gap-2">
               <span className="text-sm font-bold text-[var(--foreground)]">{token.symbol}</span>
@@ -291,6 +356,11 @@ function StockTokenCard({ token, quote }: { token: StockToken; quote?: MarketQuo
         </div>
       </div>
 
+      {/* Real stock chart */}
+      <div className="mb-3">
+        <StockChart symbol={token.symbol} height={140} defaultRange="1mo" initialData={chartData} live />
+      </div>
+
       <button
         onClick={() => setExpanded(!expanded)}
         className="w-full flex items-center justify-between py-2 px-3 rounded-lg bg-[var(--bg-card)] border border-[var(--border-subtle)] text-[10px] text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
@@ -301,6 +371,24 @@ function StockTokenCard({ token, quote }: { token: StockToken; quote?: MarketQuo
 
       {expanded && (
         <div className="mt-3 space-y-2 fade-in">
+          {token.profile && (
+            <div className="rounded-lg bg-[var(--bg-card)]/50 border border-[var(--border-subtle)] p-3 space-y-2">
+              <div className="text-[10px] font-bold text-[var(--accent)] flex items-center gap-1.5">
+                <Building2 size={10} /> Company Profile
+              </div>
+              <p className="text-[10px] leading-relaxed text-[var(--text-muted)]">{token.profile.description}</p>
+              <div className="grid grid-cols-2 gap-1.5 pt-1 border-t border-[var(--border-subtle)]">
+                <div className="text-[9px] text-[var(--text-muted)]">Industry: <span className="text-[var(--foreground)]">{token.profile.industry}</span></div>
+                <div className="text-[9px] text-[var(--text-muted)]">Founded: <span className="text-[var(--foreground)]">{token.profile.founded}</span></div>
+                <div className="text-[9px] text-[var(--text-muted)]">HQ: <span className="text-[var(--foreground)]">{token.profile.headquarters}</span></div>
+                <div className="text-[9px] text-[var(--text-muted)]">
+                  <a href={token.profile.website} target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline flex items-center gap-1">
+                    {token.profile.website.replace("https://www.", "").replace("https://", "")} <ExternalLink size={8} />
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-2">
             <div className="flex justify-between py-1.5 px-3 rounded-lg bg-[var(--bg-card)]/50 border border-[var(--border-subtle)]">
               <span className="text-[10px] text-[var(--text-muted)]">Multiplier</span>
@@ -354,6 +442,30 @@ function StockTokenCard({ token, quote }: { token: StockToken; quote?: MarketQuo
           </div>
         </div>
       )}
+
+      {/* View live profile */}
+      <Link
+        href={`/stock/${token.symbol}`}
+        className="mt-4 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] text-[10px] font-bold text-[var(--accent)] hover:bg-[var(--accent)]/10 transition-colors"
+      >
+        <ExternalLink size={11} /> View Live Profile
+      </Link>
+
+      {/* Buy / Sell actions */}
+      <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-[var(--border-subtle)] mt-auto">
+        <button
+          onClick={() => onTrade("buy")}
+          className="py-2.5 rounded-xl bg-green-500 text-black text-xs font-bold hover:opacity-90 transition-opacity"
+        >
+          Buy {token.symbol}
+        </button>
+        <button
+          onClick={() => onTrade("sell")}
+          className="py-2.5 rounded-xl bg-red-500 text-black text-xs font-bold hover:opacity-90 transition-opacity"
+        >
+          Sell {token.symbol}
+        </button>
+      </div>
     </div>
   );
 }
@@ -646,6 +758,8 @@ const FEATURE_CARDS = [
 export default function MarketPage() {
   const [stockTokens, setStockTokens] = useState<StockToken[]>([]);
   const [tokenQuotes, setTokenQuotes] = useState<Record<string, MarketQuote>>({});
+  const [tokenCharts, setTokenCharts] = useState<Record<string, Candle[]>>({});
+  const [stockTrades, setStockTrades] = useState<StockTrade[]>([]);
   const [quotes, setQuotes] = useState<MarketQuote[]>([]);
   const [gainers, setGainers] = useState<MarketQuote[]>([]);
   const [losers, setLosers] = useState<MarketQuote[]>([]);
@@ -656,11 +770,15 @@ export default function MarketPage() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [filter, setFilter] = useState<"all" | "stock" | "crypto">("all");
   const [sectorFilter, setSectorFilter] = useState("all");
+  const [detailSymbol, setDetailSymbol] = useState<string | null>(null);
+  const [tradeToken, setTradeToken] = useState<StockToken | null>(null);
+  const [tradeMode, setTradeMode] = useState<"buy" | "sell">("buy");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
-  const [detailSymbol, setDetailSymbol] = useState<string | null>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [activeTab, setActiveTab] = useState<"board" | "txns" | "tokens" | "watchlist" | "gainers" | "losers" | "movers">("board");
   const [liveTxns, setLiveTxns] = useState<LiveTxn[]>([]);
   const [txnsLoading, setTxnsLoading] = useState(false);
@@ -672,8 +790,6 @@ export default function MarketPage() {
   const [onchainBlocks, setOnchainBlocks] = useState<OnchainBlock[]>([]);
   const [onchainTxs, setOnchainTxs] = useState<OnchainTx[]>([]);
   const [onchainUpdated, setOnchainUpdated] = useState<Date | null>(null);
-  const searchRef = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
@@ -691,16 +807,42 @@ export default function MarketPage() {
       if (data.tokens) {
         setStockTokens(data.tokens);
         const symbols = data.tokens.map((t: StockToken) => t.symbol).join(",");
-        const qRes = await fetch(`/api/market?action=batch&symbols=${symbols}`);
+        const [qRes, cRes] = await Promise.all([
+          fetch(`/api/market?action=batch&symbols=${symbols}`),
+          fetch(`/api/market?action=charts&symbols=${symbols}&range=1mo`),
+        ]);
         const qData = await qRes.json();
         if (qData.quotes) {
           const map: Record<string, MarketQuote> = {};
           for (const q of qData.quotes) map[q.symbol] = q;
           setTokenQuotes(map);
         }
+        const cData = await cRes.json();
+        if (cData.charts) {
+          const map: Record<string, Candle[]> = {};
+          for (const [sym, ch] of Object.entries(cData.charts)) {
+            const chart = ch as { candles?: Candle[] };
+            if (chart?.candles) map[sym] = chart.candles;
+          }
+          setTokenCharts(map);
+        }
       }
     } catch {}
   }, [sectorFilter]);
+
+  const fetchStockTrades = useCallback(async () => {
+    try {
+      const res = await fetch("/api/stock-trades?limit=12");
+      const data = await res.json();
+      if (data.trades) setStockTrades(data.trades);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    fetchStockTrades();
+    const interval = setInterval(fetchStockTrades, 10000);
+    return () => clearInterval(interval);
+  }, [fetchStockTrades]);
 
   const fetchWatchlist = useCallback(async () => {
     try {
@@ -887,6 +1029,11 @@ export default function MarketPage() {
     return ["all", ...Array.from(s)];
   }, [stockTokens]);
 
+  const openTrade = (token: StockToken, mode: "buy" | "sell") => {
+    setTradeToken(token);
+    setTradeMode(mode);
+  };
+
   const tabs = [
     { id: "board" as const, label: "Live Board", icon: BarChart3, count: 0, color: "text-[var(--accent)]" },
     { id: "txns" as const, label: "Transactions", icon: Activity, count: liveTxns.length, color: "text-blue-400" },
@@ -914,7 +1061,7 @@ export default function MarketPage() {
           </div>
           <h1 className="text-3xl font-bold mb-2">Invest with <span className="gradient-text">Stock Tokens</span></h1>
           <p className="text-sm text-[var(--text-muted)] max-w-xl">
-            Trade and own 90+ Stock Tokens linked to companies and ETFs including NVIDIA, Google, Apple, and Invesco QQQ — all from your wallet on Robinhood Chain.
+            Trade and own 90+ Stock Tokens linked to companies and ETFs including NVIDIA, Google, Apple, and Invesco QQQ — with live prices, real charts, and real on-chain buying and selling from your wallet on Robinhood Chain.
           </p>
           <div className="flex items-center gap-4 mt-5">
             <a
@@ -1130,6 +1277,7 @@ export default function MarketPage() {
       {/* Stock Tokens Grid */}
       {!loading && activeTab === "tokens" && (
         <>
+          <LiveStockTradesFeed trades={stockTrades} />
           {stockTokens.length === 0 ? (
             <div className="text-center py-16">
               <CircleDollarSign size={32} className="mx-auto text-[var(--text-muted)] mb-3" />
@@ -1138,7 +1286,13 @@ export default function MarketPage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {stockTokens.map((token) => (
-                <StockTokenCard key={token.symbol} token={token} quote={tokenQuotes[token.symbol]} />
+                <StockTokenCard
+                  key={token.symbol}
+                  token={token}
+                  quote={tokenQuotes[token.symbol]}
+                  chartData={tokenCharts[token.symbol]}
+                  onTrade={(mode) => openTrade(token, mode)}
+                />
               ))}
             </div>
           )}
@@ -1651,6 +1805,16 @@ export default function MarketPage() {
       {detailSymbol && (
         <DetailModal symbol={detailSymbol} onClose={() => setDetailSymbol(null)} />
       )}
+
+      {/* Trade Modal */}
+      {tradeToken && (
+        <TradeModal
+          token={tradeToken}
+          quote={tokenQuotes[tradeToken.symbol]}
+          initialMode={tradeMode}
+          onClose={() => setTradeToken(null)}
+        />
+      )}
     </div>
   );
 }
@@ -1668,7 +1832,7 @@ function EcosystemLogo({ logo, name }: { logo: string; name: string }) {
   if (!logo || failed) {
     return <span className="text-xs font-bold text-[var(--accent)]">{name.slice(0, 2).toUpperCase()}</span>;
   }
-  return <img src={logo} alt={name} className="w-full h-full object-cover" onError={() => setFailed(true)} />;
+  return <Image src={logo} alt={name} width={40} height={40} className="w-full h-full object-cover" onError={() => setFailed(true)} />;
 }
 
 function LiveBoard({ quotes, onSelect }: { quotes: MarketQuote[]; onSelect: (s: string) => void }) {
@@ -1806,9 +1970,11 @@ function StockNewsFeed({ news, loading }: { news: MarketNewsItem[]; loading: boo
           className="group flex items-start gap-3 bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-xl p-3 hover:border-[var(--accent)]/25 hover:shadow-[0_0_20px_var(--accent-glow)] transition-all duration-200"
         >
           {item.thumbnail ? (
-            <img
+            <Image
               src={item.thumbnail}
               alt=""
+              width={64}
+              height={64}
               className="w-16 h-16 rounded-lg object-cover flex-shrink-0 bg-[var(--surface)]"
               loading="lazy"
               onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
@@ -1856,9 +2022,11 @@ function XAccountsGrid({ accounts }: { accounts: XProfile[] }) {
         >
           <div className="flex items-center gap-3 mb-2">
             {acc.avatarUrl ? (
-              <img
+              <Image
                 src={acc.avatarUrl}
                 alt={acc.displayName}
+                width={40}
+                height={40}
                 className="w-10 h-10 rounded-full object-cover border border-[var(--border)]"
                 loading="lazy"
               />

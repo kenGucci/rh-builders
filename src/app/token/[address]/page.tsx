@@ -3,11 +3,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowLeft, ExternalLink, Globe, Bird, MessageCircle,
   Send, RefreshCw, TrendingUp, Activity,
   Droplets, BarChart3, Clock, Layers, Copy, Check,
-  Shield, Zap,
+  Shield, Zap, User,
 } from "lucide-react";
 
 interface TokenPair {
@@ -48,6 +49,13 @@ interface TokenProfile {
     decimals: number | null;
     tokenType: string | null;
   };
+}
+
+interface DevInfo {
+  creator: string | null;
+  creationTxHash: string | null;
+  isContract: boolean;
+  name: string | null;
 }
 
 function formatCompact(n: number): string {
@@ -108,10 +116,22 @@ export default function TokenProfilePage() {
   const params = useParams();
   const address = params.address as string;
   const [profile, setProfile] = useState<TokenProfile | null>(null);
+  const [dev, setDev] = useState<DevInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const [selectedPair, setSelectedPair] = useState(0);
+
+  const fetchDev = useCallback(async () => {
+    if (!address) return;
+    try {
+      const res = await fetch(`/api/token-dev/${address}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.creator) setDev(data);
+      }
+    } catch {}
+  }, [address]);
 
   const fetchProfile = useCallback(async () => {
     if (!address) return;
@@ -121,12 +141,13 @@ export default function TokenProfilePage() {
       const data = await res.json();
       setProfile(data);
       setError("");
+      fetchDev();
     } catch {
       setError("Token not found on Robinhood Chain");
     } finally {
       setLoading(false);
     }
-  }, [address]);
+  }, [address, fetchDev]);
 
   useEffect(() => {
     setLoading(true);
@@ -180,9 +201,11 @@ export default function TokenProfilePage() {
             <div className="relative p-6">
               <div className="flex flex-col sm:flex-row items-start gap-5">
                 {profile.imageUrl ? (
-                  <img
+                  <Image
                     src={profile.imageUrl}
                     alt={profile.symbol}
+                    width={80}
+                    height={80}
                     className="w-20 h-20 rounded-2xl flex-shrink-0 border-2 border-[var(--accent)]/20 shadow-lg shadow-[var(--accent)]/5"
                   />
                 ) : (
@@ -408,6 +431,51 @@ export default function TokenProfilePage() {
               </div>
             </div>
           </div>
+
+          {/* Developer */}
+          {dev?.creator && (
+            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5">
+              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-[var(--accent)]/10 flex items-center justify-center">
+                  <User size={14} className="text-[var(--accent)]" />
+                </div>
+                Developer
+              </h3>
+              <div className="space-y-3">
+                <Link
+                  href={`/builder/${dev.creator}`}
+                  className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] hover:border-[var(--accent)]/30 transition-colors group"
+                >
+                  <div className="min-w-0">
+                    <div className="text-[10px] text-[var(--text-muted)] mb-1 uppercase tracking-wider">Deployed By</div>
+                    <div className="text-sm font-mono font-bold text-[var(--accent)] group-hover:underline truncate">
+                      {dev.creator.slice(0, 10)}...{dev.creator.slice(-6)}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[10px] text-[var(--text-muted)]">
+                    View profile <ArrowLeft size={12} className="rotate-180" />
+                  </div>
+                </Link>
+
+                {dev.creationTxHash && (
+                  <a
+                    href={`https://robinhoodchain.blockscout.com/tx/${dev.creationTxHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] hover:border-[var(--accent)]/30 transition-colors group"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-[10px] text-[var(--text-muted)] mb-1 uppercase tracking-wider">Deployment Transaction</div>
+                      <div className="text-sm font-mono font-semibold truncate">
+                        {dev.creationTxHash.slice(0, 10)}...{dev.creationTxHash.slice(-6)}
+                      </div>
+                    </div>
+                    <ExternalLink size={12} className="text-[var(--text-muted)] group-hover:text-[var(--accent)]" />
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* All Pairs */}
           {profile.pairs.length > 1 && (

@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { useI18n, languages, type Language } from "@/lib/i18n";
+import { useI18n, languages } from "@/lib/i18n";
 import {
   MessageSquare, ThumbsUp, ThumbsDown, Users, Star,
-  RefreshCw, Search, Filter, ExternalLink, Clock, Globe, Scale,
+  RefreshCw, ExternalLink, Clock, Globe, Scale,
 } from "lucide-react";
 
 const themes = [
@@ -44,13 +44,6 @@ function applyTheme(accent: string, gradient: string[]) {
   root.style.setProperty("--accent-glow", hexToRgba(accent, 0.25));
   root.style.setProperty("--gradient-from", gradient[0]);
   root.style.setProperty("--gradient-to", gradient[1]);
-
-  document.querySelectorAll<HTMLElement>(".gradient-text").forEach((el) => {
-    el.style.background = `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})`;
-    el.style.webkitBackgroundClip = "text";
-    el.style.webkitTextFillColor = "transparent";
-    el.style.backgroundClip = "text";
-  });
 }
 
 const regions = [
@@ -80,13 +73,11 @@ export default function SettingsPage() {
   const [detectedRegion, setDetectedRegion] = useState("");
   const [customColor, setCustomColor] = useState("#00c805");
   const [isCustom, setIsCustom] = useState(false);
-  const [langSearch, setLangSearch] = useState("");
   const [selectedRegion, setSelectedRegion] = useState("All Regions");
   const [fbEntries, setFbEntries] = useState<FeedbackEntry[]>([]);
   const [fbStats, setFbStats] = useState<FeedbackStats | null>(null);
   const [fbLoading, setFbLoading] = useState(false);
   const [fbFilter, setFbFilter] = useState<"all" | "good" | "bad" | "tester" | "user">("all");
-  const [fbSearch, setFbSearch] = useState("");
   const [showFbForm, setShowFbForm] = useState(false);
 
   const fetchFeedback = useCallback(async () => {
@@ -112,12 +103,8 @@ export default function SettingsPage() {
       if (fbFilter === "tester") return e.role === "tester";
       if (fbFilter === "user") return e.role === "user";
       return true;
-    }).filter((e) => {
-      if (!fbSearch) return true;
-      const q = fbSearch.toLowerCase();
-      return [e.name, e.email, e.twitter, e.message, e.page].some((f) => f?.toLowerCase().includes(q));
     });
-  }, [fbEntries, fbFilter, fbSearch]);
+  }, [fbEntries, fbFilter]);
 
   useEffect(() => {
     const navLang = navigator.language || "";
@@ -142,19 +129,8 @@ export default function SettingsPage() {
       list = list.filter((l) => codes.includes(l.code));
     }
 
-    if (langSearch.trim()) {
-      const q = langSearch.toLowerCase();
-      list = list.filter(
-        (l) =>
-          l.name.toLowerCase().includes(q) ||
-          l.nativeName.toLowerCase().includes(q) ||
-          l.region.toLowerCase().includes(q) ||
-          l.code.toLowerCase().includes(q)
-      );
-    }
-
     return list;
-  }, [langSearch, selectedRegion]);
+  }, [selectedRegion]);
 
   const selectTheme = (theme: (typeof themes)[number]) => {
     setCurrentTheme(theme.name);
@@ -162,14 +138,6 @@ export default function SettingsPage() {
     setIsCustom(false);
     applyTheme(theme.accent, theme.gradient);
     localStorage.setItem("thewallrh_theme", theme.name);
-  };
-
-  const selectCustom = () => {
-    setIsCustom(true);
-    setCurrentTheme("");
-    const gradient = [customColor, customColor];
-    applyTheme(customColor, gradient);
-    localStorage.setItem("thewallrh_theme", customColor);
   };
 
   const handleCustomColorChange = (color: string) => {
@@ -210,21 +178,6 @@ export default function SettingsPage() {
 
           <div className="text-[11px] text-[var(--text-muted)] mb-3">
             {t("settings.detectedRegion")}: <span className="text-[var(--text-secondary)]">{detectedRegion}</span>
-          </div>
-
-          {/* Search */}
-          <div className="relative mb-3">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.35-4.35" />
-            </svg>
-            <input
-              type="text"
-              value={langSearch}
-              onChange={(e) => setLangSearch(e.target.value)}
-              placeholder={t("settings.searchLang")}
-              className="w-full pl-9 pr-3 py-2 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-xs text-[var(--foreground)] placeholder-[var(--text-muted)] focus:border-[var(--accent)]/50 transition-all"
-            />
           </div>
 
           {/* Region Filter */}
@@ -424,24 +377,19 @@ export default function SettingsPage() {
           </div>
         )}
 
-        <div className="flex items-center gap-2 mb-3">
-          <div className="flex items-center gap-1">
-            {(["all", "good", "bad", "tester", "user"] as const).map((f) => (
-              <button key={f} onClick={() => setFbFilter(f)}
-                className={`px-2 py-0.5 rounded text-[9px] transition-all capitalize ${
-                  fbFilter === f ? "bg-[var(--accent)] text-black font-medium" : "bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-muted)]"
-                }`}>{f}</button>
-            ))}
+          <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center gap-1">
+              {(["all", "good", "bad", "tester", "user"] as const).map((f) => (
+                <button key={f} onClick={() => setFbFilter(f)}
+                  className={`px-2 py-0.5 rounded text-[9px] transition-all capitalize ${
+                    fbFilter === f ? "bg-[var(--accent)] text-black font-medium" : "bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-muted)]"
+                  }`}>{f}</button>
+              ))}
+            </div>
+            <button onClick={fetchFeedback} className="p-1 rounded-lg bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent)]">
+              <RefreshCw size={10} className={fbLoading ? "animate-spin" : ""} />
+            </button>
           </div>
-          <div className="relative flex-1 max-w-xs">
-            <Search size={10} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-            <input value={fbSearch} onChange={(e) => setFbSearch(e.target.value)}
-              placeholder="Search..." className="w-full pl-7 pr-2 py-1 rounded-lg bg-[var(--bg-card)] border border-[var(--border)] text-[10px] text-[var(--foreground)] placeholder-[var(--text-muted)] focus:border-[var(--accent)]/50 transition-all" />
-          </div>
-          <button onClick={fetchFeedback} className="p-1 rounded-lg bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent)]">
-            <RefreshCw size={10} className={fbLoading ? "animate-spin" : ""} />
-          </button>
-        </div>
 
         <div className="space-y-1.5 max-h-[400px] overflow-y-auto">
           {fbLoading && fbEntries.length === 0 ? (

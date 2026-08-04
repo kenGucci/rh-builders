@@ -1,20 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
+import { jwtVerify } from "jose";
 
 const redis = process.env.UPSTASH_REDIS_REST_URL
   ? new Redis({ url: process.env.UPSTASH_REDIS_REST_URL, token: process.env.UPSTASH_REDIS_REST_TOKEN })
   : null;
 
 const ratelimit = redis ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(60, "60s"), analytics: true }) : null;
-const apiRatelimit = redis ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(60, "60s"), analytics: true }) : null;
+const authRatelimit = redis ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(10, "60s"), analytics: true }) : null;
 
 const STATIC_CSP = [
   "default-src 'self'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://pbs.twimg.com https://abs.twimg.com https://robinhoodchain.blockscout.com https://en.wikipedia.org https://upload.wikimedia.org https://i.ytimg.com https://*.ytimg.com https://unavatar.io https://*.unavatar.io https://images.ctfassets.net https://www.google.com https://*.google.com https://s.yimg.com https://*.yimg.com",
-  "font-src 'self'",
-  "connect-src 'self' https://robinhoodchain.blockscout.com https://rpc.mainnet.chain.robinhood.com https://financialmodelingprep.com https://eth.blockscout.com https://polygon.blockscout.com https://arbitrum.blockscout.com https://optimism.blockscout.com https://base.blockscout.com https://bsc.blockscout.com https://publish.twitter.com https://api.twitter.com https://api.duckduckgo.com https://html.duckduckgo.com https://en.wikipedia.org https://news.google.com https://nominatim.openstreetmap.org https://vid.puffyan.us https://inv.nadeko.net https://www.youtube.com https://query1.finance.yahoo.com https://query2.finance.yahoo.com https://li.quest",
+  "img-src 'self' data: blob: https://pbs.twimg.com https://abs.twimg.com https://robinhoodchain.blockscout.com https://en.wikipedia.org https://upload.wikimedia.org https://i.ytimg.com https://*.ytimg.com https://unavatar.io https://*.unavatar.io https://images.ctfassets.net https://www.google.com https://*.google.com https://s.yimg.com https://*.yimg.com https://cdn.robinhood.com https://*.robinhood.com https://assets.parqet.com https://financialmodelingprep.com",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  "connect-src 'self' https://robinhoodchain.blockscout.com https://rpc.mainnet.chain.robinhood.com https://financialmodelingprep.com https://eth.blockscout.com https://polygon.blockscout.com https://arbitrum.blockscout.com https://optimism.blockscout.com https://base.blockscout.com https://bsc.blockscout.com https://publish.twitter.com https://api.twitter.com https://api.duckduckgo.com https://html.duckduckgo.com https://en.wikipedia.org https://news.google.com https://nominatim.openstreetmap.org https://vid.puffyan.us https://inv.nadeko.net https://www.youtube.com https://query1.finance.yahoo.com https://query2.finance.yahoo.com https://li.quest https://relay.walletconnect.com wss://relay.walletconnect.com https://rpc.walletconnect.com https://explorer-api.walletconnect.com https://verify.walletconnect.com https://www.walletconnect.org wss://www.walletconnect.org https://api.coinbase.com https://wallet.coinbase.com wss://www.walletlink.org https://www.walletlink.org https://api.wallet.coinbase.com https://api.smartwallet.coinbase.com https://cdn.robinhood.com",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -32,15 +33,16 @@ function setHeaders(response: NextResponse) {
   response.headers.set("X-Robots-Tag", "index, follow");
 }
 
-function buildCSP(isDev: boolean) {
+function buildCSP(isDev: boolean): { csp: string; nonce: string | null } {
   if (isDev) {
-    return [...STATIC_CSP, "script-src 'self' 'unsafe-inline' 'unsafe-eval'"].join("; ");
+    return { csp: [...STATIC_CSP, "script-src 'self' 'unsafe-inline' 'unsafe-eval'"].join("; "), nonce: null };
   }
   const nonce = crypto.randomUUID().replace(/-/g, "");
-  return [...STATIC_CSP, `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`].join("; ");
+  return { csp: [...STATIC_CSP, `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`].join("; "), nonce };
 }
 
 const API_CACHE: { prefix: string; value: string }[] = [
+  { prefix: "/api/search", value: "s-maxage=60, stale-while-revalidate=120" },
   { prefix: "/api/market-news", value: "s-maxage=60, stale-while-revalidate=120" },
   { prefix: "/api/market", value: "s-maxage=5, stale-while-revalidate=10" },
   { prefix: "/api/onchain", value: "s-maxage=15, stale-while-revalidate=30" },
@@ -48,8 +50,6 @@ const API_CACHE: { prefix: string; value: string }[] = [
   { prefix: "/api/ecosystem", value: "s-maxage=3600, stale-while-revalidate=7200" },
   { prefix: "/api/stock-tokens", value: "s-maxage=60, stale-while-revalidate=120" },
   { prefix: "/api/live-activity", value: "s-maxage=10, stale-while-revalidate=30" },
-  { prefix: "/api/global", value: "s-maxage=300, stale-while-revalidate=600" },
-  { prefix: "/api/search", value: "s-maxage=120, stale-while-revalidate=300" },
 ];
 
 function setApiCacheHeader(response: NextResponse, pathname: string) {
@@ -62,6 +62,29 @@ function setApiCacheHeader(response: NextResponse, pathname: string) {
   }
 }
 
+const SESSION_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "dev-only");
+
+async function hasValidSession(request: NextRequest): Promise<boolean> {
+  const token = request.cookies.get("thewallrh_token")?.value;
+  if (!token) return false;
+  try {
+    await jwtVerify(token, SESSION_SECRET);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const PUBLIC_PATHS = [
+  "/auth",
+  "/api/",
+  "/legal/",
+];
+
+function isPublicPath(pathname: string): boolean {
+  return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p));
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -69,28 +92,33 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (ratelimit) {
+  if (!isPublicPath(pathname) && !(await hasValidSession(request))) {
+    const loginUrl = new URL("/auth", request.url);
+    loginUrl.searchParams.set("from", pathname + request.nextUrl.search);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  const isApi = pathname.startsWith("/api/");
+  const isAuth = pathname.startsWith("/api/auth/");
+  if (ratelimit && (isApi || isAuth)) {
     try {
       const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
         || request.headers.get("x-real-ip")
         || "127.0.0.1";
 
-      const limiter = pathname.startsWith("/api/") && apiRatelimit ? apiRatelimit : ratelimit;
-      const limit = await Promise.race([
-        limiter.limit(ip),
-        new Promise<{ success: true }>((resolve) => setTimeout(() => resolve({ success: true }), 2000)),
-      ]);
+      const limiter = isAuth && authRatelimit ? authRatelimit : ratelimit;
+      const limit = await limiter.limit(ip);
 
       if (!limit.success) {
-        if (pathname.startsWith("/api/")) {
+        if (isApi) {
           return NextResponse.json(
             { error: "Rate limit exceeded. Please try again later." },
-            { status: 429, headers: { "Retry-After": String((limit as { reset?: number }).reset ?? 60) } }
+            { status: 429, headers: { "Retry-After": String(limit.reset ?? 60) } }
           );
         }
         return new NextResponse("Too Many Requests", {
           status: 429,
-          headers: { "Retry-After": String((limit as { reset?: number }).reset ?? 60) },
+          headers: { "Retry-After": String(limit.reset ?? 60) },
         });
       }
     } catch {
@@ -98,11 +126,33 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  const isDev = request.nextUrl.hostname === "localhost" || request.nextUrl.hostname === "127.0.0.1";
+  const { csp, nonce } = buildCSP(isDev);
+
+  if (nonce) {
+    // Propagate the nonce to the render request so Next.js injects it into the
+    // generated <script> tags. Without this, strict-dynamic CSP blocks all scripts.
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-nonce", nonce);
+    requestHeaders.set("content-security-policy", csp);
+    return applyHeaders(
+      NextResponse.next({ request: { headers: requestHeaders } }),
+      pathname,
+      csp
+    );
+  }
+
   const response = NextResponse.next();
   setHeaders(response);
   setApiCacheHeader(response, pathname);
-  const isDev = request.nextUrl.hostname === "localhost" || request.nextUrl.hostname === "127.0.0.1";
-  response.headers.set("Content-Security-Policy", buildCSP(isDev));
+  response.headers.set("Content-Security-Policy", csp);
+  return response;
+}
+
+function applyHeaders(response: NextResponse, pathname: string, csp: string) {
+  setHeaders(response);
+  setApiCacheHeader(response, pathname);
+  response.headers.set("Content-Security-Policy", csp);
   return response;
 }
 

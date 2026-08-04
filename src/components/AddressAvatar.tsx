@@ -1,6 +1,7 @@
 "use client";
 
 import Blocky from "react-blockies";
+import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
 
 const avatarCache = new Map<string, string | "failed">();
@@ -31,18 +32,34 @@ export default function AddressAvatar({
     if (cached === "failed") return;
     if (cached) { setAvatarUrl(cached); return; }
 
-    const url = `https://unavatar.io/twitter/${handle}`;
-    const img = new Image();
-    img.onload = () => {
-      if (!mountedRef.current) return;
-      avatarCache.set(key, url);
-      setAvatarUrl(url);
-    };
-    img.onerror = () => {
-      if (!mountedRef.current) return;
-      avatarCache.set(key, "failed");
-    };
-    img.src = url;
+    let active = true;
+    fetch(`/api/twitter?handle=${encodeURIComponent(handle)}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((data) => {
+        const url = data?.avatarUrl as string | undefined;
+        if (url && active) {
+          avatarCache.set(key, url);
+          setAvatarUrl(url);
+        } else if (active) {
+          avatarCache.set(key, "failed");
+        }
+      })
+      .catch(() => {
+        if (!active) return;
+        avatarCache.set(key, "failed");
+        const url = `https://unavatar.io/twitter/${handle}`;
+        const img = new window.Image();
+        img.onload = () => {
+          if (!mountedRef.current) return;
+          avatarCache.set(key, url);
+          setAvatarUrl(url);
+        };
+        img.onerror = () => {
+          avatarCache.set(key, "failed");
+        };
+        img.src = url;
+      });
+    return () => { active = false; };
   }, [handle]);
 
   return (
@@ -51,7 +68,7 @@ export default function AddressAvatar({
       style={{ width: size, height: size }}
     >
       {avatarUrl ? (
-        <img
+        <Image
           src={avatarUrl}
           alt={handle || address.slice(0, 6)}
           width={size}

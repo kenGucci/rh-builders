@@ -3,9 +3,6 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import HeaderSearch from "@/components/HeaderSearch";
-
-const HIDE_SEARCH_PATHS = new Set(["/settings", "/team", "/about", "/global", "/builder"]);
 
 interface NavItem {
   href: string;
@@ -28,13 +25,12 @@ const links: NavItem[] = [
     ),
   },
   {
-    href: "/global",
-    label: "Global",
+    href: "/profile",
+    label: "Profile",
     icon: (
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <circle cx="12" cy="12" r="10" />
-        <line x1="2" y1="12" x2="22" y2="12" />
-        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+        <circle cx="12" cy="7" r="4" />
       </svg>
     ),
   },
@@ -146,13 +142,6 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
           <div className="text-[10px] text-[var(--text-muted)] leading-tight mt-0.5">Robinhood Chain</div>
         </div>
       </div>
-
-      {/* Search (mobile drawer only — header covers desktop) */}
-      {!HIDE_SEARCH_PATHS.has(pathname) && (
-        <div className="px-3 mb-1 md:hidden">
-          <HeaderSearch />
-        </div>
-      )}
 
       {/* Nav */}
       <nav className="flex-1 px-3 space-y-0.5 mt-3 overflow-y-auto" aria-label="Navigation">

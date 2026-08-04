@@ -1,5 +1,5 @@
 import { SignJWT, jwtVerify } from "jose";
-import { createHash, randomBytes, pbkdf2Sync, timingSafeEqual } from "crypto";
+import { randomBytes, pbkdf2Sync, timingSafeEqual } from "crypto";
 
 if (!process.env.JWT_SECRET) {
   throw new Error("JWT_SECRET environment variable is required");
@@ -13,7 +13,7 @@ export interface SessionPayload {
   userId: string;
   email: string;
   name: string;
-  provider: "email";
+  provider: "email" | "x";
 }
 
 export async function createToken(payload: SessionPayload): Promise<string> {
@@ -52,4 +52,8 @@ export function verifyPassword(password: string, stored: string): boolean {
 
 export function generateUserId(): string {
   return randomBytes(16).toString("hex");
+}
+
+export function randomSecret(bytes = 32): string {
+  return randomBytes(bytes).toString("hex");
 }

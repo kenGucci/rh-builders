@@ -10,7 +10,7 @@
 
 - [x] Project setup (Next.js 16, React 19, Tailwind CSS v4, TypeScript)
 - [x] Dark/light mode with 8 accent themes + custom color picker
-- [x] 82-language i18n with region-based filtering
+- [x] 80-language i18n with region-based filtering
 - [x] PWA support (installable on mobile & desktop)
 - [x] Responsive layout with mobile hamburger nav
 - [x] Scroll-driven animations & View Transitions API
@@ -24,12 +24,15 @@
 - [x] Dashboard (`/`) — Hero, live network stats, sparklines, top builders, news
 - [x] Builders (`/builder`) — Full builder list with sort, tag filter, search
 - [x] Builder Profile (`/builder/[address]`) — Token holdings, balance history, X profile, rewards
-- [x] KOL Hub (`/kol`) — Top 50 leaderboard, podium, detail panels, category filters
 - [x] Market (`/market`) — Stock & crypto quotes, watchlist, gainers/losers, detail modals
 - [x] Global Search (`/global`) — Web, news, images, videos, maps search engine
 - [x] Team (`/team`) — Team profile with live X/Twitter data
 - [x] Settings (`/settings`) — Language selection, theme customization
-- [x] Auth (`/auth`) — OTP email, password, X/Twitter OAuth 2.0
+- [x] Auth (`/auth`) — Email + password login
+
+> **Note:** The KOL Hub (`/kol`) was built and then removed during production cleanup
+> (commit `ef20b40`). X/Twitter profiles now live at `/x/[handle]` and on the Community
+> page, and the `/api/kol` endpoint remains for future reuse.
 
 ---
 

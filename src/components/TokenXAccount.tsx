@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { ExternalLink, Users } from "lucide-react";
 
 interface TokenXData {
@@ -156,7 +157,7 @@ export default function TokenXAccount({ tokenSymbol, tokenAddress, builderTwitte
       {/* Banner */}
       {xData.bannerUrl && (
         <div className="h-28 relative overflow-hidden">
-          <img src={xData.bannerUrl} alt="Banner" className="w-full h-full object-cover" />
+          <Image src={xData.bannerUrl} alt="Banner" fill className="object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-[var(--surface)] via-transparent to-transparent" />
         </div>
       )}
@@ -164,9 +165,11 @@ export default function TokenXAccount({ tokenSymbol, tokenAddress, builderTwitte
       {/* Profile header */}
       <div className={`flex items-center gap-4 p-5 ${xData.bannerUrl ? "-mt-10 relative" : ""} border-b border-[var(--border)]`}>
         {xData.avatarUrl ? (
-          <img
+          <Image
             src={xData.avatarUrl}
             alt={xData.displayName || xData.handle}
+            width={64}
+            height={64}
             className={`rounded-full border-2 border-[var(--surface)] object-cover shadow-lg ${xData.bannerUrl ? "w-16 h-16" : "w-16 h-16 border-2 border-black/10"}`}
             onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
           />
