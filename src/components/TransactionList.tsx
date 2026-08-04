@@ -226,7 +226,7 @@ export default function TransactionList({ address }: { address: string }) {
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-sm font-mono text-[var(--foreground)] hover:text-[var(--accent)] transition-colors"
-                            aria-label={`View transaction ${tx.hash.slice(0, 10)}...${tx.hash.slice(-6)} on Blockscout explorer`}
+                            aria-label={`View transaction ${tx.hash.slice(0, 10)}...${tx.hash.slice(-6)} on Blockscout`}
                           >
                             {tx.hash.slice(0, 10)}...{tx.hash.slice(-6)}
                           </a>

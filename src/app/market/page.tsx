@@ -1798,7 +1798,7 @@ export default function MarketPage() {
 
       {/* Footer */}
       <div className="text-center text-[10px] text-[var(--text-muted)] py-4 border-t border-[var(--border-subtle)]">
-        <p>Stock Tokens on Chain ID 4663 · Block Explorer: robinhoodchain.blockscout.com</p>
+        <p>Stock Tokens on Chain ID 4663 · Blockscout: robinhoodchain.blockscout.com</p>
       </div>
 
       {/* Detail Modal */}

@@ -36,7 +36,7 @@ const features = [
     icon: Shield,
     title: "On-Chain Transparency",
     description:
-      "Everything is verifiable — every number links back to Blockscout, the canonical explorer for Robinhood Chain.",
+      "Everything is verifiable — every number links back to Blockscout on Robinhood Chain.",
   },
 ];
 

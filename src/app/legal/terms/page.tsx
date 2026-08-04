@@ -47,7 +47,7 @@ export default function TermsPage() {
         {
           heading: "6. Third-Party Links",
           paragraphs: [
-            "THE WALL may link to third-party websites and services (e.g., block explorers, X, exchange platforms). We are not responsible for the content or practices of any third-party sites.",
+            "THE WALL may link to third-party websites and services (e.g., Blockscout, X, exchange platforms). We are not responsible for the content or practices of any third-party sites.",
           ],
         },
         {

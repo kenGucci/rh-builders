@@ -50,9 +50,9 @@ export default function Shell({ children }: { children: React.ReactNode }) {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--surface)] border border-[var(--border-subtle)] text-[11px] text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)]/20 transition-all font-medium"
-                  aria-label="Open Robinhood Chain Blockscout Explorer in a new tab"
+                  aria-label="Open Robinhood Chain Blockscout in a new tab"
                 >
-                  Explorer
+                  Blockscout
                   <ExternalLink size={10} aria-hidden="true" />
                 </a>
               </nav>
