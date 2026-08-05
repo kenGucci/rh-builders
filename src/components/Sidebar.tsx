@@ -139,7 +139,12 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
         </div>
         <div>
           <div className="font-bold text-[13px] leading-tight tracking-tight">THE WALL</div>
-          <div className="text-[10px] text-[var(--text-muted)] leading-tight mt-0.5">Robinhood Chain</div>
+          <div className="text-[10px] text-[var(--text-muted)] leading-tight mt-0.5 flex items-center gap-1">
+            Robinhood Chain
+            <span className="inline-flex items-center px-1.5 py-px rounded bg-[var(--accent)]/10 border border-[var(--accent)]/25 text-[8px] font-bold text-[var(--accent)] uppercase tracking-wider">
+              Beta
+            </span>
+          </div>
         </div>
       </div>
 

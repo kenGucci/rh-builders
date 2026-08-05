@@ -149,7 +149,7 @@ export default function Home() {
 
   const trustBadges = useMemo(() => [
     { icon: <Shield size={13} />, text: "Real-time data" },
-    { icon: <Globe size={13} />, text: "100 builders tracked" },
+    { icon: <Globe size={13} />, text: "13 builders tracked" },
     { icon: <BarChart3 size={13} />, text: "Live analytics" },
   ], []);
 
@@ -185,7 +185,7 @@ export default function Home() {
               <span className="absolute inline-flex h-full w-full rounded-full bg-[var(--accent)] opacity-75 animate-ping" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--accent)]" />
             </span>
-            <span className="text-[11px] font-semibold tracking-wide text-[var(--accent)] uppercase">Live on Robinhood Chain</span>
+            <span className="text-[11px] font-semibold tracking-wide text-[var(--accent)] uppercase">Beta · Live on Robinhood Chain</span>
           </div>
 
           {/* Title */}

@@ -38,6 +38,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--surface)] border border-[var(--border-subtle)] text-[11px] text-[var(--text-muted)]" role="status" aria-label="Connected to Robinhood Chain, Chain ID 4663">
                 <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] pulse-dot" aria-hidden="true" />
                 <span className="font-medium">Robinhood Chain</span>
+                <span className="inline-flex items-center px-1.5 py-px rounded bg-[var(--accent)]/10 border border-[var(--accent)]/25 text-[8px] font-bold text-[var(--accent)] uppercase tracking-wider">Beta</span>
                 <span className="text-[var(--text-muted)]/50">·</span>
                 <span className="text-[var(--accent)] font-mono">4663</span>
               </div>
@@ -69,7 +70,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
         >
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 max-w-[1200px] mx-auto">
             <div className="text-[10px] text-[var(--text-muted)]">
-              THE WALL · Robinhood Chain (Chain ID 4663)
+              THE WALL · Robinhood Chain (Chain ID 4663) · Beta
             </div>
             <nav className="flex items-center gap-4" aria-label="Legal pages">
               {legalLinks.map((l) => (

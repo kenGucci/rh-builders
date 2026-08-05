@@ -346,6 +346,7 @@ function StockTokenCard({ token, quote, chartData, onTrade }: { token: StockToke
         <div className="flex items-center gap-1.5 text-[10px]">
           <Globe size={10} className="text-blue-400" />
           <span className="text-[var(--text-muted)]">Robinhood Chain</span>
+          <span className="px-1 py-px rounded bg-[var(--accent)]/10 border border-[var(--accent)]/25 text-[8px] font-bold text-[var(--accent)] uppercase">Beta</span>
         </div>
         <div className="flex items-center gap-1.5 text-[10px]">
           <Lock size={10} className="text-purple-400" />
@@ -1058,6 +1059,7 @@ export default function MarketPage() {
             </div>
             <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20 font-medium uppercase tracking-wider">
               Robinhood Chain
+              <span className="ml-1.5 px-1.5 py-px rounded bg-[var(--accent)]/20 text-[8px] font-bold">Beta</span>
             </span>
           </div>
           <h1 className="text-3xl font-bold mb-2">Invest with <span className="gradient-text">Stock Tokens</span></h1>

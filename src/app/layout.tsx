@@ -7,14 +7,15 @@ import WalletProvider from "@/components/WalletProvider";
 
 export const metadata: Metadata = {
   title: {
-    default: "THE WALL — Robinhood Chain Builder Dashboard",
+    default: "THE WALL — Robinhood Chain (Beta) Builder Dashboard",
     template: "%s | THE WALL",
   },
   description:
-    "The definitive builder analytics dashboard for Robinhood Chain (Chain ID 4663). Track deployed contracts, token launches, reward claims, on-chain activity, and stock market data. Powered by Blockscout with real-time data.",
+    "The definitive builder analytics dashboard for Robinhood Chain (Beta · Live, Chain ID 4663). Track deployed contracts, token launches, reward claims, on-chain activity, and stock market data. Powered by Blockscout with real-time data.",
   keywords: [
     "Robinhood Chain",
     "Chain ID 4663",
+    "Beta",
     "builder dashboard",
     "on-chain analytics",
     "token launches",
@@ -33,7 +34,7 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: "https://rh-builders.vercel.app",
     siteName: "THE WALL",
-    title: "THE WALL — Robinhood Chain Builder Dashboard",
+    title: "THE WALL — Robinhood Chain (Beta) Builder Dashboard",
     description:
       "Track builders, deployed contracts, token launches, and reward claims on Robinhood Chain (Chain ID 4663). Real-time on-chain analytics powered by Blockscout.",
     images: [
@@ -41,13 +42,13 @@ export const metadata: Metadata = {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "THE WALL — Robinhood Chain Builder Dashboard",
+        alt: "THE WALL — Robinhood Chain (Beta) Builder Dashboard",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "THE WALL — Robinhood Chain Builder Dashboard",
+    title: "THE WALL — Robinhood Chain (Beta) Builder Dashboard",
     description:
       "Track builders, deployed contracts, token launches, and reward claims on Robinhood Chain (Chain ID 4663).",
     images: ["/og-image.png"],

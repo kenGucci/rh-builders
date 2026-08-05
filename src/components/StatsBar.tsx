@@ -129,6 +129,7 @@ export default function StatsBar({ address, tokenBalance, totalRewards }: { addr
       <div className="flex items-center gap-2 text-[10px] text-[var(--text-muted)]" role="status" aria-label="Live on-chain stats for Robinhood Chain">
         <span className="w-1.5 h-1.5 rounded-full bg-green-400 live-blink" aria-hidden="true" />
         <span className="text-green-400 font-medium">LIVE</span>
+        <span className="inline-flex items-center px-1.5 py-px rounded bg-[var(--accent)]/10 border border-[var(--accent)]/25 text-[8px] font-bold text-[var(--accent)] uppercase tracking-wider">Beta</span>
         <span>· Robinhood Chain (4663)</span>
         {lastUpdated && (
           <span className="ml-auto" aria-label={`Last updated at ${lastUpdated.toLocaleTimeString()}`}>

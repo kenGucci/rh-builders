@@ -74,7 +74,7 @@ export default function AddressAvatar({
           width={size}
           height={size}
           className="w-full h-full object-cover"
-          loading="lazy"
+          loading="eager"
         />
       ) : (
         <Blocky seed={address.toLowerCase()} size={Math.ceil(size / 8)} />
