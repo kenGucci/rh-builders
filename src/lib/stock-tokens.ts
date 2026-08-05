@@ -112,6 +112,7 @@ const LOGO_OVERRIDES: Record<string, string> = {
   CRCL: "https://financialmodelingprep.com/image-stock/CRCL.png",
   MRVL: "https://financialmodelingprep.com/image-stock/MRVL.png",
   XNDU: "https://financialmodelingprep.com/image-stock/XNDU.png",
+  CRWD: "https://financialmodelingprep.com/image-stock/CRWD.png",
 };
 
 export function stockLogoUrl(symbol: string): string {
