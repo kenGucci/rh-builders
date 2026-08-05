@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import AddressAvatar from "@/components/AddressAvatar";
 import { Gift, Coins, ExternalLink } from "lucide-react";
 
@@ -48,7 +49,11 @@ export default function ClaimHistory({ address }: { address: string }) {
   const summary = useMemo(() => {
     const totalTransfers = claims.length;
     const uniqueTokens = new Set(claims.map((c) => c.token_symbol)).size;
-    return { totalTransfers, uniqueTokens };
+    const totalUsd = claims.reduce((sum, c) => {
+      const v = Number(c.usd_value);
+      return sum + (isFinite(v) && v > 0 ? v : 0);
+    }, 0);
+    return { totalTransfers, uniqueTokens, totalUsd };
   }, [claims]);
 
   const groupedClaims = useMemo(() => {
@@ -118,13 +123,22 @@ export default function ClaimHistory({ address }: { address: string }) {
     return ts.toLocaleString(undefined, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
   }
 
+  function formatUsd(v: string | number | null | undefined): string | null {
+    const n = Number(v);
+    if (v === null || v === undefined || v === "" || !isFinite(n) || n <= 0) return null;
+    if (n >= 1e6) return `$${(n / 1e6).toFixed(2)}M`;
+    if (n >= 1e3) return `$${(n / 1e3).toFixed(2)}K`;
+    if (n >= 1) return `$${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+    return `$${n.toFixed(4)}`;
+  }
+
   const paginatedClaims = claims.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   const totalPages = Math.ceil(claims.length / PAGE_SIZE);
 
   return (
     <div>
       {/* Summary card */}
-      <div className="grid grid-cols-2 gap-3 mb-4" role="list" aria-label="Claim history summary">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4" role="list" aria-label="Claim history summary">
         <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4" role="listitem" aria-label={`Total token transfers: ${summary.totalTransfers}`}>
           <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Total Transfers</div>
           <div className="text-xl font-bold gradient-text">{summary.totalTransfers.toLocaleString()}</div>
@@ -134,6 +148,11 @@ export default function ClaimHistory({ address }: { address: string }) {
           <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Unique Tokens</div>
           <div className="text-xl font-bold gradient-text">{summary.uniqueTokens.toLocaleString()}</div>
           <div className="text-[10px] text-[var(--text-muted)] mt-0.5">Different tokens received as rewards</div>
+        </div>
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4" role="listitem" aria-label={`Estimated value earned: ${formatUsd(summary.totalUsd) ?? "unknown"}`}>
+          <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Est. Value Earned</div>
+          <div className="text-xl font-bold gradient-text">{formatUsd(summary.totalUsd) ?? "—"}</div>
+          <div className="text-[10px] text-[var(--text-muted)] mt-0.5">USD value of claimed rewards</div>
         </div>
       </div>
 
@@ -164,22 +183,47 @@ export default function ClaimHistory({ address }: { address: string }) {
       </div>
 
       {/* Grouped token labels */}
-      {groupedClaims.length > 1 && (
+      {groupedClaims.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-4" role="list" aria-label="Token breakdown">
-          {groupedClaims.map(([symbol, items]) => (
-            <div key={symbol} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[10px]" role="listitem" aria-label={`${symbol}: ${items.length} transfers`}>
-              {items[0].token_icon ? (
-                <>
-                  <Image src={items[0].token_icon} alt={`${symbol} token icon`} width={14} height={14} className="w-3.5 h-3.5 rounded-full" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden"); }} />
-                  <Coins size={10} className="text-[var(--accent)] hidden" aria-hidden="true" />
-                </>
-              ) : (
-                <Coins size={10} className="text-[var(--accent)]" aria-hidden="true" />
-              )}
-              <span className="text-[var(--text-secondary)] font-medium">${symbol}</span>
-              <span className="text-[var(--text-muted)]">×{items.length}</span>
-            </div>
-          ))}
+          {groupedClaims.map(([symbol, items]) => {
+            const chipUsd = items.reduce((sum, c) => {
+              const v = Number(c.usd_value);
+              return sum + (isFinite(v) && v > 0 ? v : 0);
+            }, 0);
+            const inner = (
+              <>
+                {items[0].token_icon ? (
+                  <>
+                    <Image src={items[0].token_icon} alt={`${symbol} token icon`} width={16} height={16} className="w-4 h-4 rounded-full" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden"); }} />
+                    <Coins size={10} className="text-[var(--accent)] hidden" aria-hidden="true" />
+                  </>
+                ) : (
+                  <Coins size={10} className="text-[var(--accent)]" aria-hidden="true" />
+                )}
+                <span className="text-[var(--text-secondary)] font-medium">${symbol}</span>
+                <span className="text-[var(--text-muted)]">×{items.length}</span>
+                {formatUsd(chipUsd) && (
+                  <span className="text-green-400 font-semibold">{formatUsd(chipUsd)}</span>
+                )}
+              </>
+            );
+            const cls = "flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[10px] transition-colors";
+            return items[0].token_address ? (
+              <Link
+                key={symbol}
+                href={`/token/${items[0].token_address}`}
+                className={`${cls} hover:border-[var(--accent)]/40 hover:bg-[var(--accent)]/5`}
+                role="listitem"
+                aria-label={`${symbol}: ${items.length} transfers${formatUsd(chipUsd) ? `, ${formatUsd(chipUsd)} value` : ""}`}
+              >
+                {inner}
+              </Link>
+            ) : (
+              <div key={symbol} className={cls} role="listitem" aria-label={`${symbol}: ${items.length} transfers`}>
+                {inner}
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -213,16 +257,19 @@ export default function ClaimHistory({ address }: { address: string }) {
                     <span className="text-sm font-semibold text-[var(--accent)]">
                       +{formatAmount(c.amount, c.token_decimals)}
                     </span>
+                    {formatUsd(c.usd_value) && (
+                      <span className="text-xs font-semibold text-green-400">
+                        ≈{formatUsd(c.usd_value)}
+                      </span>
+                    )}
                     {c.token_address ? (
-                      <a
-                        href={`https://robinhoodchain.blockscout.com/token/${c.token_address}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <Link
+                        href={`/token/${c.token_address}`}
                         className="text-xs px-2 py-0.5 rounded-full bg-[var(--accent)]/10 text-[var(--accent)] hover:bg-[var(--accent)]/20 transition-colors"
-                        aria-label={`View ${c.token_symbol} token on Blockscout`}
+                        aria-label={`View ${c.token_symbol} token info`}
                       >
                         ${c.token_symbol}
-                      </a>
+                      </Link>
                     ) : (
                       <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--accent)]/10 text-[var(--accent)]">
                         ${c.token_symbol}

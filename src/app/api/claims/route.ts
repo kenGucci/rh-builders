@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveTokenLogo } from "@/lib/token-logos";
 
 const V2 = "https://robinhoodchain.blockscout.com/api/v2";
+const DEXSCREENER_API = "https://api.dexscreener.com";
 
 async function apiFetch(url: string) {
   const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
@@ -55,13 +56,20 @@ export async function GET(request: NextRequest) {
     );
     await Promise.all(
       Array.from(uniqueTokens).map(async (addr) => {
-        const logo = await resolveTokenLogo(addr);
-        if (logo) {
-          for (const c of claims) {
-            if (c.token_address?.toLowerCase() === addr.toLowerCase()) {
-              c.token_icon = logo;
-            }
-          }
+        const knownIcon = claims.find(
+          (c: { token_address: string | null; token_icon: string | null }) =>
+            c.token_address?.toLowerCase() === addr.toLowerCase()
+        )?.token_icon;
+        const logo = await resolveTokenLogo(addr, knownIcon || null);
+        for (const c of claims) {
+          if (c.token_address?.toLowerCase() !== addr.toLowerCase()) continue;
+          if (logo) c.token_icon = logo;
+          if (c.usd_value !== null && c.usd_value !== undefined) continue;
+          c.usd_value = await usdForAmount(
+            addr,
+            c.amount,
+            c.token_decimals
+          );
         }
       })
     );
@@ -70,5 +78,37 @@ export async function GET(request: NextRequest) {
   } catch (err) {
     console.error(`[claims] Failed for ${address}:`, err);
     return NextResponse.json({ claims: [] });
+  }
+}
+
+const usdPriceCache = new Map<string, number>();
+
+async function usdForAmount(
+  address: string,
+  rawAmount: string,
+  decimals: string
+): Promise<string | null> {
+  const addr = address.toLowerCase();
+  try {
+    let price = usdPriceCache.get(addr);
+    if (!price) {
+      const res = await fetch(`${DEXSCREENER_API}/latest/dex/tokens/${addr}`, {
+        signal: AbortSignal.timeout(6000),
+      });
+      if (!res.ok) return null;
+      const data = (await res.json()) as {
+        pairs?: Array<{ priceUsd?: string }>;
+      };
+      price = Number(data?.pairs?.find((p) => Number(p.priceUsd) > 0)?.priceUsd);
+      if (!price || !isFinite(price)) return null;
+      usdPriceCache.set(addr, price);
+    }
+    const d = parseInt(decimals) || 18;
+    const amount = Number(BigInt(rawAmount || "0")) / 10 ** d;
+    if (!isFinite(amount) || amount <= 0) return null;
+    const usd = amount * price;
+    return String(usd);
+  } catch {
+    return null;
   }
 }
