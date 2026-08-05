@@ -1,6 +1,17 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      { source: "/stock", destination: "/market", permanent: true },
+      { source: "/token", destination: "/market", permanent: true },
+      { source: "/x", destination: "/team", permanent: true },
+      { source: "/legal", destination: "/legal/terms", permanent: true },
+      { source: "/global", destination: "/", permanent: true },
+      { source: "/auth", destination: "/", permanent: true },
+      { source: "/kol", destination: "/builder", permanent: true },
+    ];
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "robinhoodchain.blockscout.com" },

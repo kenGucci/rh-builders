@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import ConnectWalletButton from "@/components/ConnectWalletButton";
 import StockLogo from "@/components/StockLogo";
+import { findStockToken, liveStockLogoUrl } from "@/lib/stock-tokens";
 import { useAccount, useBalance, useDisconnect } from "wagmi";
 import { formatUnits } from "viem";
 import type { EcosystemApp } from "@/app/api/ecosystem/route";
@@ -1853,16 +1854,24 @@ function LiveBoard({ quotes, onSelect }: { quotes: MarketQuote[]; onSelect: (s: 
             className="text-left bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3 hover:border-[var(--accent)]/30 hover:shadow-[0_0_20px_var(--accent-glow)] transition-all group"
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-bold truncate">{q.symbol}</span>
-                  <span className={`text-[7px] px-1 py-0.5 rounded font-medium shrink-0 ${
-                    q.category === "crypto" ? "bg-purple-500/10 text-purple-400" : "bg-blue-500/10 text-blue-400"
-                  }`}>
-                    {q.category === "crypto" ? "C" : "S"}
-                  </span>
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                {(() => {
+                  const st = findStockToken(q.symbol);
+                  return st ? (
+                    <StockLogo symbol={st.symbol} logo={st.logo || liveStockLogoUrl(st)} size={28} />
+                  ) : null;
+                })()}
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold truncate">{q.symbol}</span>
+                    <span className={`text-[7px] px-1 py-0.5 rounded font-medium shrink-0 ${
+                      q.category === "crypto" ? "bg-purple-500/10 text-purple-400" : "bg-blue-500/10 text-blue-400"
+                    }`}>
+                      {q.category === "crypto" ? "C" : "S"}
+                    </span>
+                  </div>
+                  <div className="text-[9px] text-[var(--text-muted)] truncate">{q.name}</div>
                 </div>
-                <div className="text-[9px] text-[var(--text-muted)] truncate">{q.name}</div>
               </div>
               <MiniSparkline data={q.sparkline} positive={positive} />
             </div>

@@ -39,7 +39,8 @@ export default function StockLogo({
       alt={s}
       width={size}
       height={size}
-      loading="lazy"
+      loading="eager"
+      decoding="async"
       referrerPolicy="no-referrer"
       onError={() => setIdx((i) => i + 1)}
       className={`rounded-xl object-contain bg-[var(--bg-card)]/60 border border-[var(--border-subtle)] ${className}`}
