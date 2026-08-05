@@ -73,6 +73,14 @@ function timeAgo(timestamp: string) {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
+function fmtMoney(v: number): string {
+  if (!v) return "$0";
+  if (v >= 1e9) return `$${(v / 1e9).toFixed(2)}B`;
+  if (v >= 1e6) return `$${(v / 1e6).toFixed(2)}M`;
+  if (v >= 1e3) return `$${(v / 1e3).toFixed(1)}K`;
+  return `$${v.toFixed(2)}`;
+}
+
 export default function BuilderProfileClient() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -97,6 +105,17 @@ export default function BuilderProfileClient() {
     transactionHistory: { hash: string; type: string; value: string; timestamp: string; method: string }[];
   } | null>(null);
   const [devRewardsLoading, setDevRewardsLoading] = useState(false);
+  const [devEarnings, setDevEarnings] = useState<{
+    tokens: {
+      tokenAddress: string; tokenName: string; tokenSymbol: string; tokenIcon: string | null;
+      tokenPrice: number; marketCap: string | null; holdersCount: number;
+      isCreator: boolean; totalClaimed: string; totalClaimedUsd: string; claimCount: number;
+      lastClaimDate: string | null; holderBalance: string; holderBalanceUsd: string;
+    }[];
+    totals: { tokenCount: number; claimedUsd: number; claimedTokens: number; claimCount: number };
+    wallet: { ethBalance: string; ethUsd: string; coinPrice: number } | null;
+  } | null>(null);
+  const [devEarningsLoading, setDevEarningsLoading] = useState(false);
   const [detailData, setDetailData] = useState<{
     tokenBalances: {
       address: string; name: string; symbol: string; balance: string; balanceUsd: string;
@@ -187,6 +206,21 @@ export default function BuilderProfileClient() {
       .finally(() => {});
     return () => controller.abort();
   }, [address]);
+
+  useEffect(() => {
+    if (caParam || isContract) return;
+    const controller = new AbortController();
+    setDevEarningsLoading(true);
+    fetch(`/api/builder-earnings?address=${address}`, { signal: controller.signal })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d && !d.error) setDevEarnings(d);
+        else setDevEarnings(null);
+      })
+      .catch(() => setDevEarnings(null))
+      .finally(() => setDevEarningsLoading(false));
+    return () => controller.abort();
+  }, [address, caParam, isContract]);
 
   const creatorBuilder = creator?.creator_address ? findBuilder(creator.creator_address) : null;
 
@@ -291,8 +325,17 @@ export default function BuilderProfileClient() {
             {caParam && tokenBalance && (
               <div className="mt-2 space-y-1">
                 <div className="flex items-center gap-3">
-                  {tokenBalance.tokenIcon && (
-                    <Image src={tokenBalance.tokenIcon} alt={tokenBalance.tokenSymbol} width={24} height={24} className="w-6 h-6 rounded-full border border-[var(--border)]" />
+                  {tokenBalance.tokenIcon ? (
+                    <Image src={tokenBalance.tokenIcon} alt={tokenBalance.tokenSymbol} width={24} height={24} className="w-6 h-6 rounded-full border border-[var(--border)]" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden"); }} />
+                  ) : null}
+                  {tokenBalance.tokenIcon ? (
+                    <div className="w-6 h-6 rounded-full bg-[var(--accent)]/10 border border-[var(--accent)]/20 flex items-center justify-center text-[10px] font-bold text-[var(--accent)] flex-shrink-0 hidden">
+                      {tokenBalance.tokenSymbol?.slice(0, 2)}
+                    </div>
+                  ) : (
+                    <div className="w-6 h-6 rounded-full bg-[var(--accent)]/10 border border-[var(--accent)]/20 flex items-center justify-center text-[10px] font-bold text-[var(--accent)] flex-shrink-0">
+                      {tokenBalance.tokenSymbol?.slice(0, 2)}
+                    </div>
                   )}
                   <span className="text-lg font-bold gradient-text">
                     {tokenBalance.holderBalance} ${tokenBalance.tokenSymbol}
@@ -514,6 +557,115 @@ export default function BuilderProfileClient() {
           totalRewards={!caParam && totalRewards && totalRewards.totalClaimedUsd > 0 ? totalRewards : null}
         />
 
+        {!caParam && (devEarningsLoading || devEarnings) && (
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--border)]">
+              <Wallet size={14} className="text-[var(--accent)]" />
+              <span className="text-sm font-semibold">Developer Rewards</span>
+              <span className="text-[10px] text-[var(--text-muted)]">— per-token earnings on Robinhood Chain</span>
+              {devEarnings && !devEarningsLoading && (
+                <span className="ml-auto text-[9px] text-green-400 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 live-blink" />
+                  Live
+                </span>
+              )}
+            </div>
+
+            {devEarningsLoading ? (
+              <div className="p-6 space-y-3">
+                <div className="h-4 w-48 rounded animate-shimmer" style={{ background: "var(--bg-card-hover)" }} />
+                <div className="h-4 w-32 rounded animate-shimmer" style={{ background: "var(--bg-card-hover)" }} />
+                <div className="h-4 w-40 rounded animate-shimmer" style={{ background: "var(--bg-card-hover)" }} />
+              </div>
+            ) : devEarnings && devEarnings.tokens.length > 0 ? (
+              <div>
+                {devEarnings.totals.claimedUsd > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 bg-[var(--bg-card)] border-b border-[var(--border)]">
+                    <div className="text-left">
+                      <div className="text-[9px] text-[var(--text-muted)] uppercase tracking-wider">Total ETH Earned</div>
+                      <div className="text-lg font-bold gradient-text mt-0.5">Ξ {devEarnings.totals.claimedTokens.toFixed(4)}</div>
+                    </div>
+                    <div className="text-left">
+                      <div className="text-[9px] text-[var(--text-muted)] uppercase tracking-wider">Total USD Value</div>
+                      <div className="text-lg font-bold gradient-text mt-0.5">${devEarnings.totals.claimedUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
+                    </div>
+                    <div className="text-left">
+                      <div className="text-[9px] text-[var(--text-muted)] uppercase tracking-wider">Tokens Found</div>
+                      <div className="text-lg font-bold gradient-text mt-0.5">{devEarnings.tokens.length}</div>
+                    </div>
+                    <div className="text-left">
+                      <div className="text-[9px] text-[var(--text-muted)] uppercase tracking-wider">Claims</div>
+                      <div className="text-lg font-bold gradient-text mt-0.5">{devEarnings.totals.claimCount}</div>
+                    </div>
+                  </div>
+                )}
+                <div className="divide-y divide-[var(--border)]">
+                  {devEarnings.tokens.slice(0, 15).map((token) => (
+                    <div key={token.tokenAddress} className="p-4 hover:bg-[var(--bg-card-hover)] transition-colors">
+                      <div className="flex items-center gap-3">
+                        {token.tokenIcon ? (
+                          <>
+                            <Image src={token.tokenIcon} alt={token.tokenSymbol} width={36} height={36} className="w-9 h-9 rounded-full border border-[var(--border)] object-cover flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden"); }} />
+                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--accent)]/20 to-[var(--accent)]/5 flex items-center justify-center text-xs font-bold text-[var(--accent)] border border-[var(--accent)]/20 flex-shrink-0 hidden">
+                              {token.tokenSymbol?.slice(0, 2)}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--accent)]/20 to-[var(--accent)]/5 flex items-center justify-center text-xs font-bold text-[var(--accent)] border border-[var(--accent)]/20 flex-shrink-0">
+                            {token.tokenSymbol?.slice(0, 2)}
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold truncate">{token.tokenName}</span>
+                            <span className="text-[9px] px-1 py-0.5 rounded bg-[var(--surface)] border border-[var(--border)] text-[var(--text-muted)] font-mono">{token.tokenSymbol}</span>
+                            {token.isCreator && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-green-500/10 border border-green-500/20 text-green-400 flex items-center gap-0.5 flex-shrink-0">
+                                <CheckCircle size={8} /> Creator
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3 mt-1 text-[9px] text-[var(--text-muted)] flex-wrap">
+                            {token.tokenPrice > 0 && <span className="text-green-400">${token.tokenPrice.toLocaleString(undefined, { maximumFractionDigits: 8 })}</span>}
+                            {Number(token.marketCap) > 0 && <span>MC: {fmtMoney(Number(token.marketCap))}</span>}
+                            {token.holdersCount > 0 && <span>{token.holdersCount.toLocaleString()} holders</span>}
+                          </div>
+                          {Number(token.totalClaimed) > 0 && (
+                            <div className="flex items-center gap-3 mt-1.5 p-1.5 rounded-lg bg-green-500/5 border border-green-500/20">
+                              <span className="text-[10px] font-mono text-green-400 font-semibold">Ξ {token.totalClaimed}</span>
+                              {Number(token.totalClaimedUsd) > 0 && (
+                                <span className="text-[10px] text-[var(--text-muted)]">(${Number(token.totalClaimedUsd).toLocaleString(undefined, { maximumFractionDigits: 2 })})</span>
+                              )}
+                              <span className="text-[10px] text-[var(--text-muted)]">{token.claimCount} claims</span>
+                              {token.lastClaimDate && <span className="text-[10px] text-[var(--text-muted)]">· {timeAgo(token.lastClaimDate)}</span>}
+                            </div>
+                          )}
+                          {Number(token.holderBalance) > 0 && (
+                            <div className="text-[9px] text-[var(--text-muted)] mt-1">
+                              Holds {token.holderBalance} {token.tokenSymbol}
+                              {Number(token.holderBalanceUsd) > 0 && ` ($${Number(token.holderBalanceUsd).toLocaleString(undefined, { maximumFractionDigits: 2 })})`}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                          <a href={`/token/${token.tokenAddress}`} className="text-[10px] text-[var(--accent)] hover:underline flex items-center gap-0.5">
+                            View <ArrowUpRight size={9} />
+                          </a>
+                          <a href={`/builder/${address}?ca=${token.tokenAddress}`} className="text-[9px] text-[var(--text-muted)] hover:text-[var(--accent)]">
+                            Rewards
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="p-6 text-center text-xs text-[var(--text-muted)]">No reward tokens found for this developer</div>
+            )}
+          </div>
+        )}
+
         {detailData && detailData.tokenBalances.length > 0 && (
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl overflow-hidden">
             <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--border)]">
@@ -696,7 +848,12 @@ export default function BuilderProfileClient() {
                 {devRewards.token && (
                   <div className="flex items-center gap-4 p-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border)]">
                     {devRewards.token.icon ? (
-                      <Image src={devRewards.token.icon} alt={devRewards.token.symbol} width={48} height={48} className="w-12 h-12 rounded-xl border border-[var(--border)]" />
+                      <>
+                        <Image src={devRewards.token.icon} alt={devRewards.token.symbol} width={48} height={48} className="w-12 h-12 rounded-xl border border-[var(--border)]" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden"); }} />
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[var(--accent)]/20 to-[var(--accent)]/5 flex items-center justify-center text-lg font-bold text-[var(--accent)] border border-[var(--accent)]/20 hidden">
+                          {devRewards.token.symbol?.slice(0, 2)}
+                        </div>
+                      </>
                     ) : (
                       <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[var(--accent)]/20 to-[var(--accent)]/5 flex items-center justify-center text-lg font-bold text-[var(--accent)] border border-[var(--accent)]/20">
                         {devRewards.token.symbol?.slice(0, 2)}
@@ -775,7 +932,12 @@ export default function BuilderProfileClient() {
                       {devRewards.allDeployedTokens.map((launch) => (
                         <div key={launch.tokenAddress} className="flex items-center gap-3 p-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] hover:border-[var(--accent)]/30 transition-all">
                           {launch.tokenIcon ? (
-                            <Image src={launch.tokenIcon} alt={launch.tokenSymbol} width={40} height={40} className="w-10 h-10 rounded-full border border-[var(--border)]" />
+                            <>
+                              <Image src={launch.tokenIcon} alt={launch.tokenSymbol} width={40} height={40} className="w-10 h-10 rounded-full border border-[var(--border)]" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden"); }} />
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--accent)]/20 to-[var(--accent)]/5 flex items-center justify-center text-xs font-bold text-[var(--accent)] border border-[var(--accent)]/20 hidden">
+                                {launch.tokenSymbol?.slice(0, 2)}
+                              </div>
+                            </>
                           ) : (
                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--accent)]/20 to-[var(--accent)]/5 flex items-center justify-center text-xs font-bold text-[var(--accent)] border border-[var(--accent)]/20">
                               {launch.tokenSymbol?.slice(0, 2)}
@@ -838,8 +1000,17 @@ export default function BuilderProfileClient() {
                             href={`/builder/${address}?ca=${launch.tokenAddress}`}
                             className="flex items-center gap-3 p-2 rounded-lg hover:bg-[var(--bg-card-hover)] transition-colors"
                           >
-                            {launch.tokenIcon && (
-                              <Image src={launch.tokenIcon} alt={launch.tokenSymbol} width={28} height={28} className="w-7 h-7 rounded-full border border-[var(--border)]" />
+                            {launch.tokenIcon ? (
+                              <Image src={launch.tokenIcon} alt={launch.tokenSymbol} width={28} height={28} className="w-7 h-7 rounded-full border border-[var(--border)]" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden"); }} />
+                            ) : null}
+                            {launch.tokenIcon ? (
+                              <div className="w-7 h-7 rounded-full bg-[var(--accent)]/10 border border-[var(--accent)]/20 flex items-center justify-center text-[10px] font-bold text-[var(--accent)] flex-shrink-0 hidden">
+                                {launch.tokenSymbol?.slice(0, 2)}
+                              </div>
+                            ) : (
+                              <div className="w-7 h-7 rounded-full bg-[var(--accent)]/10 border border-[var(--accent)]/20 flex items-center justify-center text-[10px] font-bold text-[var(--accent)] flex-shrink-0">
+                                {launch.tokenSymbol?.slice(0, 2)}
+                              </div>
                             )}
                             <div className="min-w-0 flex-1">
                               <div className="text-xs font-medium truncate">{launch.tokenName}</div>

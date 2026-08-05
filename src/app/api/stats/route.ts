@@ -14,11 +14,11 @@ export async function GET(request: NextRequest) {
       v1Fetch("account", "tokentx", { address, page: "1", offset: "1000", sort: "desc" }),
     ]);
 
-    const addrData = addrV2.status === "fulfilled" ? (addrV2.value as Record<string, unknown>) : {};
-    const txRaw = txV1.status === "fulfilled" ? (txV1.value as Record<string, unknown>) : {};
-    const tokenRaw = tokenV1.status === "fulfilled" ? (tokenV1.value as Record<string, unknown>) : {};
-    const rawTxs = Array.isArray(txRaw.result) ? txRaw.result : [];
-    const rawTokens = Array.isArray(tokenRaw.result) ? tokenRaw.result : [];
+    const addrData = addrV2.status === "fulfilled" ? (addrV2.value as Record<string, unknown> | null) : null;
+    const txRaw = txV1.status === "fulfilled" ? (txV1.value as Record<string, unknown> | null) : null;
+    const tokenRaw = tokenV1.status === "fulfilled" ? (tokenV1.value as Record<string, unknown> | null) : null;
+    const rawTxs = Array.isArray(txRaw?.result) ? txRaw.result : [];
+    const rawTokens = Array.isArray(tokenRaw?.result) ? tokenRaw.result : [];
 
     let contractsDeployed = 0;
     for (const tx of rawTxs) {
@@ -30,8 +30,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const balance = String(addrData.coin_balance || "0");
-    const exchangeRate = Number(addrData.exchange_rate || "0");
+    const balance = String(addrData?.coin_balance || "0");
+    const exchangeRate = Number(addrData?.exchange_rate || "0");
 
     return NextResponse.json({
       totalTransactions: rawTxs.length,
@@ -40,13 +40,13 @@ export async function GET(request: NextRequest) {
       coinBalance: balance,
       coinBalanceUsd: exchangeRate > 0 ? (Number(balance) / 1e18 * exchangeRate).toFixed(2) : "0",
       ethPrice: exchangeRate,
-      isVerified: addrData.is_verified || false,
-      isScam: addrData.is_scam || false,
-      ensDomain: addrData.ens_domain_name || null,
-      name: addrData.name || null,
-      reputation: addrData.reputation || "unknown",
-      hasLogs: addrData.has_logs || false,
-      hasTokens: addrData.has_tokens || false,
+      isVerified: addrData?.is_verified || false,
+      isScam: addrData?.is_scam || false,
+      ensDomain: addrData?.ens_domain_name || null,
+      name: addrData?.name || null,
+      reputation: addrData?.reputation || "unknown",
+      hasLogs: addrData?.has_logs || false,
+      hasTokens: addrData?.has_tokens || false,
     });
   } catch (err) {
     console.error("[stats] Failed:", err);

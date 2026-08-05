@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
-import { jwtVerify } from "jose";
 
 const redis = process.env.UPSTASH_REDIS_REST_URL
   ? new Redis({ url: process.env.UPSTASH_REDIS_REST_URL, token: process.env.UPSTASH_REDIS_REST_TOKEN })
   : null;
 
 const ratelimit = redis ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(60, "60s"), analytics: true }) : null;
-const authRatelimit = redis ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(30, "60s"), analytics: true }) : null;
 
 const STATIC_CSP = [
   "default-src 'self'",
@@ -62,29 +60,6 @@ function setApiCacheHeader(response: NextResponse, pathname: string) {
   }
 }
 
-const SESSION_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "dev-only");
-
-async function hasValidSession(request: NextRequest): Promise<boolean> {
-  const token = request.cookies.get("thewallrh_token")?.value;
-  if (!token) return false;
-  try {
-    await jwtVerify(token, SESSION_SECRET);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-const PUBLIC_PATHS = [
-  "/auth",
-  "/api/",
-  "/legal/",
-];
-
-function isPublicPath(pathname: string): boolean {
-  return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p));
-}
-
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -92,35 +67,20 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (!isPublicPath(pathname) && !(await hasValidSession(request))) {
-    const loginUrl = new URL("/auth", request.url);
-    loginUrl.searchParams.set("from", pathname + request.nextUrl.search);
-    return NextResponse.redirect(loginUrl);
-  }
-
   const isApi = pathname.startsWith("/api/");
-  const isAuth = pathname.startsWith("/api/auth/");
-  const isXAuth = pathname.startsWith("/api/auth/x");
-  if (ratelimit && (isApi || isAuth) && !isXAuth) {
+  if (ratelimit && isApi) {
     try {
       const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
         || request.headers.get("x-real-ip")
         || "127.0.0.1";
 
-      const limiter = isAuth && authRatelimit ? authRatelimit : ratelimit;
-      const limit = await limiter.limit(ip);
+      const limit = await ratelimit.limit(ip);
 
       if (!limit.success) {
-        if (isApi) {
-          return NextResponse.json(
-            { error: "Rate limit exceeded. Please try again later." },
-            { status: 429, headers: { "Retry-After": String(limit.reset ?? 60) } }
-          );
-        }
-        return new NextResponse("Too Many Requests", {
-          status: 429,
-          headers: { "Retry-After": String(limit.reset ?? 60) },
-        });
+        return NextResponse.json(
+          { error: "Rate limit exceeded. Please try again later." },
+          { status: 429, headers: { "Retry-After": String(limit.reset ?? 60) } }
+        );
       }
     } catch {
       // rate limit unavailable — proceed without

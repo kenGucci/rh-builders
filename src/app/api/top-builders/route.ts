@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import builders from "@/lib/builders.json";
-import { v2Fetch } from "@/lib/blockscout";
+import { fetchBuilderOnchainStats } from "@/lib/onchain-stats";
 
 interface BuilderLight {
   address: string;
@@ -13,37 +13,21 @@ interface BuilderLight {
   balanceEth: string;
   balanceUsd: string;
   txCount: number;
-  tokenCount: number;
-  avatar: string | null;
+  tokenTransfers: number;
   isContract: boolean;
   lastTxTimestamp: string | null;
+  isActive: boolean;
+  activeMinsAgo: number | null;
 }
 
 const statsCache = new Map<string, { data: BuilderLight[]; ts: number }>();
 const CACHE_TTL = 60_000;
 
-async function fetchBuilderStats(address: string): Promise<Partial<BuilderLight>> {
-  try {
-    const data = await v2Fetch(`/addresses/${address}`) as Record<string, unknown>;
-
-    const rawBalance = String(data.coin_balance || "0");
-    const balanceEth = (Number(rawBalance) / 1e18).toFixed(4);
-    const coinPrice = Number(data.coin_price || 0);
-    const balanceUsd = (Number(balanceEth) * coinPrice).toFixed(2);
-
-    return {
-      balanceEth,
-      balanceUsd,
-      txCount: Number(data.transaction_count || 0),
-      tokenCount: Number(data.token_balances_count || data.tokens_count || 0),
-      isContract: Boolean(data.is_contract),
-      lastTxTimestamp: (data.last_tx_at as string) || null,
-      avatar: null,
-    };
-  } catch (err) {
-    console.error("[top-builders] Stats fetch failed:", address, err);
-    return {};
-  }
+function activeMinsAgo(lastTxTimestamp: string | null): number | null {
+  if (!lastTxTimestamp) return null;
+  const t = new Date(lastTxTimestamp).getTime();
+  if (Number.isNaN(t)) return null;
+  return Math.max(0, Math.floor((Date.now() - t) / 60_000));
 }
 
 export async function GET(request: NextRequest) {
@@ -64,7 +48,8 @@ export async function GET(request: NextRequest) {
 
   const results = await Promise.allSettled(
     batch.map(async (b) => {
-      const stats = await fetchBuilderStats(b.address);
+      const stats = await fetchBuilderOnchainStats(b.address);
+      const mins = stats ? activeMinsAgo(stats.lastTxTimestamp) : null;
       return {
         address: b.address,
         name: b.name,
@@ -73,13 +58,14 @@ export async function GET(request: NextRequest) {
         tags: b.tags || [],
         category: b.category || "",
         website: b.website || "",
-        balanceEth: stats.balanceEth || "0",
-        balanceUsd: stats.balanceUsd || "0",
-        txCount: stats.txCount || 0,
-        tokenCount: stats.tokenCount || 0,
-        avatar: stats.avatar || null,
-        isContract: stats.isContract || false,
-        lastTxTimestamp: stats.lastTxTimestamp || null,
+        balanceEth: stats?.balanceEth || "0",
+        balanceUsd: stats?.balanceUsd || "$0",
+        txCount: stats?.txCount || 0,
+        tokenTransfers: stats?.tokenTransfers || 0,
+        isContract: stats?.isContract || false,
+        lastTxTimestamp: stats?.lastTxTimestamp || null,
+        isActive: mins !== null && mins < 24 * 60,
+        activeMinsAgo: mins,
       } satisfies BuilderLight;
     })
   );
@@ -87,7 +73,12 @@ export async function GET(request: NextRequest) {
   const builderResults = results
     .filter((r): r is PromiseFulfilledResult<BuilderLight> => r.status === "fulfilled")
     .map((r) => r.value)
-    .sort((a, b) => b.txCount - a.txCount);
+    .sort((a, b) => {
+      const aTs = a.lastTxTimestamp ? new Date(a.lastTxTimestamp).getTime() : 0;
+      const bTs = b.lastTxTimestamp ? new Date(b.lastTxTimestamp).getTime() : 0;
+      if (bTs !== aTs) return bTs - aTs;
+      return b.txCount - a.txCount;
+    });
 
   statsCache.set(cacheKey, { data: builderResults, ts: Date.now() });
 

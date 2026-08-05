@@ -16,14 +16,9 @@
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://rh-builders.vercel.app/about</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://rh-builders.vercel.app/global</loc>
+    <loc>https://rh-builders.vercel.app/profile</loc>
     <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.5</priority>
   </url>
   <url>
     <loc>https://rh-builders.vercel.app/team</loc>
@@ -31,12 +26,27 @@
     <priority>0.5</priority>
   </url>
   <url>
+    <loc>https://rh-builders.vercel.app/about</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://rh-builders.vercel.app/settings</loc>
     <changefreq>monthly</changefreq>
     <priority>0.4</priority>
   </url>
   <url>
-    <loc>https://rh-builders.vercel.app/auth</loc>
+    <loc>https://rh-builders.vercel.app/legal/terms</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://rh-builders.vercel.app/legal/privacy</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://rh-builders.vercel.app/legal/cookies</loc>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
   </url>

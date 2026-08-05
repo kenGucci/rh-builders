@@ -2,7 +2,7 @@
 
 ## The Definitive Analytics + Stock Token Platform for Robinhood Chain
 
-**Version 1.1 — August 2026**
+**Version 2.0 — August 2026**
 
 > **Official X:** [@officialWALLrh](https://x.com/officialWALLrh) · **Live:** [rh-builders.vercel.app](https://rh-builders.vercel.app)
 
@@ -31,16 +31,17 @@
 
 Robinhood Chain (Chain ID `4663`) is an emerging blockchain network with a growing ecosystem of builders, tokens, and decentralized applications. THE WALL exists to bring transparency, discoverability, and analytics to this ecosystem at a critical stage of its growth.
 
-The platform is built with **Next.js 16**, **React 19**, **TypeScript**, and **Supabase**, deployed as a Progressive Web App (PWA) that works on any device. It aggregates data from **Blockscout**, **DexScreener**, **Yahoo Finance**, **LI.FI**, **X/Twitter**, and multiple search engines — all unified under one roof.
+The platform is built with **Next.js 16**, **React 19**, **TypeScript**, and **Supabase**, deployed as a Progressive Web App (PWA) that works on any device. It aggregates data from **Blockscout**, **DexScreener**, **Yahoo Finance**, **LI.FI**, and **X/Twitter** — all unified under one roof. The platform is fully open: no login, no gate, everything browsable instantly.
 
 **Key metrics at launch:**
 - 90+ 1:1-backed Stock Tokens (NVDA, AAPL, TSLA, QQQ, and more)
-- 40+ API endpoints
+- 31 production API endpoints (dead routes removed)
 - Real-time market quotes, market news, and on-chain data running 24/7
 - Real wallet connect/disconnect and real on-chain swaps via LI.FI
+- Live token logos (Blockscout → stock catalog → DexScreener) with letter-avatar fallbacks
 - 80 supported languages
 - 8 customizable accent themes
-- Enterprise-grade security with rate limiting and CSP
+- Rate limiting and strict Content Security Policy
 
 ---
 
@@ -51,7 +52,7 @@ The Robinhood Chain ecosystem, like many emerging blockchains, suffers from **fr
 - **No centralized dashboard** — Users must juggle Blockscout explorers, DexScreener, social media, and various tools to get a complete picture.
 - **Builder opacity** — There is no easy way to discover who is building on Robinhood Chain, what they've deployed, or how active they are.
 - **Token discovery is manual** — Finding new or trending tokens requires constant monitoring of multiple sources.
-- **Influencer footprints are scattered** — Key Opinion Leaders drive attention and liquidity, but their on-chain footprint and social presence live in separate places.
+- **Community footprints are scattered** — The X/Twitter voices driving the ecosystem live in separate places from the on-chain data.
 - **Language barriers** — Most crypto analytics tools are English-only, excluding a significant portion of the global community.
 - **Poor mobile experience** — Existing tools are desktop-first and not optimized for mobile users who make up the majority of crypto participants.
 
@@ -67,7 +68,7 @@ THE WALL solves these problems by providing a **unified, real-time analytics pla
 
 1. **Single Source of Truth** — All Robinhood Chain data in one place, updated in real time.
 2. **Builder-First** — Spotlight the people building the ecosystem, not just the tokens.
-3. **Global by Default** — 80 languages from day one, not an afterthought.
+3. **Open by Default** — No login gate; the entire platform is instantly browsable.
 4. **Mobile-Native** — PWA installable on any device, responsive from the ground up.
 5. **Transparent** — Open data, clear metrics, no hidden agendas.
 
@@ -81,10 +82,11 @@ THE WALL solves these problems by providing a **unified, real-time analytics pla
 | Stock Tokens (1:1-backed) | No | No | **90+ with real quotes + swaps** |
 | 24/7 market news | No | No | **Live headlines per symbol** |
 | Real on-chain swaps | No | No | **LI.FI via any wallet** |
-| Multi-source search | No | No | **Web, News, Images, Video, Maps** |
-| Token discovery | Explorer | Dex pairs | **Unified with creator info** |
+| Live token logos | Explorer | Pairs | **Auto-resolved + fallbacks** |
+| Token discovery | Explorer | DEX pairs | **Unified with creator info** |
 | i18n | Limited | Limited | **80 languages** |
 | Customizable UI | No | No | **8 themes + custom colors** |
+| Login required | Yes | No | **No — fully open** |
 
 ---
 
@@ -96,9 +98,11 @@ The home screen provides an at-a-glance view of the entire Robinhood Chain ecosy
 
 - **Live Stats** — Total transactions, active builders, market cap, and volume with animated counters
 - **Sparkline Charts** — Visual transaction trend data
-- **Top 10 Builders Leaderboard** — Ranked by activity with live wallet balances
-- **News Feed** — Aggregated from DuckDuckGo, filtered for Robinhood Chain relevance
-- **Quick Links** — Direct access to all platform sections
+- **Top Builders Leaderboard** — Ranked by activity with live wallet balances
+- **Stock Token Preview** — Live cards with official token logos
+- **Live Transactions** — Real-time on-chain activity stream
+- **News Feed** — Aggregated and filtered for Robinhood Chain relevance
+- **Inline Search** — Find builders, tokens, or X handles from anywhere
 
 ### 4.2 Builders
 
@@ -119,22 +123,24 @@ The Builders section is the backbone of THE WALL, tracking every deployer and ac
 
 ### 4.3 Community & X Profiles
 
-Every X/Twitter handle resolves to a live profile page (`/x/[handle]`), and the Community page (`/team`) features the official THE WALL account and lead developer with real, live data.
+Every X/Twitter handle resolves to a live profile page (`/x/[handle]`), and the Team page (`/team`) features the official THE WALL account and lead developer with real, live data.
 
 - **Live X Profiles** — Banner, avatar, description, follower counts, join date, location, and verification, all fetched live from X
 - **Official Accounts** — @officialWALLrh (official) and @suggestionii (lead developer) with Follow buttons
-- **Search Integration** — Type any X handle into a search bar to open its live profile instantly
+- **Search Integration** — Type any X handle into the inline search to open its live profile instantly
 
 ### 4.4 Stock Token Marketplace
 
 The Market page is a **real, 24/7 trading dashboard** for Stock Tokens — 1:1-backed tokenized equities on Robinhood Chain.
 
 - **90+ Stock Tokens** — NVDA, AAPL, TSLA, QQQ, and more, each 1:1-backed with real assets (Robinhood Custody)
+- **Official Logos** — Deterministic token logos served from the Robinhood CDN for every listed symbol
 - **Real-time Quotes 24/7** — Live prices, volume, and 24h change streamed from Yahoo Finance (primary) with Financial Modeling Prep fallback
 - **Live Board** — Searchable, filterable ticker board with sparklines
 - **Watchlist** — Track your favorite tickers
 - **Gainers / Losers / Movers** — Auto-updating boards
 - **Detail Modal** — 52-week range, volume, market cap, PE ratio, and a live 5s refresh
+- **Per-Stock Pages (`/stock/[symbol]`)** — Full company profile, live quote and chart, market state, and Buy/Sell actions
 - **Market News 24/7** — Real headlines from Yahoo Finance for the tokens behind Stock Tokens, refreshed every 60 seconds
 - **On X** — Live X profiles of the market voices moving the stock world (@robinhood, @CNBC, @MarketWatch, @WSJMarkets, @Stocktwits, @Nasdaq)
 - **Real On-Chain Swaps** — Connect any wallet (MetaMask / WalletConnect / Coinbase), then swap Stock Tokens directly on Robinhood Chain via LI.FI — real transactions, verifiable on Blockscout
@@ -145,7 +151,7 @@ The Market page is a **real, 24/7 trading dashboard** for Stock Tokens — 1:1-b
 
 The Market page also hosts a **live 24/7 chain dashboard**:
 
-- **Chain Stats** — Real blocks, transactions, addresses, average block time, gas, and live RH price (25M+ blocks, 220M+ txs at launch)
+- **Chain Stats** — Real blocks, transactions, addresses, average block time, gas, and live RH price
 - **Latest Blocks** — Live-verified blocks with timestamp, tx count, gas used, linking to Blockscout
 - **Latest Transactions** — Real DEX transactions (`exactInputSingle`, `clockOut`, `permit2TransferAndMulticall`, `Transfer`) with ETH values and fees
 - **Live Refresh** — Staggered auto-refresh (quotes/onchain 15s, txns 30s, news 60s, X/ecosystem 300s)
@@ -161,17 +167,15 @@ Deep-dive into any token deployed on Robinhood Chain.
 - Transaction history
 - Multi-pair support for tokens listed on multiple DEXs
 
-**Token Search** — Find tokens by name, symbol, or contract address.
+**Live Token Logos** — Every token resolves a logo automatically: Blockscout icon → Stock Token catalog → DexScreener, with graceful letter-avatar fallbacks when no logo exists anywhere.
 
-### 4.7 Global Search
+### 4.7 Inline Search
 
-A multi-source search engine built into the platform:
+Search is built directly into the platform chrome:
 
-- **Web Search** — DuckDuckGo integration
-- **News Search** — Real-time news aggregation
-- **Image Search** — Pexels API for high-quality images
-- **Video Search** — YouTube integration
-- **Maps** — OpenStreetMap for location-based queries
+- **Builders** — Find any address by wallet, ENS, token CA, or X handle
+- **Tokens** — Jump to any token profile by address or symbol
+- **X Handles** — Resolve any handle to its live profile page instantly
 
 ### 4.8 Settings & Customization
 
@@ -180,20 +184,18 @@ A multi-source search engine built into the platform:
 - **Custom Color Picker** — Create your own accent color
 - **Dark/Light Mode** — System-preference aware with manual toggle
 - **Persistent Preferences** — Saved to localStorage
+- **Legal** — Terms of Use, Privacy Policy, and Cookie Policy one click away
 
-### 4.9 Authentication
+### 4.9 Wallet Portfolio
 
-- **Email/Password** — PBKDF2 hashing, JWT tokens in httpOnly cookies
-- **X/Twitter OAuth 2.0** — PKCE flow for secure social login
-- **Session Management** — 7-day expiration, secure token rotation
-- **Role-Based Access** — Admin capabilities for platform management
-- **Wallet Connect / Disconnect** — RainbowKit (MetaMask, WalletConnect, Coinbase) with real token balances
+- **Profile (`/profile`)** — Connect any wallet to see stock token holdings, their value in ETH/USD, live buy & sell history, and ETH balance
+- **Real Balances** — Token balances fetched live from Blockscout
+- **Wallet Connect / Disconnect** — RainbowKit (MetaMask, WalletConnect, Coinbase)
 
 ### 4.10 Feedback System
 
-- **User Feedback** — Submit bug reports, feature requests, and suggestions
-- **Analytics Dashboard** — View feedback trends and statistics
-- **Status Tracking** — Monitor feedback resolution
+- **User Feedback** — Submit bug reports, feature requests, and suggestions (good/bad rating on any page)
+- **Storage** — Feedback persisted via the Supabase-backed `/api/feedback` endpoint
 
 ---
 
@@ -209,9 +211,9 @@ A multi-source search engine built into the platform:
 | Styling | Tailwind CSS 4.3 |
 | Database | Supabase (PostgreSQL) |
 | Wallet | RainbowKit + wagmi + viem |
-| Authentication | jose (JWT), PBKDF2, X OAuth 2.0 |
 | Swaps | LI.FI |
 | Blockchain | Robinhood Chain RPC (Chain ID 4663) |
+| Rate Limiting | Upstash Redis + Ratelimit |
 | Hosting | Vercel (Edge Network) |
 
 ### 5.2 Architecture Overview
@@ -224,14 +226,14 @@ A multi-source search engine built into the platform:
 └──────────────────────┬──────────────────────────┘
                        │
 ┌──────────────────────▼──────────────────────────┐
-│                Next.js 15 Server                 │
-│  App Router + API Routes + Middleware            │
-│  Rate Limiting + CSP + Security Headers         │
+│                Next.js Server                    │
+│  App Router + API Routes + Proxy Middleware     │
+│  Rate Limiting + CSP + Security Headers        │
 └──┬───────────┬───────────┬───────────┬──────────┘
    │           │           │           │
 ┌──▼──┐  ┌────▼────┐  ┌───▼───┐  ┌───▼────┐
 │ RPC │  │Blockscout│  │DexScr.│  │Supabase│
-│ WS  │  │  V1/V2   │  │  API  │  │  (DB)  │
+│ HTTP│  │  V1/V2   │  │  API  │  │  (DB)  │
 └─────┘  └─────────┘  └───────┘  └────────┘
 ```
 
@@ -242,32 +244,29 @@ A multi-source search engine built into the platform:
 - Client components handle interactivity (sorting, filtering, real-time updates)
 - `generateMetadata` for dynamic SEO on builder profiles
 
-**WebSocket Block Monitor**
-- Persistent connection to Robinhood Chain RPC
-- Real-time block tracking with configurable polling interval
-- Graceful degradation on connection failure with automatic recovery
-- Rate-limited error logging to prevent log spam
+**Live Logo Resolution**
+- Central `resolveTokenLogo()` pipeline: known icon → Stock Token catalog (Robinhood CDN) → DexScreener
+- 10-minute in-memory cache, letter-avatar fallbacks, and graceful `onError` handling on every image
 
 **Caching Strategy**
-- CDN `Cache-Control` headers on hot APIs via middleware (5s–1h per route)
+- CDN `Cache-Control` headers on hot APIs via proxy middleware (5s–1h per route)
 - In-memory stores with inflight-request dedupe for expensive calls (Blockscout, market news)
+- Blockscout fail-cache short-circuits upstream outages to prevent cascade failures
 - Staggered client refresh intervals to cut network chatter
-- No external caching dependencies — simplicity first
 
 **Modular API Layer**
-- 40+ API routes, each with a single responsibility
+- 31 production routes, each with a single responsibility
 - Consistent error handling patterns
-- Rate limiting per IP
-- Path sanitization to prevent directory traversal
+- Rate limiting per IP (60 req/min, Upstash sliding window)
+- Path sanitization and strict input validation
 
 ### 5.4 Data Flow
 
 1. **User visits page** → Next.js serves RSC HTML with metadata
 2. **Client hydrates** → Client components fetch real-time data via API routes
-3. **API routes aggregate** → Combine data from multiple sources (RPC, Blockscout, DexScreener)
+3. **API routes aggregate** → Combine data from multiple sources (RPC, Blockscout, DexScreener, Yahoo)
 4. **Cache layer** → Serve cached responses when available, refresh on expiry
-5. **Block monitor** → Background WebSocket updates latest block and chain stats
-6. **Supabase** → Auth sessions, user data, feedback stored securely with RLS
+5. **Supabase** → Feedback and user-facing records stored securely
 
 ---
 
@@ -279,7 +278,7 @@ A multi-source search engine built into the platform:
 |--------|---------|--------|
 | **Robinhood Chain RPC** | Latest block, balances | JSON-RPC (HTTP) |
 | **Blockscout V2** | Chain stats, live blocks, live transactions, token balances | REST API |
-| **DexScreener** | DEX pairs, live transactions | REST API |
+| **DexScreener** | DEX pairs, live transactions, token logos | REST API |
 | **Yahoo Finance** | Stock & crypto quotes, 24/7 market news | REST API + scrape |
 | **Financial Modeling Prep** | Stock & crypto market data (fallback) | REST API |
 | **LI.FI** | On-chain swap quotes & execution | REST API |
@@ -288,21 +287,15 @@ A multi-source search engine built into the platform:
 
 | Source | Purpose | Method |
 |--------|---------|--------|
-| **X/Twitter** | Profile data, social links, market voices | Page scrape + oEmbed + unavatar |
-| **DuckDuckGo** | Web & news search | HTML scraping |
-| **Pexels** | Image search | REST API |
-| **YouTube** | Video search | Data API v3 |
-| **OpenStreetMap** | Map tiles | Tile server |
+| **X/Twitter** | Live profile data, social links, market voices | Page scrape + oEmbed + unavatar |
+| **Robinhood CDN** | Official Stock Token logos | Static assets |
 | **Robinhood Ecosystem API** | Ecosystem dApp grid | REST API |
 
-### 6.3 Authentication
+### 6.3 Data Resilience
 
-| Provider | Method | Use Case |
-|----------|--------|----------|
-| **Supabase Auth** | Email/Password | User accounts |
-| **X/Twitter OAuth 2.0** | PKCE Flow | Social login |
-| **JWT (jose)** | httpOnly cookies | Session management |
-| **PBKDF2** | Server-side hashing | Password storage |
+- **Graceful degradation** — Every external feed is optional; pages render with skeletons and retry automatically
+- **Rate-limit handling** — Retries with backoff, in-flight dedupe, and a 20s fail-cache for upstream 429/503s
+- **Logo fallbacks** — If no logo exists anywhere, a deterministic letter avatar is rendered
 
 ---
 
@@ -312,25 +305,17 @@ THE WALL implements multiple layers of security:
 
 ### 7.1 Application Security
 
-- **Rate Limiting** — 100 requests per minute per IP, configurable per route
+- **Rate Limiting** — 60 requests per minute per IP (Upstash sliding window)
 - **Content Security Policy (CSP)** — Restrictive policy preventing XSS and injection attacks
-- **Security Headers** — X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy
-- **Path Sanitization** — Directory traversal prevention on all file-serving routes
-- **Input Validation** — Server-side validation on all API inputs
+- **Security Headers** — X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, HSTS
+- **Input Validation** — Server-side validation on all API inputs (addresses, handles, symbols)
+- **No Login Surface** — An open platform means no credentials, sessions, or auth attack surface to manage
 
-### 7.2 Authentication Security
-
-- **PBKDF2 Password Hashing** — Industry-standard key derivation
-- **JWT in httpOnly Cookies** — Tokens inaccessible to JavaScript
-- **PKCE for OAuth** — Proof Key for Code Exchange prevents authorization code interception
-- **7-Day Token Expiration** — Automatic session rotation
-- **Secure Cookie Flags** — HttpOnly, Secure, SameSite attributes
-
-### 7.3 Infrastructure Security
+### 7.2 Infrastructure Security
 
 - **Supabase RLS** — Row Level Security on all database tables
 - **No Secrets in Client Code** — All API keys server-side only
-- **`.gitignore` Enforcement** — Environment files, data directories excluded from version control
+- **`.gitignore` Enforcement** — Environment files excluded from version control
 - **Environment Variable Rotation** — All keys rotatable without code changes
 
 ---
@@ -394,25 +379,24 @@ English, Spanish, French, German, Portuguese, Chinese (Simplified & Traditional)
 - Dashboard with live stats
 - Builder leaderboard and profiles
 - Block explorer integration
-- Authentication system
 - i18n (80 languages)
 
 ### Phase 2 — Analytics ✅
 
 - Community & X profile pages
-- Market data (crypto + stocks)
+- Market data (stocks + on-chain)
 - Token explorer with DexScreener
-- Global multi-source search
+- Live token logo resolution
 
 ### Phase 3 — Stock Token Marketplace ✅
 
-- 90+ 1:1-backed Stock Tokens with real quotes
+- 90+ 1:1-backed Stock Tokens with real quotes and official logos
 - Market News 24/7 (Yahoo Finance headlines)
 - On X — live market-voice profiles
 - Real-time on-chain dashboard (live blocks, live txns, chain stats)
 - Real wallet connect/disconnect + real on-chain swaps via LI.FI
-- CDN caching + performance optimizations
-- Official X account [@officialWALLrh](https://x.com/officialWALLrh)
+- Per-stock detail pages, token pages, and live X pages
+- Production cleanup — dead routes and unused libraries removed, docs rewritten
 
 ### Phase 4 — Advanced Features 🔄
 
@@ -446,9 +430,9 @@ THE WALL is built by a small, focused team passionate about Robinhood Chain and 
 
 ## 12. Conclusion
 
-THE WALL is not just another blockchain explorer — it is a **purpose-built analytics ecosystem and Stock Token marketplace** for Robinhood Chain. By unifying on-chain data, builder profiles, community tracking, market analytics, Stock Tokens, and global search into a single, beautiful, multilingual platform, we are creating the infrastructure that Robinhood Chain needs to grow.
+THE WALL is not just another blockchain explorer — it is a **purpose-built analytics ecosystem and Stock Token marketplace** for Robinhood Chain. By unifying on-chain data, builder profiles, community tracking, market analytics, Stock Tokens, and live X profiles into a single, beautiful, multilingual platform, we are creating the infrastructure that Robinhood Chain needs to grow.
 
-The problem is clear: fragmented information slows down ecosystems. The solution is THE WALL — one platform, every metric, every builder, every token, in every language. And with real on-chain swaps, real wallet support, and market data streaming 24/7, THE WALL turns browsing into doing.
+The problem is clear: fragmented information slows down ecosystems. The solution is THE WALL — one platform, every metric, every builder, every token, in every language. And with real on-chain swaps, real wallet support, and market data streaming 24/7, THE WALL turns browsing into doing — with no login standing in the way.
 
 As Robinhood Chain grows, THE WALL grows with it. Our roadmap is ambitious but grounded, our architecture is modular and extensible, and our commitment is to the community that uses this tool every day.
 

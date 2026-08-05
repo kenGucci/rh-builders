@@ -119,6 +119,11 @@ export function stockLogoUrl(symbol: string): string {
   return LOGO_OVERRIDES[s] || `https://assets.parqet.com/logos/symbol/${s}`;
 }
 
+export function liveStockLogoUrl(token: Pick<StockToken, "symbol" | "tokenAddress">): string {
+  const s = token.symbol.toUpperCase();
+  return LOGO_OVERRIDES[s] || `https://cdn.robinhood.com/ncw_assets/logos/${token.tokenAddress.toLowerCase()}.png`;
+}
+
 export const STOCK_TOKEN_MAP: Record<string, StockToken> = Object.fromEntries(
   STOCK_TOKENS.map((t) => [t.symbol.toLowerCase(), t])
 );

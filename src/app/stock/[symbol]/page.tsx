@@ -19,7 +19,7 @@ import {
   Activity,
   Radar,
 } from "lucide-react";
-import { findStockToken, STOCK_TOKENS } from "@/lib/stock-tokens";
+import { findStockToken, STOCK_TOKENS, liveStockLogoUrl } from "@/lib/stock-tokens";
 import { getCompanyProfile } from "@/lib/company-profiles";
 import StockLogo from "@/components/StockLogo";
 
@@ -173,7 +173,7 @@ export default function StockProfilePage() {
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
           <div className="flex items-center gap-4">
-            <StockLogo symbol={token.symbol} logo={token.logo} size={56} />
+            <StockLogo symbol={token.symbol} logo={token.logo || liveStockLogoUrl(token)} size={56} />
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-extrabold text-[var(--foreground)]">{token.symbol}</h1>
@@ -340,7 +340,7 @@ export default function StockProfilePage() {
                 href={`/stock/${t.symbol}`}
                 className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] hover:border-[var(--accent)]/40 hover:bg-[var(--accent)]/5 transition-colors"
               >
-                <StockLogo symbol={t.symbol} logo={t.logo} size={18} />
+                <StockLogo symbol={t.symbol} logo={t.logo || liveStockLogoUrl(t)} size={18} />
                 <span className="text-xs font-bold text-[var(--foreground)]">{t.symbol}</span>
                 <span className="text-[10px] text-[var(--text-muted)] max-w-[140px] truncate">{t.name}</span>
               </Link>

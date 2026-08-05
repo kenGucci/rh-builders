@@ -3,8 +3,9 @@
 import Link from "next/link";
 import {
   LayoutDashboard, Users, LineChart, Settings2, Info,
-  ArrowRight, Activity, Sparkles, Wallet, Shield,
-  Palette, Rocket, RefreshCw, MousePointerClick, Boxes,
+  ArrowRight, Activity, Sparkles, Wallet,
+  Rocket, RefreshCw, MousePointerClick, Boxes,
+  Coins, Layers, AtSign, FileText, Search, User,
 } from "lucide-react";
 
 const features = [
@@ -12,7 +13,7 @@ const features = [
     icon: Activity,
     title: "Live Network Stats",
     description:
-      "Real-time Robinhood Chain metrics — transactions, blocks, addresses, and block time — refreshed automatically as the network moves.",
+      "Real-time Robinhood Chain metrics — transactions, blocks, addresses, and block time — refreshed every few seconds as the network moves.",
   },
   {
     icon: Users,
@@ -22,42 +23,67 @@ const features = [
   },
   {
     icon: LineChart,
-    title: "Market Data",
+    title: "Market Data & News",
     description:
-      "Live stock and crypto quotes, plus a real on-chain swap panel.",
+      "Live stock and crypto quotes, interactive charts, and 24/7 market news for the stocks behind Stock Tokens.",
+  },
+  {
+    icon: Coins,
+    title: "Stock Token Trading",
+    description:
+      "90+ 1:1-backed Stock Tokens — buy and sell NVDA, AAPL, QQQ and more with real on-chain trades straight from your wallet.",
   },
   {
     icon: Wallet,
-    title: "Reward Tracking",
+    title: "Wallet-Linked Profile",
     description:
-      "Creator reward claims per token — claimed amount, claim count, and last claim — so you never miss what builders are earning.",
-  },
-  {
-    icon: Shield,
-    title: "On-Chain Transparency",
-    description:
-      "Everything is verifiable — every number links back to Blockscout on Robinhood Chain.",
+      "Connect your wallet to see your live portfolio — holdings, value in ETH and USD, and your full buy & sell history.",
   },
 ];
 
-const pages = [
+interface PageGuide {
+  href: string;
+  title: string;
+  badge: string;
+  icon: React.ElementType;
+  summary: string;
+  howToUse: string[];
+  howItWorks: string;
+}
+
+const pages: PageGuide[] = [
   {
     href: "/",
     title: "Dashboard",
     badge: "Home",
     icon: LayoutDashboard,
     summary:
-      "The command center of THE WALL. The Dashboard shows you the health and activity of the entire Robinhood Chain at a glance — with a universal search bar and a real Invest with Stock Tokens section.",
+      "The command center of THE WALL. The Dashboard shows the health and activity of the entire Robinhood Chain at a glance — with a universal search bar and a real Invest with Stock Tokens section.",
     howToUse: [
       "Use the search bar to look up any wallet (0x…), contract address (CA), X handle (@…), or Stock Token — results route straight to the matching profile.",
-      "Scan the four live stat cards: Transactions, Blocks, Addresses, and Block Time — each with a sparkline of recent history.",
-      "Read the ticker bar for ETH price, today's transactions, and current gas in Gwei.",
+      "Read the four live stat cards: Transactions, Blocks, Addresses, and Block Time — each with a sparkline of recent history.",
+      "Check the ticker bar for ETH price, today's transactions, and current gas in Gwei.",
       "Invest with Stock Tokens: browse all 90+ Stock Tokens with live prices, real stock charts, and Buy/Sell buttons that execute real on-chain trades from your wallet.",
       "Browse Top on-chain builders and click any card to jump straight into their profile.",
       "Watch the live transaction feed at the bottom and read the latest crypto news.",
     ],
     howItWorks:
-      "The page polls /api/chain-stats every 15 seconds for real-time metrics from Blockscout, keeps a rolling history for the sparklines, and streams recent transactions and news through dedicated live components. Search resolves against /api/search using Blockscout plus local registries. The Stock Tokens section fetches live quotes and historical chart data from /api/market and executes buys and sells on-chain via LI.FI.",
+      "The page polls /api/chain-stats every 15 seconds for real-time metrics from Blockscout, keeps a rolling history for the sparklines, and streams recent transactions and news through dedicated live components. Search resolves against /api/search. The Stock Tokens section fetches live quotes and historical chart data from /api/market and executes buys and sells on-chain via LI.FI.",
+  },
+  {
+    href: "/profile",
+    title: "Profile",
+    badge: "Core",
+    icon: User,
+    summary:
+      "Your wallet-linked hub. Connect a wallet to see your live portfolio — holdings, portfolio value, trade history, and ETH balance.",
+    howToUse: [
+      "Connect your wallet (MetaMask, WalletConnect, or Coinbase) to load your live portfolio.",
+      "Review your holdings with live prices and USD/ETH value, plus your full buy & sell history.",
+      "Refresh to re-pull balances at any time, or disconnect your wallet from the profile header.",
+    ],
+    howItWorks:
+      "The page uses wagmi for wallet connection and /api/profile for on-chain holdings and trade history from Blockscout. Portfolio data refreshes every 20 seconds.",
   },
   {
     href: "/builder",
@@ -67,14 +93,14 @@ const pages = [
     summary:
       "The builder hub. Search the directory, see top trending coins by volume and market cap on Robinhood Chain, then browse the full list of builders, launchpads, and contracts.",
     howToUse: [
-      "Use the compact search bar to filter the developer list by name, X handle, wallet, or contract address.",
+      "Use the search bar to filter the developer list by name, X handle, wallet, or contract address.",
       "Start with the trending coins grid — live DEX data on volume, price changes, and market cap.",
       "Scroll the full builder list and sort it by activity, balance, or last seen — or filter by tag and category.",
       "Click any builder to open their full profile page and dig into their activity.",
       "Spot launchpads and deployed tech from the overview panels at the top.",
     ],
     howItWorks:
-      "Builder data is served from a local curated registry plus live enrichment from Blockscout for on-chain stats and DexScreener for DEX pairs and liquidity. Every card links back to the verified on-chain record.",
+      "Builder data is served from a curated local registry plus live enrichment from Blockscout for on-chain stats and DexScreener for DEX pairs and liquidity. Every card links back to the verified on-chain record.",
   },
   {
     href: "/market",
@@ -82,17 +108,17 @@ const pages = [
     badge: "Trading",
     icon: LineChart,
     summary:
-      "Live stock and crypto market data, plus a real on-chain swap panel. Track all 90+ Stock Tokens backed by Robinhood Custody and trade right from your wallet.",
+      "Live stock and crypto market data, 24/7 news, plus a real on-chain swap panel. Track all 90+ Stock Tokens backed by Robinhood Custody and trade right from your wallet.",
     howToUse: [
       "Use the symbol search to jump instantly to any Stock Token (NVDA, AAPL, QQQ, and more) or crypto pair.",
-      "Browse the 90+ Stock Tokens and crypto pairs with live quotes and real interactive stock charts, and build a watchlist.",
+      "Browse the 90+ Stock Tokens with live quotes and real interactive stock charts, and build a watchlist.",
       "Click Buy or Sell on any Stock Token to open the trade modal — it fetches a live LI.FI quote and executes a real on-chain transaction from your wallet.",
-      "Sort by Gainers, Losers, or Top Movers to follow the action.",
-      "Open any asset for a detail modal with sparkline, volume, and market state (open / pre / after / closed).",
+      "Sort by Gainers, Losers, or Top Movers to follow the action, and open any asset for a detail view with sparkline, volume, and market state.",
       "Connect your wallet and use the built-in Swap panel to trade tokens on-chain.",
+      "Follow the 24/7 market news feed and the live X profiles of the market voices moving the stock world.",
     ],
     howItWorks:
-      "Quotes stream in live from the market API, historical chart data is served via the chart action (Yahoo Finance OHLCV), Stock Token metadata comes from the /api/stock-tokens endpoint, and swaps execute through LI.FI on Robinhood Chain.",
+      "Quotes stream in live from the market API, historical chart data comes from Yahoo Finance OHLCV, Stock Token metadata from /api/stock-tokens, and swaps execute through LI.FI on Robinhood Chain. Live blocks, transactions, and chain stats run 24/7 from Blockscout.",
   },
   {
     href: "/team",
@@ -115,29 +141,16 @@ const pages = [
     badge: "Customize",
     icon: Settings2,
     summary:
-      "Make THE WALL yours — language, theme, and feedback all in one place.",
+      "Make THE WALL yours — language, theme, and feedback all in one place, with the Terms of Use, Privacy Policy, and Cookie Policy one click away.",
     howToUse: [
-      "Switch the interface language from a list of 80 supported languages, or let region-based filtering suggest the right one.",
+      "Switch the interface language from 80 supported languages, or let region-based filtering suggest the right one.",
       "Toggle dark / light mode.",
+      "Pick one of 8 preset accent colors — or enter a custom hex and watch the whole app restyle live.",
       "Send feedback on any page with a good / bad rating to help shape the product.",
+      "Read the Terms of Use, Privacy Policy, and Cookie Policy.",
     ],
     howItWorks:
-      "Settings are persisted locally and applied instantly. Language is managed through the i18n provider, and feedback is stored in the Supabase-backed /api/feedback endpoint.",
-  },
-  {
-    href: "/settings",
-    title: "Theme",
-    badge: "Customize",
-    icon: Palette,
-    summary:
-      "Pick one of 8 preset accent colors — or drop in your own custom color — and restyle the whole app in real time.",
-    howToUse: [
-      "Choose a preset: Green, Red, Blue, Yellow, Purple, Black, Cyan, or Pink.",
-      "Use the color picker to enter any custom hex and watch the live preview update.",
-      "Toggle between dark and light mode to see your accent on both.",
-    ],
-    howItWorks:
-      "The selected accent is written to CSS variables (--accent, --accent-glow, gradient colors) on the document root, so every component restyles instantly without a page reload.",
+      "Settings persist locally and apply instantly. Language is managed through the i18n provider, themes write CSS variables to the document root, feedback is stored in the Supabase-backed /api/feedback endpoint, and legal pages are served as static routes.",
   },
   {
     href: "/about",
@@ -153,6 +166,82 @@ const pages = [
     ],
     howItWorks:
       "A static, always-available reference page — no live data required, so it loads instantly from anywhere.",
+  },
+];
+
+const morePages: PageGuide[] = [
+  {
+    href: "/builder",
+    title: "Builder Profile",
+    badge: "Detail",
+    icon: Search,
+    summary:
+      "A deep-dive into any address — ETH and token balance, transaction count, token holdings, balance history, X profile, contract deployer info, and developer rewards with claim history.",
+    howToUse: [
+      "Open any builder card from the Dashboard or the Builder directory.",
+      "Review on-chain stats, holdings, and the balance history chart.",
+      "See their X profile, developer rewards, and reward claim history.",
+    ],
+    howItWorks:
+      "On-chain stats are enriched live from Blockscout, and social data comes from the /api/twitter endpoint.",
+  },
+  {
+    href: "/market",
+    title: "Stock Token",
+    badge: "Detail",
+    icon: Coins,
+    summary:
+      "A full page for any Stock Token — company profile, live quote and chart, market state, and Buy/Sell actions.",
+    howToUse: [
+      "Open any Stock Token from the Market page.",
+      "Read the company profile, live quote, and interactive chart.",
+      "Buy or sell directly from the page with a real on-chain transaction.",
+    ],
+    howItWorks:
+      "Live quotes stream from the market API, historical chart data comes from Yahoo Finance OHLCV, and trades execute on-chain via LI.FI.",
+  },
+  {
+    href: "/market",
+    title: "Token Profile",
+    badge: "Detail",
+    icon: Layers,
+    summary:
+      "Live DEX profile for any token on Robinhood Chain — price, liquidity, volume, and pair data from DexScreener, plus its X account and chain links.",
+    howToUse: [
+      "Open any token from the trending grid or a builder's holdings.",
+      "Review price, market cap, liquidity, volume, and price-change stats.",
+      "See the token's X account and view it on Blockscout or DexScreener.",
+    ],
+    howItWorks:
+      "Pair and liquidity data streams live from DexScreener, and social data comes from the /api/twitter endpoint.",
+  },
+  {
+    href: "/team",
+    title: "X Profile",
+    badge: "Detail",
+    icon: AtSign,
+    summary:
+      "Any X handle resolves to a live profile page — banner, avatar, description, follower counts, location, and join date, all fetched live from X.",
+    howToUse: [
+      "Search or click any X handle anywhere on the site.",
+      "View the live profile details and jump to x.com for the full account.",
+    ],
+    howItWorks:
+      "The page fetches the live X/Twitter profile via the /api/twitter endpoint and renders the account's real banner, avatar, and details.",
+  },
+  {
+    href: "/legal/terms",
+    title: "Legal",
+    badge: "Info",
+    icon: FileText,
+    summary:
+      "Terms of Use, Privacy Policy, and Cookie Policy — always available, linked from Settings and the cookie consent banner.",
+    howToUse: [
+      "Open any legal page from Settings or the cookie banner.",
+      "Read how data is handled, how accounts work, and what cookies the site uses.",
+    ],
+    howItWorks:
+      "Static, always-available reference pages served from the app using a shared LegalPage layout — no live data required.",
   },
 ];
 
@@ -177,8 +266,8 @@ export default function AboutPage() {
           <p className="text-sm text-[var(--text-muted)] leading-relaxed max-w-2xl">
             THE WALL is a real-time analytics platform for the Robinhood Chain (Chain ID 4663) —
             the permissionless, Ethereum-compatible Layer-2 network that brings stocks, crypto, and
-            real-world assets on-chain. We track every builder, token launch, reward claim, and DEX
-            move, and surface it in one clean dashboard.
+            real-world assets on-chain. We track every builder, token launch, reward claim, Stock
+            Token, and DEX move — and surface it in one clean dashboard.
           </p>
           <div className="flex flex-wrap gap-3 mt-6">
             <Link
@@ -253,81 +342,31 @@ export default function AboutPage() {
           </span>
           <h2 className="text-2xl font-bold tracking-tight">Explore every page</h2>
           <p className="text-sm text-[var(--text-muted)] mt-1.5">
-            How to use each page in the sidebar — and how it works under the hood.
+            How to use each page in the app — and how it works under the hood.
           </p>
         </div>
 
-        <div className="space-y-6">
+        {/* Main pages */}
+        <div className="mb-3">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">
+            Main Pages
+          </span>
+        </div>
+        <div className="space-y-6 mb-10">
           {pages.map((p, i) => (
-            <article
-              key={p.href + p.title}
-              className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl overflow-hidden"
-            >
-              <header className="p-6 pb-0">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-11 h-11 rounded-xl bg-[var(--accent)]/10 border border-[var(--accent)]/20 flex items-center justify-center">
-                    <p.icon size={18} className="text-[var(--accent)]" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-bold">{p.title}</h3>
-                      <span className="text-[9px] px-2 py-0.5 rounded-full bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20 font-medium uppercase tracking-wider">
-                        {p.badge}
-                      </span>
-                    </div>
-                    <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                      {i + 1} of {pages.length} · {p.href}
-                    </p>
-                  </div>
-                  <Link
-                    href={p.href}
-                    className="ml-auto hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[var(--accent)] text-black text-xs font-semibold hover:opacity-90 transition-opacity"
-                  >
-                    Open page <ArrowRight size={12} />
-                  </Link>
-                </div>
-                <p className="text-sm text-[var(--text-secondary)] leading-relaxed max-w-3xl">
-                  {p.summary}
-                </p>
-              </header>
+            <PageCard key={p.href + p.title} page={p} index={i} total={pages.length + morePages.length} />
+          ))}
+        </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6">
-                <div className="bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-2xl p-5">
-                  <div className="flex items-center gap-2 mb-3">
-                    <MousePointerClick size={14} className="text-[var(--accent)]" />
-                    <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                      How to use
-                    </span>
-                  </div>
-                  <ul className="space-y-2.5">
-                    {p.howToUse.map((step) => (
-                      <li key={step} className="flex items-start gap-2.5 text-xs text-[var(--text-muted)] leading-relaxed">
-                        <span className="mt-1 w-1.5 h-1.5 rounded-full bg-[var(--accent)] flex-shrink-0" />
-                        {step}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div className="bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-2xl p-5">
-                  <div className="flex items-center gap-2 mb-3">
-                    <RefreshCw size={14} className="text-[var(--accent)]" />
-                    <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                      How it works
-                    </span>
-                  </div>
-                  <p className="text-xs text-[var(--text-muted)] leading-relaxed">{p.howItWorks}</p>
-                </div>
-              </div>
-
-              <div className="px-6 pb-6 md:hidden">
-                <Link
-                  href={p.href}
-                  className="flex items-center justify-center gap-1.5 w-full px-4 py-2.5 rounded-xl bg-[var(--accent)] text-black text-xs font-semibold hover:opacity-90 transition-opacity"
-                >
-                  Open page <ArrowRight size={12} />
-                </Link>
-              </div>
-            </article>
+        {/* More pages */}
+        <div className="mb-3">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">
+            More Pages
+          </span>
+        </div>
+        <div className="space-y-6">
+          {morePages.map((p, i) => (
+            <PageCard key={p.href + p.title} page={p} index={pages.length + i} total={pages.length + morePages.length} />
           ))}
         </div>
       </section>
@@ -346,5 +385,86 @@ export default function AboutPage() {
         </Link>
       </div>
     </div>
+  );
+}
+
+function PageCard({
+  page,
+  index,
+  total,
+}: {
+  page: PageGuide;
+  index: number;
+  total: number;
+}) {
+  return (
+    <article
+      className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl overflow-hidden"
+    >
+      <header className="p-6 pb-0">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-11 h-11 rounded-xl bg-[var(--accent)]/10 border border-[var(--accent)]/20 flex items-center justify-center">
+            <page.icon size={18} className="text-[var(--accent)]" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-bold">{page.title}</h3>
+              <span className="text-[9px] px-2 py-0.5 rounded-full bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20 font-medium uppercase tracking-wider">
+                {page.badge}
+              </span>
+            </div>
+            <p className="text-xs text-[var(--text-muted)] mt-0.5">
+              {index + 1} of {total} · {page.href}
+            </p>
+          </div>
+          <Link
+            href={page.href}
+            className="ml-auto hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[var(--accent)] text-black text-xs font-semibold hover:opacity-90 transition-opacity"
+          >
+            Open page <ArrowRight size={12} />
+          </Link>
+        </div>
+        <p className="text-sm text-[var(--text-secondary)] leading-relaxed max-w-3xl">
+          {page.summary}
+        </p>
+      </header>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6">
+        <div className="bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <MousePointerClick size={14} className="text-[var(--accent)]" />
+            <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+              How to use
+            </span>
+          </div>
+          <ul className="space-y-2.5">
+            {page.howToUse.map((step) => (
+              <li key={step} className="flex items-start gap-2.5 text-xs text-[var(--text-muted)] leading-relaxed">
+                <span className="mt-1 w-1.5 h-1.5 rounded-full bg-[var(--accent)] flex-shrink-0" />
+                {step}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <RefreshCw size={14} className="text-[var(--accent)]" />
+            <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+              How it works
+            </span>
+          </div>
+          <p className="text-xs text-[var(--text-muted)] leading-relaxed">{page.howItWorks}</p>
+        </div>
+      </div>
+
+      <div className="px-6 pb-6 md:hidden">
+        <Link
+          href={page.href}
+          className="flex items-center justify-center gap-1.5 w-full px-4 py-2.5 rounded-xl bg-[var(--accent)] text-black text-xs font-semibold hover:opacity-90 transition-opacity"
+        >
+          Open page <ArrowRight size={12} />
+        </Link>
+      </div>
+    </article>
   );
 }

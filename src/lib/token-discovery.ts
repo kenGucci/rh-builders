@@ -34,6 +34,7 @@ export interface MappedToken {
   symbol: string;
   address: string;
   priceUsd: string;
+  priceNative: string;
   marketCap: number;
   fdv: number;
   liquidityUsd: number;
@@ -67,6 +68,7 @@ export function mapPair(pair: DexPair): MappedToken {
     symbol: pair.baseToken?.symbol || "???",
     address: pair.baseToken?.address || "",
     priceUsd: pair.priceUsd || "0",
+    priceNative: pair.priceNative || "0",
     marketCap: pair.marketCap || pair.fdv || 0,
     fdv: pair.fdv || 0,
     liquidityUsd: pair.liquidity?.usd || 0,
@@ -281,6 +283,7 @@ export async function searchTokens(query: string): Promise<MappedToken[]> {
         symbol: t.symbol || "???",
         address: t.address || query.toLowerCase(),
         priceUsd: t.exchange_rate || "0",
+        priceNative: "0",
         marketCap: t.market_cap || 0,
         fdv: t.fdv || 0,
         liquidityUsd: 0,
@@ -344,6 +347,7 @@ export async function searchTokens(query: string): Promise<MappedToken[]> {
         symbol: t.symbol || "???",
         address: t.address || "",
         priceUsd: t.exchange_rate || "0",
+        priceNative: "0",
         marketCap: t.market_cap || 0,
         fdv: t.fdv || 0,
         liquidityUsd: 0,

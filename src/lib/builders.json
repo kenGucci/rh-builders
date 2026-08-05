@@ -1,60 +1,6 @@
 {
   "builders": [
     {
-      "address": "0x2FbAdbC261e78a94f3388423ce12fFbe48897777",
-      "name": "kenGucci",
-      "twitter": "githubood_fun",
-      "ens": "",
-      "description": "GitHub-verified builder on Robinhood Chain. All projects and code live on github.com/kenGucci.",
-      "category": "Launchpad",
-      "website": "https://github.com/kenGucci",
-      "github": "https://github.com/kenGucci",
-      "logo": "",
-      "foundingDate": "2025",
-      "team": [],
-      "tags": [
-        "launchpad",
-        "github-verified",
-        "fair-launch"
-      ]
-    },
-    {
-      "address": "0x00C1a8025a5FDdf5046965Dc94e1dB845853A7D1",
-      "name": "Zardoz Instant Factory",
-      "twitter": "ZardozHood",
-      "ens": "",
-      "description": "Instant-deployment token factory with zero configuration required. Single transaction deploys a fully configured ERC-20.",
-      "category": "Launchpad",
-      "website": "",
-      "github": "",
-      "logo": "",
-      "foundingDate": "2025",
-      "team": [],
-      "tags": [
-        "launchpad",
-        "instant-launch",
-        "factory"
-      ]
-    },
-    {
-      "address": "0x81de990be508b95540b3c519417e7c0755b42977",
-      "name": "The Greenwood Factory",
-      "twitter": "Greenwood_Hood",
-      "ens": "",
-      "description": "Community-driven token launch factory on Robinhood Chain with anti-whitelist mechanisms and built-in LP token locking.",
-      "category": "Launchpad",
-      "website": "",
-      "github": "",
-      "logo": "",
-      "foundingDate": "2025",
-      "team": [],
-      "tags": [
-        "launchpad",
-        "factory",
-        "community"
-      ]
-    },
-    {
       "address": "0x80B42Aed46d73f47119dC444beA28A9e68F32BF4",
       "name": "DYOR Fun",
       "twitter": "DYORFun",

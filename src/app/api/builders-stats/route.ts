@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import builders from "@/lib/builders.json";
-import { v2Fetch } from "@/lib/blockscout";
+import { fetchBuilderOnchainStats } from "@/lib/onchain-stats";
 
 interface BuilderStats {
   address: string;
@@ -21,34 +21,23 @@ let cache: { data: Record<string, BuilderStats>; timestamp: number } | null = nu
 const CACHE_TTL = 60000;
 
 async function fetchBuilderStats(address: string): Promise<BuilderStats | null> {
-  try {
-    const data = await v2Fetch(`/addresses/${address.toLowerCase()}`) as Record<string, unknown>;
+  const stats = await fetchBuilderOnchainStats(address);
+  if (!stats) return null;
 
-    const balWei = String(data.coin_balance || "0");
-    const balEth = Number(balWei) / 1e18;
-    const rate = Number(data.coin_price || "0");
-    const usd = balEth * rate;
-
-    const tokenObj = data.token as Record<string, unknown> | undefined;
-
-    return {
-      address: address.toLowerCase(),
-      balance: balWei,
-      balanceFormatted: balEth < 0.001 && balEth > 0 ? balEth.toFixed(6) : balEth.toFixed(4),
-      balanceUsd: usd > 0 ? `$${usd.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : "$0",
-      txCount: Number(data.transaction_count || 0),
-      tokenCount: Number(data.token_balances_count || data.tokens_count || 0),
-      isContract: Boolean(data.is_contract),
-      lastTxTimestamp: (data.last_tx_at as string) || null,
-      ethPrice: rate,
-      name: (data.name as string) || (tokenObj?.name as string) || null,
-      isVerified: Boolean(data.is_verified),
-      tokenSymbol: (tokenObj?.symbol as string) || null,
-    };
-  } catch (err) {
-    console.error("[builders-stats] Failed for address:", address, err);
-    return null;
-  }
+  return {
+    address: address.toLowerCase(),
+    balance: stats.balanceWei,
+    balanceFormatted: stats.balanceEth,
+    balanceUsd: stats.balanceUsd,
+    txCount: stats.txCount,
+    tokenCount: stats.tokenTransfers,
+    isContract: stats.isContract,
+    lastTxTimestamp: stats.lastTxTimestamp,
+    ethPrice: stats.ethPrice,
+    name: stats.name,
+    isVerified: stats.isVerified,
+    tokenSymbol: stats.tokenSymbol,
+  };
 }
 
 export async function GET() {

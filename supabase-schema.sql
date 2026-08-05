@@ -3,32 +3,6 @@
 -- Run this in the Supabase SQL Editor to set up tables
 -- ============================================================
 
--- Users table
-CREATE TABLE IF NOT EXISTS users (
-  id TEXT PRIMARY KEY,
-  email TEXT UNIQUE NOT NULL,
-  name TEXT NOT NULL,
-  password TEXT NOT NULL,
-  provider TEXT NOT NULL DEFAULT 'email' CHECK (provider IN ('email', 'x')),
-  x_handle TEXT,
-  wallet_address TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
-
--- Sessions table (optional — for tracking active sessions)
-CREATE TABLE IF NOT EXISTS sessions (
-  id TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  token TEXT NOT NULL,
-  expires_at TIMESTAMPTZ NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions (user_id);
-CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions (token);
-
 -- Feedback table
 CREATE TABLE IF NOT EXISTS feedback (
   id TEXT PRIMARY KEY,
@@ -50,28 +24,11 @@ CREATE INDEX IF NOT EXISTS idx_feedback_created_at ON feedback (created_at DESC)
 -- Row Level Security (RLS)
 -- ============================================================
 -- Enable RLS on all tables
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE feedback ENABLE ROW LEVEL SECURITY;
 
 -- IMPORTANT: Drop the old permissive policies first
-DROP POLICY IF EXISTS "Allow anon read users" ON users;
-DROP POLICY IF EXISTS "Allow anon insert users" ON users;
-DROP POLICY IF EXISTS "Allow anon update users" ON users;
-DROP POLICY IF EXISTS "Allow anon read sessions" ON sessions;
-DROP POLICY IF EXISTS "Allow anon insert sessions" ON sessions;
-DROP POLICY IF EXISTS "Allow anon delete sessions" ON sessions;
-DROP POLICY IF EXISTS "Allow anon read feedback" ON feedback;
 DROP POLICY IF EXISTS "Allow anon insert feedback" ON feedback;
-
--- ============================================================
--- New restrictive policies
--- ============================================================
-
--- Users: NO anon access (server uses service_role key which bypasses RLS)
--- All user operations must go through server-side code with service_role
-
--- Sessions: NO anon access (server uses service_role key which bypasses RLS)
+DROP POLICY IF EXISTS "Allow anon read feedback" ON feedback;
 
 -- Feedback: Allow anon INSERT only (public form submissions)
 -- No SELECT/UPDATE/DELETE for anon — only service_role can read/manage

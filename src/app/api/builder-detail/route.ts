@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { v2Fetch } from "@/lib/blockscout";
+import { resolveTokenLogo } from "@/lib/token-logos";
 
 const DEXSCREENER_API = "https://api.dexscreener.com";
 
@@ -212,6 +213,14 @@ export async function GET(request: NextRequest) {
     };
   });
 
+  await Promise.all(
+    tokenBalances.slice(0, 10).map(async (t) => {
+      if (t.icon) return;
+      const logo = await resolveTokenLogo(t.address);
+      if (logo) t.icon = logo;
+    })
+  );
+
   const recentTransactions = Array.isArray((txsData as Record<string, unknown>)?.items)
     ? ((txsData as Record<string, unknown>).items as Record<string, unknown>[]).map((tx: Record<string, unknown>) => ({
         hash: (tx.hash as string) ?? "",
@@ -237,12 +246,12 @@ export async function GET(request: NextRequest) {
     isContract: Boolean(addressData.is_contract),
     name: (addressData.name as string) ?? null,
     ethBalance: String(addressData.coin_balance ?? "0"),
-    ethBalanceUsd: addressData.coin_balance ? (Number(addressData.coin_balance) * Number(addressData.coin_price ?? 0)).toFixed(2) : "0",
+    ethBalanceUsd: addressData.coin_balance ? (Number(addressData.coin_balance) * Number(addressData.exchange_rate ?? 0)).toFixed(2) : "0",
     txCount: Number(addressData.tx_count ?? 0),
     tokenBalances,
     recentTransactions,
     balanceHistory,
-    coinPrice: String(addressData.coin_price ?? "0"),
+    coinPrice: String(addressData.exchange_rate ?? "0"),
     exchangeRate: String(addressData.exchange_rate ?? "0"),
   });
 }

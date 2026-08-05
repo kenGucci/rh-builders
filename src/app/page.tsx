@@ -42,8 +42,11 @@ interface BuilderProfile {
   description: string;
   tags: string[];
   txCount: number;
-  tokenCount: number;
+  tokenTransfers: number;
   balanceEth: string;
+  lastTxTimestamp: string | null;
+  isActive: boolean;
+  activeMinsAgo: number | null;
 }
 
 export default function Home() {
@@ -68,8 +71,11 @@ export default function Home() {
         description: (b.description as string) || "",
         tags: (b.tags as string[]) || [],
         txCount: (b.txCount as number) || 0,
-        tokenCount: (b.tokenCount as number) || 0,
+        tokenTransfers: (b.tokenTransfers as number) || 0,
         balanceEth: (b.balanceEth as string) || "0",
+        lastTxTimestamp: (b.lastTxTimestamp as string) || null,
+        isActive: Boolean(b.isActive),
+        activeMinsAgo: (b.activeMinsAgo as number) ?? null,
       }));
       setTopBuilders(profiles);
     } catch {}
@@ -115,7 +121,8 @@ export default function Home() {
     load();
     fetchBuilders();
     const interval = setInterval(load, 15000);
-    return () => clearInterval(interval);
+    const buildersInterval = setInterval(fetchBuilders, 60000);
+    return () => { clearInterval(interval); clearInterval(buildersInterval); };
   }, [fetchBuilders]);
 
   useEffect(() => {
@@ -306,7 +313,13 @@ export default function Home() {
                 Builders
               </span>
               <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Top on-chain builders</h2>
-              <p className="text-sm text-[var(--text-muted)] mt-1.5">Real developers and protocols on Robinhood Chain — live from Blockscout</p>
+              <p className="text-sm text-[var(--text-muted)] mt-1.5 flex items-center gap-1.5">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-[var(--accent)] opacity-75 animate-ping" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
+                </span>
+                Ranked by live on-chain activity — refreshed every minute
+              </p>
             </div>
             <Link
               href="/builder"
@@ -339,12 +352,23 @@ export default function Home() {
                   </div>
                   <ChevronRight size={16} className="text-[var(--text-muted)] group-hover:text-[var(--accent)] group-hover:translate-x-0.5 transition-all flex-shrink-0" />
                 </div>
-                {(b.txCount > 0 || b.tokenCount > 0) && (
-                  <div className="flex items-center gap-2 mt-2 text-[9px] text-[var(--text-muted)]">
-                    {b.txCount > 0 && <span className="flex items-center gap-0.5"><Activity size={7} className="text-[var(--accent)]" />{b.txCount} txs</span>}
-                    {b.tokenCount > 0 && <span className="flex items-center gap-0.5"><Zap size={7} className="text-yellow-400" />{b.tokenCount} tokens</span>}
-                  </div>
-                )}
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-2 text-[9px] text-[var(--text-muted)]">
+                  {b.isActive ? (
+                    <span className="flex items-center gap-1 text-green-400 font-medium">
+                      <span className="relative flex h-1.5 w-1.5">
+                        <span className="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75 animate-ping" />
+                        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-green-400" />
+                      </span>
+                      Active · {timeAgoShort(b.activeMinsAgo)}
+                    </span>
+                  ) : b.lastTxTimestamp ? (
+                    <span className="flex items-center gap-1">Last active · {timeAgoShort(b.activeMinsAgo)}</span>
+                  ) : (
+                    <span className="text-[var(--text-muted)]/60">No activity yet</span>
+                  )}
+                  {b.txCount > 0 && <span className="flex items-center gap-0.5"><Activity size={7} className="text-[var(--accent)]" />{b.txCount} txs</span>}
+                  {b.tokenTransfers > 0 && <span className="flex items-center gap-0.5"><Zap size={7} className="text-yellow-400" />{b.tokenTransfers} transfers</span>}
+                </div>
               </Link>
             ))}
           </div>
@@ -432,6 +456,14 @@ export default function Home() {
 }
 
 /* ── Ticker Badge ── */
+function timeAgoShort(mins: number | null): string {
+  if (mins == null) return "never";
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  if (mins < 24 * 60) return `${Math.floor(mins / 60)}h ago`;
+  return `${Math.floor(mins / (24 * 60))}d ago`;
+}
+
 function TickerBadge({ dot, label, value, className = "", ariaLabel }: { dot?: boolean; label: string; value: string; className?: string; ariaLabel?: string }) {
   return (
     <div

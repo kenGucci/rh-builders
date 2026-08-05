@@ -3,9 +3,9 @@ import BuilderListClient from "@/components/BuilderListClient";
 import builders from "@/lib/builders.json";
 
 export const metadata: Metadata = {
-  title: "Robinhood Chain — Trending Coins & Builder Analytics",
+  title: "Robinhood Chain — Live Builders",
   description:
-    "Top trending coins by volume and market cap on Robinhood Chain. Live DEX data, builder stats, and on-chain analytics on Chain ID 4663.",
+    "Live tracking of builders deploying new tokens on Robinhood Chain. On-chain stats, deployer wallets, and X-connected builders on Chain ID 4663.",
 };
 
 export default function BuildersPage() {
@@ -31,9 +31,16 @@ export default function BuildersPage() {
             </svg>
           </div>
           <div>
-            <h1 className="text-xl font-semibold">Builders[Dev]</h1>
-            <p className="text-sm text-[var(--text-muted)]">
-              Top trending coins by volume and market cap on Robinhood Chain. Chain ID 4663.
+            <h1 className="text-xl font-semibold flex items-center gap-2">
+              Builders[Dev]
+              <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-green-500/10 border border-green-500/20 text-[9px] font-bold text-green-400 uppercase tracking-wider">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400 live-blink" />
+                Live
+              </span>
+            </h1>
+            <p className="text-sm text-[var(--text-muted)] flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400 live-blink" />
+              Live · Tracking builders deploying new tokens on Robinhood
             </p>
           </div>
         </div>

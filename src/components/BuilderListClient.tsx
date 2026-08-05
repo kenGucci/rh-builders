@@ -2,13 +2,11 @@
 
 import SearchBar from "@/components/SearchBar";
 import Link from "next/link";
-import Image from "next/image";
 import AddressAvatar from "@/components/AddressAvatar";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   ArrowUpRight, Activity, ArrowUpDown, Clock,
-  RefreshCw, DollarSign, Flame, Layers,
-  Shield, BarChart3, Code, Rocket,
+  RefreshCw, DollarSign, Rocket,
   TrendingUp, Users,
 } from "lucide-react";
 
@@ -51,6 +49,33 @@ interface ChainStats {
   txsToday: number;
 }
 
+interface DeployedToken {
+  name: string;
+  symbol: string;
+  address: string;
+  imageUrl: string | null;
+}
+
+interface NewBuilderStat {
+  balanceEth: string;
+  balanceUsd: string;
+  txCount: number;
+  tokenTransfers: number;
+  isContract: boolean;
+  isVerified: boolean;
+  name: string | null;
+  tokenSymbol: string | null;
+  ethPrice: number;
+  lastTxTimestamp: string | null;
+}
+
+interface NewBuilder extends Builder {
+  isNew: boolean;
+  source: "token" | "x";
+  deployedTokens: DeployedToken[];
+  stat?: NewBuilderStat;
+}
+
 function timeAgo(ts: string | null) {
   if (!ts) return "never";
   const t = ts.includes("T") ? new Date(ts).getTime() / 1000 : parseInt(ts);
@@ -76,11 +101,9 @@ export default function BuilderListClient({ builders }: { builders: Builder[] })
   const [statsMap, setStatsMap] = useState<Record<string, BuilderStat>>({});
   const [statsLoading, setStatsLoading] = useState(true);
   const [liveBlock, setLiveBlock] = useState(0);
-  const [liveLoading, setLiveLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [chainStats, setChainStats] = useState<ChainStats | null>(null);
-  const [trendingTokens, setTrendingTokens] = useState<Record<string, unknown>[]>([]);
-  const [launchpadStats, setLaunchpadStats] = useState<{ txCount: number; tokenCount: number; uniqueBuilders: number } | null>(null);
+  const [newBuilders, setNewBuilders] = useState<NewBuilder[]>([]);
 
   const allTags = useMemo(() => {
     const tags = new Set<string>();
@@ -112,36 +135,35 @@ export default function BuilderListClient({ builders }: { builders: Builder[] })
 
   const fetchLive = useCallback(async () => {
     try {
-      const [liveRes, launchpadRes] = await Promise.all([
-        fetch("/api/live-activity"),
-        fetch("/api/launchpad-stats"),
-      ]);
+      const liveRes = await fetch("/api/live-activity");
       if (liveRes.ok) {
         const data = await liveRes.json();
         setLiveBlock(data.block_number || 0);
-        if (Array.isArray(data.trending)) setTrendingTokens(data.trending);
-      }
-      if (launchpadRes.ok) {
-        const lpData = await launchpadRes.json();
-        setLaunchpadStats({
-          txCount: (lpData as { txCount?: number }).txCount || 0,
-          tokenCount: (lpData as { tokenTransfers?: number }).tokenTransfers || 0,
-          uniqueBuilders: (lpData as { uniqueBuilders?: number }).uniqueBuilders || 0,
-        });
       }
     } catch {
-    } finally {
-      setLiveLoading(false);
+    }
+  }, []);
+
+  const fetchNewBuilders = useCallback(async () => {
+    try {
+      const res = await fetch("/api/builders-new");
+      if (res.ok) {
+        const data = await res.json();
+        setNewBuilders(data.builders || []);
+      }
+    } catch {
     }
   }, []);
 
   useEffect(() => {
     fetchStats();
     fetchLive();
+    fetchNewBuilders();
     const statsInterval = setInterval(fetchStats, 30000);
     const liveInterval = setInterval(fetchLive, 15000);
-    return () => { clearInterval(statsInterval); clearInterval(liveInterval); };
-  }, [fetchStats, fetchLive]);
+    const newInterval = setInterval(fetchNewBuilders, 60000);
+    return () => { clearInterval(statsInterval); clearInterval(liveInterval); clearInterval(newInterval); };
+  }, [fetchStats, fetchLive, fetchNewBuilders]);
 
   const enrichedBuilders = useMemo(() => {
     return builders.map((b) => {
@@ -150,14 +172,43 @@ export default function BuilderListClient({ builders }: { builders: Builder[] })
     });
   }, [builders, statsMap]);
 
-  const activeLaunchpadCount = useMemo(
-    () => enrichedBuilders.filter((b) => b.category === "Launchpad" && b.stat && b.stat.txCount > 0).length,
-    [enrichedBuilders]
-  );
-  const antiRugCount = useMemo(
-    () => enrichedBuilders.filter((b) => (b.tags || []).includes("anti-rug")).length,
-    [enrichedBuilders]
-  );
+  const combinedBuilders = useMemo(() => {
+    const seen = new Set<string>();
+    const merged: Array<Builder & { stat?: BuilderStat; isNew?: boolean; source?: "token" | "x"; deployedTokens?: DeployedToken[] }> = [];
+    for (const nb of newBuilders) {
+      if (nb.address) {
+        const key = nb.address.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+      }
+      merged.push({
+        ...nb,
+        stat: nb.stat
+          ? {
+              address: nb.address || "",
+              balance: nb.stat.balanceEth,
+              balanceFormatted: nb.stat.balanceEth,
+              balanceUsd: nb.stat.balanceUsd,
+              txCount: nb.stat.txCount,
+              tokenCount: nb.stat.tokenTransfers,
+              isContract: nb.stat.isContract,
+              lastTxTimestamp: nb.stat.lastTxTimestamp,
+              ethPrice: nb.stat.ethPrice,
+              name: nb.stat.name,
+              isVerified: nb.stat.isVerified,
+              tokenSymbol: nb.stat.tokenSymbol,
+            }
+          : undefined,
+      });
+    }
+    for (const b of enrichedBuilders) {
+      const key = b.address.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push(b);
+    }
+    return merged;
+  }, [newBuilders, enrichedBuilders]);
 
   const tagCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -172,16 +223,16 @@ export default function BuilderListClient({ builders }: { builders: Builder[] })
   const filtered = useMemo(() => {
     const q = filter.toLowerCase();
     const list = q
-      ? enrichedBuilders.filter((b) => {
+      ? combinedBuilders.filter((b) => {
           const fields = [b.name, b.twitter, b.ens, b.address, ...(b.tags || [])].filter(Boolean).map((f) => f!.toLowerCase());
           return fields.some((f) => f.includes(q));
         })
-      : enrichedBuilders;
+      : combinedBuilders;
 
     return [...list].sort((a, b) => {
       switch (sortBy) {
         case "name":
-          return a.name.localeCompare(b.name);
+          return (a.name || "").localeCompare(b.name || "");
         case "balance":
           return Number(b.stat?.balance || 0) - Number(a.stat?.balance || 0);
         case "txCount":
@@ -195,9 +246,7 @@ export default function BuilderListClient({ builders }: { builders: Builder[] })
           return 0;
       }
     });
-  }, [enrichedBuilders, filter, sortBy]);
-
-  const totalTokens = Object.values(statsMap).reduce((s, b) => s + (b.tokenCount || 0), 0);
+  }, [combinedBuilders, filter, sortBy]);
 
   return (
     <div className="space-y-6 fade-in">
@@ -215,232 +264,13 @@ export default function BuilderListClient({ builders }: { builders: Builder[] })
           <SearchBar compact value={filter} onValueChange={setFilter} />
         </div>
         <button
-          onClick={() => { setStatsLoading(true); fetchStats(); fetchLive(); }}
+          onClick={() => { setStatsLoading(true); fetchStats(); fetchLive(); fetchNewBuilders(); }}
           className="flex items-center gap-1.5 px-3 py-2 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-xs text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)]/30 transition-colors"
         >
           <RefreshCw size={12} className={statsLoading ? "animate-spin" : ""} />
           Refresh
         </button>
       </div>
-
-      {/* Top Trending Coins */}
-      <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Flame size={14} className="text-orange-400" />
-          <h2 className="text-sm font-semibold">Top Trending Coins</h2>
-          <span className="text-[10px] text-[var(--text-muted)]">— by 24h volume on Robinhood Chain</span>
-          {!liveLoading && trendingTokens.length > 0 && (
-            <span className="ml-auto text-[9px] text-green-400 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-400 live-blink" />
-              Live
-            </span>
-          )}
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {liveLoading ? (
-            Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-32 rounded-xl animate-shimmer" style={{ background: "var(--surface)" }} />
-            ))
-          ) : trendingTokens.length > 0 ? (
-            trendingTokens.slice(0, 8).map((token, i) => {
-              const name = (token.name as string) || "Unknown";
-              const symbol = (token.symbol as string) || "???";
-              const priceUsd = parseFloat(token.priceUsd as string || "0");
-              const volume24h = (token.volume24h as number) || 0;
-              const volume6h = (token.volume6h as number) || 0;
-              const volume1h = (token.volume1h as number) || 0;
-              const marketCap = (token.marketCap as number) || 0;
-              const fdv = (token.fdv as number) || 0;
-              const priceChange24h = (token.priceChange24h as number) || 0;
-              const priceChange1h = (token.priceChange1h as number) || 0;
-              const priceChange6h = (token.priceChange6h as number) || 0;
-              const liquidityUsd = (token.liquidityUsd as number) || 0;
-              const buys24h = (token.buys24h as number) || 0;
-              const sells24h = (token.sells24h as number) || 0;
-              const buys1h = (token.buys1h as number) || 0;
-              const sells1h = (token.sells1h as number) || 0;
-              const address = (token.address as string) || "";
-              const dexUrl = (token.url as string) || "";
-              const imageUrl = (token.imageUrl as string) || null;
-              const pairCreatedAt = (token.pairCreatedAt as number) || 0;
-              const isPositive = priceChange24h >= 0;
-              const buyRatio = buys24h + sells24h > 0 ? (buys24h / (buys24h + sells24h)) * 100 : 50;
-              const colors = ["#00c805", "#f59e0b", "#3b82f6", "#8b5cf6", "#ef4444", "#06b6d4", "#ec4899", "#f97316"];
-              const bgColor = colors[i % colors.length];
-
-              return (
-                <a
-                  key={`${address}-${i}`}
-                  href={dexUrl || `https://dexscreener.com/robinhood/${address}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--accent)]/30 hover:shadow-[0_4px_20px_rgba(0,200,5,0.05)] transition-all"
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      {imageUrl ? (
-                        <Image
-                          src={imageUrl}
-                          alt={name}
-                          width={36}
-                          height={36}
-                          className="w-9 h-9 rounded-full border border-[var(--border)] object-cover bg-[var(--surface)]"
-                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden"); }}
-                        />
-                      ) : null}
-                      <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${imageUrl ? "hidden" : ""}`} style={{ backgroundColor: bgColor }}>
-                        {symbol.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-xs font-semibold truncate group-hover:text-[var(--accent)] transition-colors">{name}</div>
-                        <div className="text-[9px] text-[var(--text-muted)] font-mono">${symbol}</div>
-                      </div>
-                    </div>
-                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${isPositive ? "bg-green-500/10 text-green-400" : "bg-red-500/10 text-red-400"}`}>
-                      {isPositive ? "+" : ""}{priceChange24h.toFixed(1)}%
-                    </span>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between text-[10px]">
-                      <span className="text-[var(--text-muted)]">Price</span>
-                      <span className="font-medium">
-                        {priceUsd < 0.0001 ? `$${priceUsd.toExponential(2)}` : priceUsd < 1 ? `$${priceUsd.toFixed(6)}` : `$${priceUsd.toFixed(2)}`}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-[10px]">
-                      <span className="text-[var(--text-muted)]">Volume 24h</span>
-                      <span className="font-medium text-blue-400">${volume24h >= 1e6 ? `${(volume24h / 1e6).toFixed(2)}M` : volume24h >= 1e3 ? `${(volume24h / 1e3).toFixed(1)}K` : volume24h.toFixed(0)}</span>
-                    </div>
-                    <div className="flex justify-between text-[10px]">
-                      <span className="text-[var(--text-muted)]">Vol 6h</span>
-                      <span className="font-medium text-indigo-400">${volume6h >= 1e6 ? `${(volume6h / 1e6).toFixed(2)}M` : volume6h >= 1e3 ? `${(volume6h / 1e3).toFixed(1)}K` : volume6h.toFixed(0)}</span>
-                    </div>
-                    <div className="flex justify-between text-[10px]">
-                      <span className="text-[var(--text-muted)]">Vol 1h</span>
-                      <span className="font-medium text-cyan-400">${volume1h >= 1e6 ? `${(volume1h / 1e6).toFixed(2)}M` : volume1h >= 1e3 ? `${(volume1h / 1e3).toFixed(1)}K` : volume1h.toFixed(0)}</span>
-                    </div>
-                    <div className="flex justify-between text-[10px]">
-                      <span className="text-[var(--text-muted)]">Market Cap</span>
-                      <span className="font-medium">${marketCap >= 1e6 ? `${(marketCap / 1e6).toFixed(2)}M` : marketCap >= 1e3 ? `${(marketCap / 1e3).toFixed(1)}K` : marketCap.toFixed(0)}</span>
-                    </div>
-                    <div className="flex justify-between text-[10px]">
-                      <span className="text-[var(--text-muted)]">FDV</span>
-                      <span className="font-medium">${fdv >= 1e6 ? `${(fdv / 1e6).toFixed(2)}M` : fdv >= 1e3 ? `${(fdv / 1e3).toFixed(1)}K` : fdv.toFixed(0)}</span>
-                    </div>
-                    <div className="flex justify-between text-[10px]">
-                      <span className="text-[var(--text-muted)]">Liquidity</span>
-                      <span className="font-medium text-purple-400">${liquidityUsd >= 1e6 ? `${(liquidityUsd / 1e6).toFixed(2)}M` : liquidityUsd >= 1e3 ? `${(liquidityUsd / 1e3).toFixed(1)}K` : liquidityUsd.toFixed(0)}</span>
-                    </div>
-                  </div>
-
-                  <div className="mt-2 pt-2 border-t border-[var(--border)]">
-                    <div className="flex items-center justify-between text-[9px]">
-                      <span className="text-[var(--text-muted)]">Buys/Sells 24h</span>
-                      <span className={buyRatio >= 50 ? "text-green-400" : "text-red-400"}>
-                        {buys24h.toLocaleString()} / {sells24h.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-[9px] mt-0.5">
-                      <span className="text-[var(--text-muted)]">1h Activity</span>
-                      <span className="text-[var(--text-secondary)]">{buys1h} buys / {sells1h} sells</span>
-                    </div>
-                    <div className="flex items-center justify-between text-[9px] mt-0.5">
-                      <span className="text-[var(--text-muted)]">Price Δ 1h</span>
-                      <span className={`${priceChange1h >= 0 ? "text-green-400" : "text-red-400"}`}>
-                        {priceChange1h >= 0 ? "+" : ""}{priceChange1h.toFixed(1)}%
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-[9px] mt-0.5">
-                      <span className="text-[var(--text-muted)]">Price Δ 6h</span>
-                      <span className={`${priceChange6h >= 0 ? "text-green-400" : "text-red-400"}`}>
-                        {priceChange6h >= 0 ? "+" : ""}{priceChange6h.toFixed(1)}%
-                      </span>
-                    </div>
-                    <div className="w-full h-1 rounded-full bg-[var(--border)] mt-1.5 overflow-hidden">
-                      <div className="h-full rounded-full transition-all" style={{ width: `${buyRatio}%`, backgroundColor: buyRatio >= 50 ? "#22c55e" : "#ef4444" }} />
-                    </div>
-                    {pairCreatedAt > 0 && (
-                      <div className="text-[8px] text-[var(--text-muted)] mt-1">
-                        Created {new Date(pairCreatedAt).toLocaleDateString()}
-                      </div>
-                    )}
-                  </div>
-                </a>
-              );
-            })
-          ) : (
-            <div className="col-span-full text-center py-6 text-[var(--text-muted)] text-xs">No trending tokens found</div>
-          )}
-        </div>
-      </section>
-
-      {/* Deployed Tech on Robinhood Chain */}
-      <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Layers size={14} className="text-purple-400" />
-          <h2 className="text-sm font-semibold">Deployed Tech</h2>
-          <span className="text-[10px] text-[var(--text-muted)]">— what&apos;s live on Robinhood Chain</span>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <button
-            onClick={() => setFilter("Launchpad")}
-            className="text-left group bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--accent)]/20 transition-all cursor-pointer"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--accent)] border border-[var(--accent)]/20 bg-[var(--accent)]/5">
-                <Rocket size={16} />
-              </div>
-              {launchpadStats && (
-                <span className="text-[9px] text-green-400 flex items-center gap-1">
-                  <span className="w-1 h-1 rounded-full bg-green-400 live-blink" />
-                  Live
-                </span>
-              )}
-            </div>
-            <div className="text-xs font-semibold">Token Launchpads</div>
-            {launchpadStats ? (
-              <div className="mt-1 space-y-0.5">
-                <div className="text-[10px] font-medium text-[var(--foreground)]">{launchpadStats.txCount.toLocaleString()} transactions</div>
-                <div className="text-[9px] text-[var(--text-muted)]">{launchpadStats.tokenCount.toLocaleString()} token transfers · {launchpadStats.uniqueBuilders} projects</div>
-              </div>
-            ) : (
-              <div className="text-[10px] font-medium text-[var(--foreground)] mt-0.5">{statsLoading ? "..." : `${activeLaunchpadCount} active`}</div>
-            )}
-            <div className="text-[9px] text-[var(--text-muted)] mt-0.5 leading-relaxed">Bonding curves, fair-launch, instant deploy</div>
-          </button>
-          <button
-            onClick={() => setFilter("anti-rug")}
-            className="text-left group bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 hover:border-green-400/20 transition-all cursor-pointer"
-          >
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center mb-2 text-green-400 border border-green-400/20 bg-green-400/5">
-              <Shield size={16} />
-            </div>
-            <div className="text-xs font-semibold">Anti-Rug Mechanisms</div>
-            <div className="text-[10px] font-medium text-[var(--foreground)] mt-0.5">{antiRugCount} verified contracts</div>
-            <div className="text-[9px] text-[var(--text-muted)] mt-0.5 leading-relaxed">LP locking, renounced ownership, audits</div>
-          </button>
-          <button
-            onClick={() => setFilter("analytics")}
-            className="text-left group bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 hover:border-blue-400/20 transition-all cursor-pointer"
-          >
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center mb-2 text-blue-400 border border-blue-400/20 bg-blue-400/5">
-              <BarChart3 size={16} />
-            </div>
-            <div className="text-xs font-semibold">On-Chain Analytics</div>
-            <div className="text-[10px] font-medium text-[var(--foreground)] mt-0.5">{chainStats ? `${chainStats.totalTransactions.toLocaleString()} total txs` : "—"}</div>
-            <div className="text-[9px] text-[var(--text-muted)] mt-0.5 leading-relaxed">{chainStats ? `${chainStats.totalAddresses.toLocaleString()} addresses · ${chainStats.txsToday.toLocaleString()} txs today` : "Holder distribution, tx tracking"}</div>
-          </button>
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 hover:border-purple-400/20 transition-all">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center mb-2 text-purple-400 border border-purple-400/20 bg-purple-400/5">
-              <Code size={16} />
-            </div>
-            <div className="text-xs font-semibold">ERC-20 Standards</div>
-            <div className="text-[10px] font-medium text-[var(--foreground)] mt-0.5">{totalTokens.toLocaleString()} deployed</div>
-            <div className="text-[9px] text-[var(--text-muted)] mt-0.5 leading-relaxed">Standard, proxy, gasless, meta-tx</div>
-          </div>
-        </div>
-      </section>
 
       {/* Sort + Tag filter */}
       <div className="space-y-3">
@@ -469,7 +299,11 @@ export default function BuilderListClient({ builders }: { builders: Builder[] })
               filter === "" ? "bg-[var(--accent)] text-black" : "bg-[var(--surface)] border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--accent)]/30"
             }`}
           >
-            All ({builders.length})
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400 live-blink" />
+              Live Builders
+            </span>
+            <span className="opacity-80">({combinedBuilders.length})</span>
           </button>
           {allTags.map((tag) => (
             <button
@@ -489,18 +323,24 @@ export default function BuilderListClient({ builders }: { builders: Builder[] })
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" role="list" aria-label="Developer profiles">
         {filtered.map((b, i) => (
           <Link
-            key={`${b.address}-${i}`}
-            href={`/builder/${b.address.toLowerCase()}`}
+            key={`${b.address || b.twitter || "x"}-${i}`}
+            href={b.address ? `/builder/${b.address.toLowerCase()}` : "#"}
             className="group bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--accent)]/30 transition-all duration-200 hover:shadow-[0_0_20px_var(--accent-glow)] fade-in"
             style={{ animationDelay: `${i * 30}ms`, animationFillMode: "both" }}
             role="listitem"
             aria-label={`${b.name}${b.description ? ` — ${b.description.slice(0, 100)}` : ''}. ${b.stat ? `${b.stat.txCount} transactions, ${b.stat.balanceFormatted} ETH` : 'Loading stats...'}`}
           >
             <div className="flex items-start gap-3">
-              <AddressAvatar address={b.address} size={44} handle={b.twitter} />
+              <AddressAvatar address={b.address || ""} size={44} handle={b.twitter} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="font-medium text-sm truncate">{b.name}</span>
+                  {b.isNew && (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-400 border border-orange-500/30 flex-shrink-0 font-mono animate-pulse">NEW</span>
+                  )}
+                  {b.source === "x" && (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#1DA1F2]/10 text-[#1DA1F2] border border-[#1DA1F2]/20 flex-shrink-0 font-mono">X</span>
+                  )}
                   {b.stat?.tokenSymbol && (
                     <span className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20 flex-shrink-0 font-mono">${b.stat.tokenSymbol}</span>
                   )}
@@ -539,7 +379,7 @@ export default function BuilderListClient({ builders }: { builders: Builder[] })
                       {b.stat.tokenCount > 0 && (
                         <span className="text-[var(--text-muted)] flex items-center gap-1">
                           <Rocket size={10} className="text-green-400" />
-                          {b.stat.tokenCount} tokens
+                          {b.stat.tokenCount} transfers
                         </span>
                       )}
                     </>
@@ -575,6 +415,26 @@ export default function BuilderListClient({ builders }: { builders: Builder[] })
                     {b.description}
                   </p>
                 )}
+
+                {b.deployedTokens && b.deployedTokens.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {b.deployedTokens.slice(0, 3).map((t) => (
+                      <Link
+                        key={t.address}
+                        href={`/token/${t.address}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent)]/30 transition-colors font-mono"
+                      >
+                        {t.symbol}
+                      </Link>
+                    ))}
+                    {b.deployedTokens.length > 3 && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--surface)] text-[var(--text-muted)]">
+                        +{b.deployedTokens.length - 3}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="flex flex-col items-end gap-1 flex-shrink-0">
                 <ArrowUpRight size={14} className="text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors" />
@@ -595,7 +455,7 @@ export default function BuilderListClient({ builders }: { builders: Builder[] })
 
       {lastRefresh && (
         <div className="text-center text-[10px] text-[var(--text-muted)]">
-          Stats refresh every 30s · DEX feed every 15s · DexScreener every 60s · Last: {lastRefresh.toLocaleTimeString()}
+          Stats refresh every 30s · Network block every 15s · Last: {lastRefresh.toLocaleTimeString()}
         </div>
       )}
     </div>

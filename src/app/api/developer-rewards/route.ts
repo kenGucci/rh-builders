@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { v2Fetch, v1Fetch, v2RecentlyFailed } from "@/lib/blockscout";
+import { resolveTokenLogo } from "@/lib/token-logos";
 
 interface DevReward {
   tokenAddress: string;
@@ -281,9 +282,9 @@ export async function GET(request: NextRequest) {
         page: "1",
         offset: "20",
         sort: "desc",
-      }) as { result?: Record<string, unknown>[] };
+      }) as { result?: Record<string, unknown>[] } | null;
 
-      if (Array.isArray(txData.result)) {
+      if (Array.isArray(txData?.result)) {
         transactionHistory = txData.result.map((tx) => ({
           hash: (tx.hash as string) || "",
           type: String(tx.from || "").toLowerCase() === (creatorAddress || "").toLowerCase() ? "outgoing" : "incoming",
@@ -296,13 +297,18 @@ export async function GET(request: NextRequest) {
       console.error("[developer-rewards] Transaction history fetch failed:", err);
     }
 
+    const tokenIcon = await resolveTokenLogo(
+      tokenAddrLower,
+      (tData.icon_url as string) || null
+    );
+
     const response: DevRewardResponse = {
       creatorAddress,
       token: {
         address: tokenAddrLower,
         name: (tData.name as string) || "Unknown",
         symbol: (tData.symbol as string) || "???",
-        icon: (tData.icon_url as string) || null,
+        icon: tokenIcon,
         price: tokenPrice,
         holdersCount,
         totalSupply,

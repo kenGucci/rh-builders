@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { v2Fetch, v1Fetch, v2RecentlyFailed } from "@/lib/blockscout";
+import { resolveTokenLogo } from "@/lib/token-logos";
 
 export async function GET(request: NextRequest) {
   const address = request.nextUrl.searchParams.get("address");
@@ -64,12 +65,17 @@ export async function GET(request: NextRequest) {
       console.error("[token-balance] Transfer count fetch failed:", err);
     }
 
+    const tokenIcon = await resolveTokenLogo(
+      tokenAddress.toLowerCase(),
+      (tokenData.icon_url as string) || null
+    );
+
     return NextResponse.json({
       tokenAddress: tokenAddress.toLowerCase(),
       tokenName: tokenData.name || "Unknown",
       tokenSymbol: tokenData.symbol || "???",
       tokenDecimals: decimals,
-      tokenIcon: tokenData.icon_url || null,
+      tokenIcon,
       tokenPrice,
       tokenMarketCap: tokenData.circulating_market_cap || null,
       tokenVolume24h: tokenData.volume_24h || null,

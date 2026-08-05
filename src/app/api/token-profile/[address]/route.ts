@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { findStockToken, stockLogoUrl } from "@/lib/stock-tokens";
+import { findStockToken, liveStockLogoUrl } from "@/lib/stock-tokens";
 
 const DEXSCREENER_API = "https://api.dexscreener.com";
 const BLOCKSCOUT_V2 = "https://robinhoodchain.blockscout.com/api/v2";
@@ -90,17 +90,21 @@ export async function GET(
   }
 
   try {
-    const [dexData, bsData] = await Promise.allSettled([
+    const [dexData, bsData, countersData] = await Promise.allSettled([
       fetch(`${DEXSCREENER_API}/latest/dex/tokens/${addr}`, {
         signal: AbortSignal.timeout(8000),
       }).then((r) => (r.ok ? r.json() : null)),
       fetch(`${BLOCKSCOUT_V2}/tokens/${addr}`, {
         signal: AbortSignal.timeout(8000),
       }).then((r) => (r.ok ? r.json() : null)),
+      fetch(`${BLOCKSCOUT_V2}/tokens/${addr}/counters`, {
+        signal: AbortSignal.timeout(8000),
+      }).then((r) => (r.ok ? r.json() : null)),
     ]);
 
     const dexResult = dexData.status === "fulfilled" ? dexData.value : null;
     const bsResult = bsData.status === "fulfilled" ? bsData.value : null;
+    const counters = countersData.status === "fulfilled" ? countersData.value : null;
 
     const robinhoodPairs = (dexResult?.pairs || []).filter(
       (p: DexPair) => p.chainId === "robinhood"
@@ -110,13 +114,13 @@ export async function GET(
     const firstPair = robinhoodPairs[0];
 
     const stockToken = findStockToken(addr);
-    const stockImage = stockToken ? stockLogoUrl(stockToken.symbol) : null;
+    const stockImage = stockToken ? liveStockLogoUrl(stockToken) : null;
 
     const profile: TokenProfile = {
       name: firstPair?.baseToken?.name || bsResult?.name || "Unknown",
       symbol: firstPair?.baseToken?.symbol || bsResult?.symbol || "???",
       address: addr,
-      imageUrl: stockImage || firstPair?.info?.imageUrl || bsResult?.icon_url || null,
+      imageUrl: bsResult?.icon_url || stockImage || firstPair?.info?.imageUrl || null,
       websites: firstPair?.info?.websites || [],
       socials: firstPair?.info?.socials || [],
       description: bsResult?.description || null,
@@ -149,7 +153,9 @@ export async function GET(
         })),
       onChain: {
         totalSupply: bsResult?.total_supply || null,
-        holders: bsResult?.holders || null,
+        holders: counters?.token_holders_count
+          ? parseInt(counters.token_holders_count, 10)
+          : bsResult?.holders || null,
         decimals: bsResult?.decimals ? parseInt(bsResult.decimals) : null,
         tokenType: bsResult?.token_type || null,
       },

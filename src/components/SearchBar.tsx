@@ -2,6 +2,7 @@
 
 import { useState, FormEvent, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { ArrowUpRight } from "lucide-react";
 
 interface SearchResult {
@@ -19,7 +20,25 @@ interface SearchResult {
     symbol: string;
     holders_count: number;
     total_supply: string;
+    market_cap?: string | null;
+    exchange_rate?: string | null;
+    icon_url?: string | null;
   } | null;
+}
+
+function fmtMoney(v: number): string {
+  if (!v) return "$0";
+  if (v >= 1e9) return `$${(v / 1e9).toFixed(2)}B`;
+  if (v >= 1e6) return `$${(v / 1e6).toFixed(2)}M`;
+  if (v >= 1e3) return `$${(v / 1e3).toFixed(1)}K`;
+  return `$${v.toFixed(2)}`;
+}
+
+function fmtPrice(v: number): string {
+  if (!v) return "$0";
+  if (v >= 1) return `$${v.toFixed(2)}`;
+  if (v >= 0.0001) return `$${v.toFixed(6)}`;
+  return `$${v.toExponential(2)}`;
 }
 
 function resultUrl(s: SearchResult): string | null {
@@ -322,25 +341,52 @@ export default function SearchBar({ compact = false, value, onValueChange }: { c
               className="w-full text-left bg-[var(--surface)] border border-[var(--accent)]/30 rounded-xl p-4 hover:border-[var(--accent)]/60 hover:shadow-[0_0_20px_var(--accent-glow)] transition-all duration-300 cursor-pointer group"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-[var(--accent)]/10 flex items-center justify-center flex-shrink-0">
+                {searchResult.token_info?.icon_url ? (
+                  <Image
+                    src={searchResult.token_info.icon_url}
+                    alt={searchResult.label || "token"}
+                    width={40}
+                    height={40}
+                    className="w-10 h-10 rounded-full border border-[var(--border)] object-cover flex-shrink-0"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden"); }}
+                  />
+                ) : null}
+                <div className={`w-10 h-10 rounded-lg bg-[var(--accent)]/10 flex items-center justify-center flex-shrink-0 ${searchResult.token_info?.icon_url ? "hidden" : ""}`}>
                   {searchResult.type === "token" ? (
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M12 6v12M6 12h12" /></svg>
+                    <span className="text-sm font-bold text-[var(--accent)]">
+                      {searchResult.token_symbol?.slice(0, 1) || searchResult.label?.slice(0, 1) || "T"}
+                    </span>
                   ) : (
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-sm">{searchResult.label || "Unknown"}</span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--accent)]/10 text-[var(--accent)] uppercase">{searchResult.type}</span>
+                    <span className="font-semibold text-sm truncate">{searchResult.label || "Unknown"}</span>
+                    {searchResult.type === "token" && searchResult.token_symbol && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--accent)]/10 text-[var(--accent)] font-mono flex-shrink-0">${searchResult.token_symbol}</span>
+                    )}
+                    {searchResult.token_info && (
+                      <span className="ml-auto flex items-center gap-1 text-[9px] text-green-400 flex-shrink-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-400 live-blink" />
+                        Live
+                      </span>
+                    )}
                   </div>
                   <div className="text-[11px] text-[var(--text-muted)] font-mono mt-0.5 truncate">
                     {searchResult.address}
                   </div>
                   {searchResult.token_info && (
-                    <div className="flex items-center gap-3 mt-1 text-[10px] text-[var(--text-muted)]">
-                      {searchResult.token_info.symbol && <span>${searchResult.token_info.symbol}</span>}
-                      {searchResult.token_info.holders_count > 0 && <span>{searchResult.token_info.holders_count.toLocaleString()} holders</span>}
+                    <div className="flex items-center gap-3 mt-1 text-[10px] text-[var(--text-muted)] flex-wrap">
+                      {Number(searchResult.token_info.exchange_rate) > 0 && (
+                        <span className="text-green-400 font-medium">{fmtPrice(Number(searchResult.token_info.exchange_rate))}</span>
+                      )}
+                      {Number(searchResult.token_info.market_cap) > 0 && (
+                        <span>MC: {fmtMoney(Number(searchResult.token_info.market_cap))}</span>
+                      )}
+                      {searchResult.token_info.holders_count > 0 && (
+                        <span>{searchResult.token_info.holders_count.toLocaleString()} holders</span>
+                      )}
                     </div>
                   )}
                   {searchResult.creator && (
@@ -352,7 +398,7 @@ export default function SearchBar({ compact = false, value, onValueChange }: { c
                 <ArrowUpRight size={16} className="text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors flex-shrink-0" />
               </div>
               <div className="mt-2 text-[11px] text-[var(--accent)] opacity-0 group-hover:opacity-100 transition-opacity text-center">
-                View full builder profile →
+                {searchResult.type === "token" ? "View full token profile →" : "View full builder profile →"}
               </div>
             </button>
           )}

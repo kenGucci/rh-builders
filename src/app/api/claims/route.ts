@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolveTokenLogo } from "@/lib/token-logos";
 
 const V2 = "https://robinhoodchain.blockscout.com/api/v2";
 
@@ -39,13 +40,31 @@ export async function GET(request: NextRequest) {
           token_symbol: token?.symbol || "???",
           token_name: token?.name || "Unknown",
           token_address: token?.address_hash || null,
-          token_icon: token?.icon_url || null,
+          token_icon: (token?.icon_url as string) || null,
           token_decimals: token?.decimals || "18",
           token_type: token?.type || "ERC-20",
           type: "receive",
           usd_value: total?.usd || null,
         };
       });
+
+    const uniqueTokens = new Set(
+      claims
+        .map((c: { token_address: string | null }) => c.token_address)
+        .filter(Boolean) as string[]
+    );
+    await Promise.all(
+      Array.from(uniqueTokens).map(async (addr) => {
+        const logo = await resolveTokenLogo(addr);
+        if (logo) {
+          for (const c of claims) {
+            if (c.token_address?.toLowerCase() === addr.toLowerCase()) {
+              c.token_icon = logo;
+            }
+          }
+        }
+      })
+    );
 
     return NextResponse.json({ claims });
   } catch (err) {

@@ -13,7 +13,6 @@
 - [x] 80-language i18n with region-based filtering
 - [x] PWA support (installable on mobile & desktop)
 - [x] Responsive layout with mobile hamburger nav
-- [x] Scroll-driven animations & View Transitions API
 - [x] Glassmorphism UI (backdrop-blur header, cards)
 - [x] Accessibility (skip-to-content, focus rings, reduced-motion, screen reader)
 
@@ -21,32 +20,35 @@
 
 ## Phase 2 — Core Pages ✅
 
-- [x] Dashboard (`/`) — Hero, live network stats, sparklines, top builders, news
+- [x] Dashboard (`/`) — Hero, live network stats, sparklines, top builders, live transactions, news
 - [x] Builders (`/builder`) — Full builder list with sort, tag filter, search
 - [x] Builder Profile (`/builder/[address]`) — Token holdings, balance history, X profile, rewards
 - [x] Market (`/market`) — Stock & crypto quotes, watchlist, gainers/losers, detail modals
-- [x] Global Search (`/global`) — Web, news, images, videos, maps search engine
+- [x] Profile (`/profile`) — Wallet-connected portfolio: holdings, ETH balance, trade history
+- [x] Stock Token (`/stock/[symbol]`) — Company profile, live quote & chart, Buy/Sell
+- [x] Token Profile (`/token/[address]`) — DexScreener pair data + X account + chain links
+- [x] X Profile (`/x/[handle]`) — Live X/Twitter profile for any handle
 - [x] Team (`/team`) — Team profile with live X/Twitter data
 - [x] Settings (`/settings`) — Language selection, theme customization
-- [x] Auth (`/auth`) — Email + password login
+- [x] About (`/about`) — Full site guide ("How to use" / "How it works")
+- [x] Legal (`/legal/*`) — Terms, Privacy, Cookies
 
-> **Note:** The KOL Hub (`/kol`) was built and then removed during production cleanup
-> (commit `ef20b40`). X/Twitter profiles now live at `/x/[handle]` and on the Community
-> page, and the `/api/kol` endpoint remains for future reuse.
+> **Note:** The Global Search page (`/global`), KOL Hub (`/kol`), and email/X login
+> (`/auth`) were built and then removed during production cleanup. The site is now a
+> fully open, no-login platform. Search is handled by the inline search bar
+> (builders / tokens / X handles), and live X profiles live at `/x/[handle]`.
 
 ---
 
 ## Phase 3 — Data & API ✅
 
 - [x] Blockscout V2 integration (on-chain data, token transfers, balance history)
-- [x] DexScreener integration (DEX pairs, volume, liquidity, price changes)
+- [x] DexScreener integration (DEX pairs, volume, liquidity, price changes, token logos)
 - [x] Financial Modeling Prep integration (stock & crypto market data)
 - [x] Yahoo Finance integration (primary quotes + 24/7 market news)
-- [x] DuckDuckGo, YouTube, OpenStreetMap search (Global page)
 - [x] X/Twitter profile scraping & oembed integration
-- [x] Supabase database (users, auth, sessions)
-- [x] JWT authentication with PBKDF2 hashing
-- [x] 40+ API route handlers
+- [x] 31 production API routes (dead/unused routes removed)
+- [x] Upstash Redis rate limiting (60 req/min per IP)
 
 ---
 
@@ -63,6 +65,7 @@
 ## Phase 5 — Stock Token Marketplace ✅
 
 - [x] Stock Tokens page — 90+ 1:1-backed tokens (NVDA, AAPL, TSLA, QQQ, …) with real quotes
+- [x] Official Stock Token logos from the Robinhood CDN (deterministic per token address)
 - [x] Live board, watchlist, gainers/losers/movers with sparklines
 - [x] Real-time stock market quotes 24/7 (Yahoo Finance primary + FMP fallback)
 - [x] Detail modal with 52-week range, volume, market cap, PE, and live 5s refresh
@@ -73,10 +76,11 @@
 - [x] Real token balances from Blockscout per wallet
 - [x] Real on-chain swaps via LI.FI (ETH → Stock Tokens, etc.), tx links to Blockscout
 - [x] Ecosystem apps grid (live from Robinhood Chain ecosystem)
+- [x] Per-stock detail pages (`/stock/[symbol]`)
 
 ---
 
-## Phase 6 — Performance & Publishing ✅
+## Phase 6 — Performance, Logos & Publishing ✅
 
 - [x] Critical-path rendering (page paints before slow feeds load)
 - [x] Staggered refresh intervals (15s/30s/60s/300s) to cut network chatter
@@ -84,6 +88,7 @@
 - [x] CDN cache headers on hot APIs via middleware (5s–1h)
 - [x] About Us page with full site guide for all pages
 - [x] SEO fixes (metadata, sitemap, robots, OG image)
+- [x] Live token logo resolution with letter-avatar fallbacks across claims, rewards, builders, and token pages
 - [x] Official X account [@officialWALLrh](https://x.com/officialWALLrh) featured on Team page
 
 ---
@@ -140,7 +145,6 @@
 
 ### Mobile
 - [ ] Native mobile app (React Native)
-- [ ] Biometric auth
 - [ ] Push notifications
 - [ ] Deep linking for token/builder share
 
@@ -159,7 +163,6 @@
 
 ## Tech Debt & Improvements
 
-- [ ] Add ESLint configuration
 - [ ] Add unit & integration tests
 - [ ] Optimize API response caching (Redis / ISR)
 - [ ] Add error monitoring (Sentry)

@@ -8,7 +8,7 @@ import {
   ArrowLeft, ExternalLink, Globe, Bird, MessageCircle,
   Send, RefreshCw, TrendingUp, Activity,
   Droplets, BarChart3, Clock, Layers, Copy, Check,
-  Shield, Zap, User,
+  Shield, Zap, User, Radio,
 } from "lucide-react";
 
 interface TokenPair {
@@ -58,6 +58,17 @@ interface DevInfo {
   name: string | null;
 }
 
+interface TransferItem {
+  txHash: string | null;
+  timestamp: string;
+  method: string | null;
+  type: string;
+  value: number;
+  from: { hash: string; name: string | null; isContract: boolean };
+  to: { hash: string; name: string | null; isContract: boolean };
+  symbol: string | null;
+}
+
 function formatCompact(n: number): string {
   if (n >= 1e9) return `${(n / 1e9).toFixed(1)}B`;
   if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
@@ -82,6 +93,19 @@ function timeAgo(ts: number): string {
   if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
   if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
   return `${Math.floor(diff / 86400000)}d ago`;
+}
+
+function shortAddr(hash: string): string {
+  if (!hash) return "?";
+  return `${hash.slice(0, 6)}...${hash.slice(-4)}`;
+}
+
+function formatAmount(n: number): string {
+  if (n >= 1e9) return `${(n / 1e9).toFixed(2)}B`;
+  if (n >= 1e6) return `${(n / 1e6).toFixed(2)}M`;
+  if (n >= 1e3) return `${(n / 1e3).toFixed(1)}K`;
+  if (n >= 1) return n.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  return n.toString();
 }
 
 function formatSupply(val: string | null): string {
@@ -117,10 +141,25 @@ export default function TokenProfilePage() {
   const address = params.address as string;
   const [profile, setProfile] = useState<TokenProfile | null>(null);
   const [dev, setDev] = useState<DevInfo | null>(null);
+  const [transfers, setTransfers] = useState<TransferItem[]>([]);
+  const [transfersLoading, setTransfersLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const [selectedPair, setSelectedPair] = useState(0);
+  const [imgFailed, setImgFailed] = useState(false);
+
+  const fetchTransfers = useCallback(async () => {
+    if (!address) return;
+    try {
+      const res = await fetch(`/api/token-transfers/${address}`);
+      if (res.ok) {
+        const data = await res.json();
+        setTransfers(data.transfers || []);
+      }
+    } catch {}
+    setTransfersLoading(false);
+  }, [address]);
 
   const fetchDev = useCallback(async () => {
     if (!address) return;
@@ -151,8 +190,12 @@ export default function TokenProfilePage() {
 
   useEffect(() => {
     setLoading(true);
+    setImgFailed(false);
     fetchProfile();
-  }, [fetchProfile]);
+    fetchTransfers();
+    const interval = setInterval(fetchTransfers, 10000);
+    return () => clearInterval(interval);
+  }, [fetchProfile, fetchTransfers]);
 
   const copyAddress = () => {
     navigator.clipboard.writeText(address);
@@ -200,12 +243,13 @@ export default function TokenProfilePage() {
             <div className="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/8 via-transparent to-transparent pointer-events-none" />
             <div className="relative p-6">
               <div className="flex flex-col sm:flex-row items-start gap-5">
-                {profile.imageUrl ? (
+                {profile.imageUrl && !imgFailed ? (
                   <Image
                     src={profile.imageUrl}
                     alt={profile.symbol}
                     width={80}
                     height={80}
+                    onError={() => setImgFailed(true)}
                     className="w-20 h-20 rounded-2xl flex-shrink-0 border-2 border-[var(--accent)]/20 shadow-lg shadow-[var(--accent)]/5"
                   />
                 ) : (
@@ -430,6 +474,87 @@ export default function TokenProfilePage() {
                 <div className="text-sm font-mono font-bold">{profile.onChain.tokenType || "ERC-20"}</div>
               </div>
             </div>
+          </div>
+
+          {/* Live Transactions */}
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl overflow-hidden">
+            <div className="section-header">
+              <div className="section-title">
+                <Radio size={14} className="text-[var(--accent)]" />
+                Live Transactions
+                <span className="flex items-center gap-1.5 ml-2 px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-[9px] font-bold text-red-400 uppercase tracking-wider">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                  Live
+                </span>
+              </div>
+              <button
+                onClick={fetchTransfers}
+                className="flex items-center gap-1.5 text-[10px] text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
+              >
+                <RefreshCw size={10} className={transfersLoading ? "animate-spin" : ""} />
+                Refresh
+              </button>
+            </div>
+            {transfersLoading ? (
+              <div className="space-y-2 p-4">
+                {[0, 1, 2, 3].map((i) => (
+                  <div key={i} className="h-11 rounded-xl animate-shimmer" style={{ background: "var(--bg-card-hover)" }} />
+                ))}
+              </div>
+            ) : transfers.length === 0 ? (
+              <div className="px-5 py-8 text-center text-xs text-[var(--text-muted)]">
+                No recent transfers for this token
+              </div>
+            ) : (
+              <div className="divide-y divide-[var(--border)] max-h-96 overflow-y-auto">
+                {transfers.map((t, i) => {
+                  const fromName = t.from.isContract ? (t.from.name || "Contract") : null;
+                  const toName = t.to.isContract ? (t.to.name || "Contract") : null;
+                  return (
+                    <div key={i} className="px-5 py-3 flex items-center gap-3">
+                      <div className="flex flex-col items-center gap-0.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+                        <span className="text-[9px] font-mono text-[var(--text-muted)]">{timeAgo(new Date(t.timestamp).getTime())}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[10px] font-mono text-[var(--text-muted)]">
+                            {fromName || shortAddr(t.from.hash)}
+                          </span>
+                          <ArrowLeft size={10} className="text-[var(--accent)] rotate-180 flex-shrink-0" />
+                          <span className="text-[10px] font-mono text-[var(--text-muted)]">
+                            {toName || shortAddr(t.to.hash)}
+                          </span>
+                          {t.method && (
+                            <span className="px-1.5 py-0.5 rounded bg-[var(--bg-card)] border border-[var(--border)] text-[9px] font-mono text-[var(--text-muted)]">
+                              {t.method}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[10px] text-[var(--text-muted)] mt-0.5">
+                          {t.type.replace(/_/g, " ")} {t.symbol ? `· ${t.symbol}` : ""}
+                        </div>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <div className="text-sm font-mono font-bold text-[var(--accent)]">
+                          {formatAmount(t.value)}
+                        </div>
+                        {t.txHash && (
+                          <a
+                            href={`https://robinhoodchain.blockscout.com/tx/${t.txHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[9px] font-mono text-[var(--text-muted)] hover:text-[var(--accent)]"
+                          >
+                            {shortAddr(t.txHash)}
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Developer */}

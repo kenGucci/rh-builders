@@ -6,7 +6,7 @@ import { useAccount, useBalance } from "wagmi";
 import { formatUnits } from "viem";
 import {
   Wallet, Coins, TrendingUp, ArrowUpRight, RefreshCw,
-  BadgeCheck, ExternalLink, Link2, Copy, Check, Clock,
+  ExternalLink, Link2, Copy, Check, Clock,
 } from "lucide-react";
 import ConnectWalletButton from "@/components/ConnectWalletButton";
 import AddressAvatar from "@/components/AddressAvatar";
@@ -55,20 +55,6 @@ interface ProfileData {
   updatedAt: string;
 }
 
-interface XUser {
-  id: string;
-  name?: string;
-  x_handle?: string;
-  email?: string;
-  provider?: string;
-}
-
-const X_BRAND = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-  </svg>
-);
-
 function fmtEth(n: number): string {
   if (n >= 1000) return `${n.toLocaleString(undefined, { maximumFractionDigits: 2 })} ETH`;
   if (n >= 1) return `${n.toLocaleString(undefined, { maximumFractionDigits: 3 })} ETH`;
@@ -108,7 +94,6 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [xUser, setXUser] = useState<XUser | null>(null);
   const [copied, setCopied] = useState(false);
 
   const fetchProfile = useCallback(async () => {
@@ -126,15 +111,6 @@ export default function ProfilePage() {
     }
   }, [address]);
 
-  const fetchMe = useCallback(async () => {
-    try {
-      const res = await fetch("/api/auth/me");
-      if (!res.ok) return;
-      const data = await res.json();
-      setXUser(data.user || null);
-    } catch {}
-  }, []);
-
   useEffect(() => {
     setLoading(true);
     setProfile(null);
@@ -142,12 +118,6 @@ export default function ProfilePage() {
     const interval = setInterval(fetchProfile, 20000);
     return () => clearInterval(interval);
   }, [fetchProfile]);
-
-  useEffect(() => {
-    fetchMe();
-    const interval = setInterval(fetchMe, 60000);
-    return () => clearInterval(interval);
-  }, [fetchMe]);
 
   const handleCopy = async () => {
     if (!address) return;
@@ -173,8 +143,8 @@ export default function ProfilePage() {
           <div>
             <h1 className="text-xl font-semibold mb-1">Your Profile</h1>
             <p className="text-sm text-[var(--text-muted)] max-w-sm mx-auto leading-relaxed">
-              Connect your wallet to see your stock token holdings, their value in ETH, your
-              live buy &amp; sell history, and your connected X identity.
+              Connect your wallet to see your stock token holdings, their value in ETH, and
+              your live buy &amp; sell history.
             </p>
           </div>
           <ConnectWalletButton />
@@ -187,23 +157,12 @@ export default function ProfilePage() {
     <div className="max-w-5xl mx-auto space-y-6 fade-in">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-5 bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6">
-        <AddressAvatar address={address} size={72} className="rounded-2xl" handle={xUser?.x_handle} />
+        <AddressAvatar address={address} size={72} className="rounded-2xl" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-lg font-bold truncate">
-              {xUser?.name || shortAddr(address)}
+              {shortAddr(address)}
             </h1>
-            {xUser?.x_handle && (
-              <a
-                href={`https://x.com/${xUser.x_handle}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--accent)]/10 text-[var(--accent)] text-[10px] font-semibold border border-[var(--accent)]/20 hover:bg-[var(--accent)]/20 transition-colors"
-              >
-                {X_BRAND}
-                @{xUser.x_handle}
-              </a>
-            )}
           </div>
           <div className="flex items-center gap-2 mt-1.5 text-xs font-mono text-[var(--text-muted)]">
             <span>{shortAddr(address)}</span>
@@ -229,34 +188,6 @@ export default function ProfilePage() {
             Live portfolio · Robinhood Chain (4663)
           </div>
         </div>
-
-        {/* X identity */}
-        {xUser?.x_handle ? (
-          <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl px-4 py-3 text-right">
-            <div className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1 flex items-center justify-end gap-1">
-              <BadgeCheck size={11} className="text-[var(--accent)]" />
-              Connected X
-            </div>
-            <a
-              href={`https://x.com/${xUser.x_handle}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm font-semibold text-[var(--accent)] hover:underline flex items-center justify-end gap-1.5"
-            >
-              {X_BRAND}
-              @{xUser.x_handle}
-            </a>
-            <div className="text-[10px] text-[var(--text-muted)] mt-0.5">{xUser.name}</div>
-          </div>
-        ) : (
-          <a
-            href="/api/auth/x?from=/profile"
-            className="flex items-center gap-2 px-4 py-3 rounded-xl bg-black border border-[var(--border)] text-xs font-semibold text-white hover:border-white/40 transition-all"
-          >
-            {X_BRAND}
-            Connect X
-          </a>
-        )}
       </div>
 
       {/* Stats */}
