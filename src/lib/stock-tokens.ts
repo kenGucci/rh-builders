@@ -106,6 +106,9 @@ export const STOCK_TOKENS: StockToken[] = [
   { symbol: "SNDK", name: "Sandisk Corporation", sector: "Technology", chain: "Robinhood Chain", multiplier: 1.0, backed: true, custodian: "Robinhood Custody", tokenAddress: "0xB90A19fF0Af67f7779afF50A882A9CfF42446400", apy: 0, tvl: 1000000 },
   { symbol: "NU", name: "Nu Holdings", sector: "Financial", chain: "Robinhood Chain", multiplier: 1.0, backed: true, custodian: "Robinhood Custody", tokenAddress: "0x408c14038a04f7bD235329E26d2bf569ee20e250", apy: 0, tvl: 800000 },
   { symbol: "USAR", name: "USA Rare Earth", sector: "Basic Materials", chain: "Robinhood Chain", multiplier: 1.0, backed: true, custodian: "Robinhood Custody", tokenAddress: "0xd917B029C761D264c6A312BBbcDA868658eF86a6", apy: 0, tvl: 600000 },
+  { symbol: "P", name: "Everpure", sector: "Industrials", chain: "Robinhood Chain", multiplier: 1.0, backed: true, custodian: "Robinhood Custody", tokenAddress: "0x1Cdad396DB64BDa184d5182A97Dd9B3C62100b7D", apy: 0, tvl: 0 },
+  { symbol: "SPCX", name: "Space Exploration Technologies", sector: "Industrials", chain: "Robinhood Chain", multiplier: 1.0, backed: true, custodian: "Robinhood Custody", tokenAddress: "0x4a0E65A3EcceC6dBe60AE065F2e7bb85Fae35eEa", apy: 0, tvl: 0 },
+  { symbol: "SKHY", name: "SK hynix", sector: "Technology", chain: "Robinhood Chain", multiplier: 1.0, backed: true, custodian: "Robinhood Custody", tokenAddress: "0x84CAb63bc87912E71ad199ff14A0bA45de68FeF8", apy: 0, tvl: 0 },
 ];
 
 const LOGO_OVERRIDES: Record<string, string> = {
@@ -122,7 +125,7 @@ export function stockLogoUrl(symbol: string): string {
 
 export function liveStockLogoUrl(token: Pick<StockToken, "symbol" | "tokenAddress">): string {
   const s = token.symbol.toUpperCase();
-  return LOGO_OVERRIDES[s] || `https://cdn.robinhood.com/ncw_assets/logos/${token.tokenAddress.toLowerCase()}.png`;
+  return `https://financialmodelingprep.com/image-stock/${s}.png`;
 }
 
 export const STOCK_TOKEN_MAP: Record<string, StockToken> = Object.fromEntries(

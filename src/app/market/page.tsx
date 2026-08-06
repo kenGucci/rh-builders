@@ -1920,7 +1920,7 @@ function TxnsFeed({ txns, loading }: { txns: LiveTxn[]; loading: boolean }) {
         return (
           <a
             key={`${tx.address}-${i}`}
-            href={tx.url || `https://dexscreener.com/robinhood/${tx.address}`}
+            href={tx.url || `https://robinhoodchain.blockscout.com/token/${tx.address}`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-[var(--bg-card-hover)] transition-colors group"

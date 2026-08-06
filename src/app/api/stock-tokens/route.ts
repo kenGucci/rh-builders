@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { STOCK_TOKENS, liveStockLogoUrl } from "@/lib/stock-tokens";
+import { STOCK_TOKENS, liveStockLogoUrl, type StockToken } from "@/lib/stock-tokens";
 import { getCompanyProfile } from "@/lib/company-profiles";
 import { v2Fetch } from "@/lib/blockscout";
+import { getRhjAssets, assetToStockToken } from "@/lib/rhj";
 
 const CHAIN_INFO = {
   name: "Robinhood Chain",
@@ -18,6 +19,20 @@ interface LiveTokenData {
   totalSupply: string;
 }
 
+async function getAllStockTokens(): Promise<StockToken[]> {
+  const known = new Set(STOCK_TOKENS.map((t) => t.symbol.toUpperCase()));
+  const extras: StockToken[] = [];
+  try {
+    const assets = await getRhjAssets();
+    for (const a of assets) {
+      const sym = a.tokenSymbol.toUpperCase();
+      if (known.has(sym)) continue;
+      extras.push(assetToStockToken(a));
+    }
+  } catch {}
+  return [...STOCK_TOKENS, ...extras];
+}
+
 let liveCache: { tokens: Record<string, LiveTokenData>; ts: number } | null = null;
 const LIVE_CACHE_TTL = 5 * 60_000;
 
@@ -25,13 +40,14 @@ async function loadLiveData(): Promise<Record<string, LiveTokenData>> {
   if (liveCache && Date.now() - liveCache.ts < LIVE_CACHE_TTL) {
     return liveCache.tokens;
   }
-  const addresses = STOCK_TOKENS.map((t) => t.tokenAddress.toLowerCase());
+  const allTokens = await getAllStockTokens();
+  const addresses = allTokens.map((t) => t.tokenAddress.toLowerCase());
   const results = await Promise.allSettled(
     addresses.map((addr) => v2Fetch(`/tokens/${addr}`, 120_000))
   );
   const map: Record<string, LiveTokenData> = {};
   results.forEach((res, i) => {
-    const token = STOCK_TOKENS[i];
+    const token = allTokens[i];
     if (res.status !== "fulfilled") return;
     const d = res.value as Record<string, unknown>;
     if (!d || !d.address_hash) return;
@@ -39,7 +55,7 @@ async function loadLiveData(): Promise<Record<string, LiveTokenData>> {
     const marketCap = Number(d.circulating_market_cap || 0);
     map[token.tokenAddress.toLowerCase()] = {
       tvl: Number.isFinite(marketCap) ? marketCap : 0,
-      logo: typeof d.icon_url === "string" && d.icon_url ? d.icon_url : liveStockLogoUrl(token),
+      logo: liveStockLogoUrl(token),
       price: Number.isFinite(price) ? price : 0,
       holders: Number(d.holders_count || 0),
       totalSupply: String(d.total_supply || ""),
@@ -49,7 +65,7 @@ async function loadLiveData(): Promise<Record<string, LiveTokenData>> {
   return map;
 }
 
-function withProfile(token: (typeof STOCK_TOKENS)[number], live?: LiveTokenData) {
+function withProfile(token: StockToken, live?: LiveTokenData) {
   const logo = live?.logo || liveStockLogoUrl(token);
   return {
     ...token,
@@ -68,20 +84,21 @@ export async function GET(request: NextRequest) {
   const symbol = request.nextUrl.searchParams.get("symbol");
 
   try {
+    const allTokens = await getAllStockTokens();
     const live = await loadLiveData();
 
     if (action === "detail" && symbol) {
-      const token = STOCK_TOKENS.find((t) => t.symbol === symbol.toUpperCase());
+      const token = allTokens.find((t) => t.symbol === symbol.toUpperCase());
       if (!token) return NextResponse.json({ error: "Token not found" }, { status: 404 });
       return NextResponse.json({ token: withProfile(token, live[token.tokenAddress.toLowerCase()]), chain: CHAIN_INFO }, { headers: { "Cache-Control": "s-maxage=60, stale-while-revalidate=120" } });
     }
 
-    let tokens = [...STOCK_TOKENS];
+    let tokens = [...allTokens];
     if (sector && sector !== "all") {
       tokens = tokens.filter((t) => t.sector.toLowerCase() === sector.toLowerCase());
     }
 
-    const sectors = [...new Set(STOCK_TOKENS.map((t) => t.sector))];
+    const sectors = [...new Set(allTokens.map((t) => t.sector))];
     const totalTvl = tokens.reduce((sum, t) => sum + (live[t.tokenAddress.toLowerCase()]?.tvl ?? 0), 0);
 
     return NextResponse.json({
@@ -89,7 +106,7 @@ export async function GET(request: NextRequest) {
       sectors,
       chain: CHAIN_INFO,
       summary: {
-        totalTokens: STOCK_TOKENS.length,
+        totalTokens: allTokens.length,
         totalTvl,
         sectors: sectors.length,
       },

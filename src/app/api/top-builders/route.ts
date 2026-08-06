@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import builders from "@/lib/builders.json";
-import { fetchBuilderOnchainStats } from "@/lib/onchain-stats";
+import { discoverAllBuilders, discoverBuilderCount } from "@/lib/discover-builders";
+import { fetchBuilderOnchainStats, type BuilderOnchainStats } from "@/lib/onchain-stats";
+
+export const maxDuration = 60;
 
 interface BuilderLight {
   address: string;
@@ -20,7 +22,7 @@ interface BuilderLight {
   activeMinsAgo: number | null;
 }
 
-const statsCache = new Map<string, { data: BuilderLight[]; ts: number }>();
+const statsCache = new Map<string, { data: BuilderLight[]; total: number; ts: number }>();
 const CACHE_TTL = 60_000;
 
 function activeMinsAgo(lastTxTimestamp: string | null): number | null {
@@ -30,6 +32,35 @@ function activeMinsAgo(lastTxTimestamp: string | null): number | null {
   return Math.max(0, Math.floor((Date.now() - t) / 60_000));
 }
 
+function toLight(b: {
+  address: string;
+  name: string;
+  twitter: string;
+  description: string;
+  tags: string[];
+  category: string;
+  website: string;
+}, stats: BuilderOnchainStats | null): BuilderLight {
+  const mins = stats ? activeMinsAgo(stats.lastTxTimestamp) : null;
+  return {
+    address: b.address,
+    name: b.name,
+    handle: b.twitter || null,
+    description: b.description || "",
+    tags: b.tags || [],
+    category: b.category || "",
+    website: b.website || "",
+    balanceEth: stats?.balanceEth || "0",
+    balanceUsd: stats?.balanceUsd || "$0",
+    txCount: stats?.txCount || 0,
+    tokenTransfers: stats?.tokenTransfers || 0,
+    isContract: stats?.isContract || false,
+    lastTxTimestamp: stats?.lastTxTimestamp || null,
+    isActive: mins !== null && mins < 24 * 60,
+    activeMinsAgo: mins,
+  };
+}
+
 export async function GET(request: NextRequest) {
   const limit = Math.min(parseInt(request.nextUrl.searchParams.get("limit") || "20"), 50);
   const offset = parseInt(request.nextUrl.searchParams.get("offset") || "0");
@@ -37,36 +68,18 @@ export async function GET(request: NextRequest) {
   const cacheKey = `builders-${limit}-${offset}`;
   const cached = statsCache.get(cacheKey);
   if (cached && Date.now() - cached.ts < CACHE_TTL) {
-    return NextResponse.json({ builders: cached.data, cached: true });
+    return NextResponse.json({ builders: cached.data, total: cached.total, cached: true });
   }
 
-  const onChainBuilders = builders.builders.filter(
-    (b) => b.address && b.address.trim() !== "" && b.address.startsWith("0x")
-  );
+  const discovered = await discoverAllBuilders({ limit: Math.min(offset + limit, 100) });
+  const total = await discoverBuilderCount();
 
-  const batch = onChainBuilders.slice(offset, offset + limit);
+  const batch = discovered.slice(offset, offset + limit);
 
   const results = await Promise.allSettled(
     batch.map(async (b) => {
-      const stats = await fetchBuilderOnchainStats(b.address);
-      const mins = stats ? activeMinsAgo(stats.lastTxTimestamp) : null;
-      return {
-        address: b.address,
-        name: b.name,
-        handle: b.twitter || null,
-        description: b.description || "",
-        tags: b.tags || [],
-        category: b.category || "",
-        website: b.website || "",
-        balanceEth: stats?.balanceEth || "0",
-        balanceUsd: stats?.balanceUsd || "$0",
-        txCount: stats?.txCount || 0,
-        tokenTransfers: stats?.tokenTransfers || 0,
-        isContract: stats?.isContract || false,
-        lastTxTimestamp: stats?.lastTxTimestamp || null,
-        isActive: mins !== null && mins < 24 * 60,
-        activeMinsAgo: mins,
-      } satisfies BuilderLight;
+      const stats = b.stat ?? (await fetchBuilderOnchainStats(b.address));
+      return toLight(b, stats);
     })
   );
 
@@ -80,11 +93,11 @@ export async function GET(request: NextRequest) {
       return b.txCount - a.txCount;
     });
 
-  statsCache.set(cacheKey, { data: builderResults, ts: Date.now() });
+  statsCache.set(cacheKey, { data: builderResults, total, ts: Date.now() });
 
   return NextResponse.json({
     builders: builderResults,
-    total: onChainBuilders.length,
+    total,
     cached: false,
   });
 }

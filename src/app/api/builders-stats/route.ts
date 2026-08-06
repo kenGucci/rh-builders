@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
-import builders from "@/lib/builders.json";
-import { fetchBuilderOnchainStats } from "@/lib/onchain-stats";
+import { discoverAllBuilders } from "@/lib/discover-builders";
+import { fetchBuilderOnchainStats, type BuilderOnchainStats } from "@/lib/onchain-stats";
+
+export const maxDuration = 60;
 
 interface BuilderStats {
   address: string;
@@ -20,8 +22,11 @@ interface BuilderStats {
 let cache: { data: Record<string, BuilderStats>; timestamp: number } | null = null;
 const CACHE_TTL = 60000;
 
-async function fetchBuilderStats(address: string): Promise<BuilderStats | null> {
-  const stats = await fetchBuilderOnchainStats(address);
+async function fetchBuilderStats(
+  address: string,
+  existing?: BuilderOnchainStats | null
+): Promise<BuilderStats | null> {
+  const stats = existing ?? (await fetchBuilderOnchainStats(address));
   if (!stats) return null;
 
   return {
@@ -45,9 +50,10 @@ export async function GET() {
     return NextResponse.json({ stats: cache.data });
   }
 
-  const validBuilders = builders.builders.filter((b) => b.address && /^0x[a-fA-F0-9]{40}$/.test(b.address));
+  const builders = await discoverAllBuilders({ limit: 100 });
+
   const results = await Promise.allSettled(
-    validBuilders.map((b) => fetchBuilderStats(b.address))
+    builders.map((b) => fetchBuilderStats(b.address, b.stat))
   );
 
   const statsMap: Record<string, BuilderStats> = {};

@@ -779,16 +779,6 @@ export default function BuilderProfileClient() {
                     >
                       Blockscout <ExternalLink size={8} />
                     </a>
-                    {token.dex?.url && (
-                      <a
-                        href={token.dex.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[10px] text-purple-400 hover:underline flex items-center gap-0.5"
-                      >
-                        DexScreener <ExternalLink size={8} />
-                      </a>
-                    )}
                     <a
                       href={`/builder/${address}?ca=${token.address}`}
                       className="text-[10px] text-[var(--accent)] hover:underline"

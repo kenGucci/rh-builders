@@ -1,4 +1,3 @@
-const DEXSCREENER_API = "https://api.dexscreener.com";
 const BLOCKSCOUT_V2 = "https://robinhoodchain.blockscout.com/api/v2";
 
 export interface DexPair {
@@ -62,6 +61,41 @@ export interface MappedToken {
     socials?: Array<{ url: string; type: string }>;
 }
 
+interface BlockscoutToken {
+  address_hash: string;
+  name: string;
+  symbol: string;
+  exchange_rate: string;
+  circulating_market_cap: string;
+  holders_count: string;
+  icon_url: string | null;
+  volume_24h: string;
+  decimals: string;
+  total_supply: string;
+}
+
+function blockscoutTokenToPair(t: BlockscoutToken): DexPair {
+  const addr = t.address_hash || "";
+  return {
+    chainId: "robinhood",
+    dexId: "blockscout",
+    pairAddress: "",
+    url: `https://robinhoodchain.blockscout.com/token/${addr}`,
+    baseToken: { address: addr, name: t.name || "Unknown", symbol: t.symbol || "???" },
+    quoteToken: { address: "", name: "USD", symbol: "USD" },
+    priceNative: "0",
+    priceUsd: t.exchange_rate || "0",
+    txns: { m5: { buys: 0, sells: 0 }, h1: { buys: 0, sells: 0 }, h6: { buys: 0, sells: 0 }, h24: { buys: 0, sells: 0 } },
+    volume: { h24: Number(t.volume_24h) || 0, h6: 0, h1: 0, m5: 0 },
+    priceChange: { m5: 0, h1: 0, h6: 0, h24: 0 },
+    liquidity: { usd: 0, base: 0, quote: 0 },
+    fdv: Number(t.circulating_market_cap) || 0,
+    marketCap: Number(t.circulating_market_cap) || 0,
+    pairCreatedAt: 0,
+    info: { imageUrl: t.icon_url || undefined, websites: [], socials: [] },
+  };
+}
+
 export function mapPair(pair: DexPair): MappedToken {
   return {
     name: pair.baseToken?.name || "Unknown",
@@ -104,112 +138,36 @@ interface CacheEntry {
 }
 
 let cachePromise: Promise<CacheEntry> | null = null;
-const CACHE_TTL = 20_000;
+const CACHE_TTL = 30_000;
 
-async function fetchBlockscoutTokens(): Promise<string[]> {
+async function fetchBlockscoutTokenItems(limit = 200): Promise<BlockscoutToken[]> {
   try {
     const res = await fetch(
-      `${BLOCKSCOUT_V2}/tokens?sort=holders_count&order=desc&limit=200`,
-      { signal: AbortSignal.timeout(8000) }
+      `${BLOCKSCOUT_V2}/tokens?type=ERC-20&sort=holders_count&order=desc&limit=${limit}`,
+      { signal: AbortSignal.timeout(12000) }
     );
     if (!res.ok) return [];
     const data = await res.json();
-    return (data.items || [])
-      .filter((t: Record<string, unknown>) => t.address_hash && t.token_type === "ERC-20")
-      .map((t: Record<string, unknown>) => t.address_hash as string);
-  } catch {
-    return [];
-  }
-}
-
-async function fetchDexScreenerSearch(): Promise<DexPair[]> {
-  const terms = ["robinhood", "hood", "robin", "rh chain"];
-  const results = await Promise.allSettled(
-    terms.map(async (term) => {
-      const res = await fetch(`${DEXSCREENER_API}/latest/dex/search?q=${term}`, {
-        signal: AbortSignal.timeout(6000),
-      });
-      if (!res.ok) return [];
-      const data = await res.json();
-      return (data.pairs || []).filter(
-        (p: DexPair) => p.chainId === "robinhood" && p.baseToken?.address
-      );
-    })
-  );
-
-  const pairs: DexPair[] = [];
-  for (const r of results) {
-    if (r.status === "fulfilled") pairs.push(...r.value);
-  }
-  return pairs;
-}
-
-async function fetchDexScreenerBatch(addresses: string[]): Promise<DexPair[]> {
-  if (addresses.length === 0) return [];
-  try {
-    const res = await fetch(`${DEXSCREENER_API}/latest/dex/tokens/${addresses.join(",")}`, {
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!res.ok) return [];
-    const data = await res.json();
-    if (!data) return [];
-    return (data.pairs || []).filter((p: DexPair) => p.chainId === "robinhood");
+    return (data.items || []).filter(
+      (t: Record<string, unknown>) => t.address_hash && t.token_type === "ERC-20"
+    ) as BlockscoutToken[];
   } catch {
     return [];
   }
 }
 
 async function discoverAll(): Promise<CacheEntry> {
-  // Fetch Blockscout tokens and DexScreener search results in parallel
-  const [blockscoutAddrs, searchPairs] = await Promise.all([
-    fetchBlockscoutTokens(),
-    fetchDexScreenerSearch(),
-  ]);
+  const items = await fetchBlockscoutTokenItems();
 
-  // Merge all unique addresses
-  const addressSet = new Set<string>(blockscoutAddrs);
-  for (const p of searchPairs) {
-    if (p.baseToken?.address) addressSet.add(p.baseToken.address);
-  }
-
-  // Also add addresses from search pairs directly
-  const allPairs: DexPair[] = [...searchPairs];
-  const seenPairs = new Set<string>(searchPairs.map((p) => p.pairAddress));
-
-  // Batch-fetch DexScreener data for all addresses (parallel batches of 30)
-  const addresses = Array.from(addressSet);
-  const batches: string[][] = [];
-  for (let i = 0; i < addresses.length; i += 30) {
-    batches.push(addresses.slice(i, i + 30));
-  }
-
-  const batchResults = await Promise.allSettled(
-    batches.map((batch) => fetchDexScreenerBatch(batch))
-  );
-
-  for (const result of batchResults) {
-    if (result.status === "fulfilled") {
-      for (const pair of result.value) {
-        if (!seenPairs.has(pair.pairAddress)) {
-          seenPairs.add(pair.pairAddress);
-          allPairs.push(pair);
-        }
-      }
-    }
-  }
-
-  // Deduplicate: keep best pair per token (highest liquidity)
+  const pairs: DexPair[] = items.map(blockscoutTokenToPair);
   const bestPerToken = new Map<string, DexPair>();
-  for (const pair of allPairs) {
+  for (const pair of pairs) {
     const addr = pair.baseToken?.address;
     if (!addr) continue;
-    const existing = bestPerToken.get(addr);
-    if (!existing || (pair.liquidity?.usd || 0) > (existing.liquidity?.usd || 0)) {
-      bestPerToken.set(addr, pair);
-    }
+    if (!bestPerToken.has(addr)) bestPerToken.set(addr, pair);
   }
 
-  return { pairs: allPairs, bestPerToken, ts: Date.now() };
+  return { pairs, bestPerToken, ts: Date.now() };
 }
 
 export async function getRobinhoodTokens(): Promise<CacheEntry> {
@@ -252,138 +210,80 @@ export async function getLatestBlock(): Promise<number> {
   }
 }
 
+function tokenToMapped(t: BlockscoutToken): MappedToken {
+  const addr = t.address_hash || "";
+  return {
+    name: t.name || "Unknown",
+    symbol: t.symbol || "???",
+    address: addr,
+    priceUsd: t.exchange_rate || "0",
+    priceNative: "0",
+    marketCap: Number(t.circulating_market_cap) || 0,
+    fdv: Number(t.circulating_market_cap) || 0,
+    liquidityUsd: 0,
+    volume24h: Number(t.volume_24h) || 0,
+    volume6h: 0,
+    volume1h: 0,
+    volumeM5: 0,
+    priceChange24h: 0,
+    priceChange1h: 0,
+    priceChange6h: 0,
+    priceChangeM5: 0,
+    buys24h: 0,
+    sells24h: 0,
+    buys1h: 0,
+    sells1h: 0,
+    buysM5: 0,
+    sellsM5: 0,
+    dex: "blockscout",
+    pairAddress: "",
+    url: `https://robinhoodchain.blockscout.com/token/${addr}`,
+    imageUrl: t.icon_url || null,
+    pairCreatedAt: 0,
+    quoteSymbol: "WETH",
+    websites: [],
+    socials: [],
+  };
+}
+
 export async function searchTokens(query: string): Promise<MappedToken[]> {
-  const isAddress = /^0x[a-fA-F0-9]{40}$/.test(query);
+  const q = query.trim();
+  const isAddress = /^0x[a-fA-F0-9]{40}$/.test(q);
 
   if (isAddress) {
-    // Parallel: DexScreener + Blockscout
-    const [dexRes, bsRes] = await Promise.allSettled([
-      fetch(`${DEXSCREENER_API}/latest/dex/tokens/${query.toLowerCase()}`, {
-        signal: AbortSignal.timeout(6000),
-      }).then((r) => r.ok ? r.json() : null),
-      fetch(`${BLOCKSCOUT_V2}/tokens/${query.toLowerCase()}`, {
-        signal: AbortSignal.timeout(6000),
-      }).then((r) => r.ok ? r.json() : null),
-    ]);
+    const res = await fetch(`${BLOCKSCOUT_V2}/tokens/${q.toLowerCase()}`, {
+      signal: AbortSignal.timeout(6000),
+    });
+    if (!res.ok) return [];
+    const t = (await res.json()) as BlockscoutToken;
+    if (!t || !t.address_hash) return [];
+    return [tokenToMapped(t)];
+  }
 
+  // Symbol/name search via Blockscout
+  try {
+    const res = await fetch(
+      `${BLOCKSCOUT_V2}/tokens?q=${encodeURIComponent(q)}&type=ERC-20`,
+      { signal: AbortSignal.timeout(6000) }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
     const results: MappedToken[] = [];
-
-    if (dexRes.status === "fulfilled" && dexRes.value) {
-      results.push(
-        ...(dexRes.value.pairs || [])
-          .filter((p: DexPair) => p.chainId === "robinhood")
-          .map(mapPair)
-      );
+    const seen = new Set<string>();
+    for (const t of (data.items || []) as BlockscoutToken[]) {
+      if (seen.has(t.address_hash)) continue;
+      seen.add(t.address_hash);
+      results.push(tokenToMapped(t));
     }
-
-    if (results.length === 0 && bsRes.status === "fulfilled" && bsRes.value) {
-      const t = bsRes.value;
-      results.push({
-        name: t.name || "Unknown",
-        symbol: t.symbol || "???",
-        address: t.address || query.toLowerCase(),
-        priceUsd: t.exchange_rate || "0",
-        priceNative: "0",
-        marketCap: t.market_cap || 0,
-        fdv: t.fdv || 0,
-        liquidityUsd: 0,
-        volume24h: 0,
-        volume6h: 0,
-        volume1h: 0,
-        volumeM5: 0,
-        priceChange24h: 0,
-        priceChange1h: 0,
-        priceChange6h: 0,
-        priceChangeM5: 0,
-        buys24h: 0,
-        sells24h: 0,
-        buys1h: 0,
-        sells1h: 0,
-        buysM5: 0,
-        sellsM5: 0,
-        dex: "blockscout",
-        pairAddress: "",
-        url: `https://robinhoodchain.blockscout.com/token/${query.toLowerCase()}`,
-        imageUrl: t.icon_url || null,
-        pairCreatedAt: 0,
-        quoteSymbol: "WETH",
-        websites: [],
-        socials: [],
-      });
-    }
-
-    return results;
+    // Sort: market cap first, then volume
+    results.sort((a, b) => {
+      if (a.marketCap > 0 && b.marketCap > 0) return b.marketCap - a.marketCap;
+      if (a.marketCap > 0) return -1;
+      if (b.marketCap > 0) return 1;
+      return b.volume24h - a.volume24h;
+    });
+    return results.slice(0, 20);
+  } catch {
+    return [];
   }
-
-  // Symbol/name search: parallel DexScreener + Blockscout
-  const [dexRes, bsRes] = await Promise.allSettled([
-    fetch(`${DEXSCREENER_API}/latest/dex/search?q=${encodeURIComponent(query)}`, {
-      signal: AbortSignal.timeout(6000),
-    }).then((r) => r.ok ? r.json() : null),
-    fetch(`${BLOCKSCOUT_V2}/tokens?q=${encodeURIComponent(query)}&type=ERC-20`, {
-      signal: AbortSignal.timeout(6000),
-    }).then((r) => r.ok ? r.json() : null),
-  ]);
-
-  const results: MappedToken[] = [];
-  const seen = new Set<string>();
-
-  if (dexRes.status === "fulfilled" && dexRes.value) {
-    for (const pair of dexRes.value.pairs || []) {
-      if (pair.chainId !== "robinhood") continue;
-      const addr = pair.baseToken?.address;
-      if (!addr || seen.has(addr)) continue;
-      seen.add(addr);
-      results.push(mapPair(pair));
-    }
-  }
-
-  if (bsRes.status === "fulfilled" && bsRes.value) {
-    for (const t of bsRes.value.items || []) {
-      if (seen.has(t.address)) continue;
-      seen.add(t.address);
-      results.push({
-        name: t.name || "Unknown",
-        symbol: t.symbol || "???",
-        address: t.address || "",
-        priceUsd: t.exchange_rate || "0",
-        priceNative: "0",
-        marketCap: t.market_cap || 0,
-        fdv: t.fdv || 0,
-        liquidityUsd: 0,
-        volume24h: 0,
-        volume6h: 0,
-        volume1h: 0,
-        volumeM5: 0,
-        priceChange24h: 0,
-        priceChange1h: 0,
-        priceChange6h: 0,
-        priceChangeM5: 0,
-        buys24h: 0,
-        sells24h: 0,
-        buys1h: 0,
-        sells1h: 0,
-        buysM5: 0,
-        sellsM5: 0,
-        dex: "blockscout",
-        pairAddress: "",
-        url: `https://robinhoodchain.blockscout.com/token/${t.address}`,
-        imageUrl: t.icon_url || null,
-        pairCreatedAt: 0,
-        quoteSymbol: "WETH",
-        websites: [],
-        socials: [],
-      });
-    }
-  }
-
-  // Sort: liquidity first, then volume
-  results.sort((a, b) => {
-    if (a.liquidityUsd > 0 && b.liquidityUsd > 0) return b.liquidityUsd - a.liquidityUsd;
-    if (a.liquidityUsd > 0) return -1;
-    if (b.liquidityUsd > 0) return 1;
-    return b.volume24h - a.volume24h;
-  });
-
-  return results.slice(0, 20);
 }

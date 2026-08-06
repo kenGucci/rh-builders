@@ -3,33 +3,6 @@ import builders from "@/lib/builders.json";
 import { findStockToken } from "@/lib/stock-tokens";
 
 const BLOCKSCOUT_API_V2 = "https://robinhoodchain.blockscout.com/api/v2";
-const DEXSCREENER_API = "https://api.dexscreener.com";
-
-async function fetchDexToken(address: string): Promise<{
-  priceUsd: string;
-  marketCap: number;
-  imageUrl: string | null;
-} | null> {
-  try {
-    const res = await fetch(
-      `${DEXSCREENER_API}/latest/dex/tokens/${address.toLowerCase()}`,
-      { signal: AbortSignal.timeout(6000) }
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    const pair = (data.pairs || []).find(
-      (p: Record<string, unknown>) => p.chainId === "robinhood"
-    );
-    if (!pair) return null;
-    return {
-      priceUsd: pair.priceUsd || "0",
-      marketCap: Number(pair.marketCap || pair.fdv || 0),
-      imageUrl: (pair.info as Record<string, unknown> | undefined)?.imageUrl as string | null || null,
-    };
-  } catch {
-    return null;
-  }
-}
 
 // ─── In-memory cache ───
 const cache = new Map<string, { data: unknown; expires: number }>();
@@ -132,11 +105,10 @@ async function searchBlockscout(query: string): Promise<{
   if (!addr) return null;
 
   if (best.type === "token" || best.token_type) {
-    // Enrich token + resolve creator in parallel (both bounded by the same 5s timeout)
-    const [tokenInfo, addrData, dexInfo] = await Promise.all([
+    // Enrich token + resolve creator in parallel
+    const [tokenInfo, addrData] = await Promise.all([
       apiFetch(`${BLOCKSCOUT_API_V2}/tokens/${addr.toLowerCase()}`).catch(() => null),
       apiFetch(`${BLOCKSCOUT_API_V2}/addresses/${addr.toLowerCase()}`).catch(() => null),
-      fetchDexToken(addr),
     ]);
 
     return {
@@ -153,9 +125,9 @@ async function searchBlockscout(query: string): Promise<{
             decimals: tokenInfo.decimals,
             total_supply: tokenInfo.total_supply,
             holders_count: tokenInfo.holders_count,
-            market_cap: dexInfo?.marketCap ? String(dexInfo.marketCap) : (tokenInfo.circulating_market_cap ?? null),
-            exchange_rate: dexInfo?.priceUsd && dexInfo.priceUsd !== "0" ? dexInfo.priceUsd : (tokenInfo.exchange_rate ?? null),
-            icon_url: (dexInfo?.imageUrl || tokenInfo.icon_url) ?? null,
+            market_cap: tokenInfo.circulating_market_cap ?? null,
+            exchange_rate: tokenInfo.exchange_rate ?? null,
+            icon_url: tokenInfo.icon_url ?? null,
           }
         : null,
       creator: addrData?.creator_address_hash ?? null,
@@ -172,10 +144,9 @@ async function searchBlockscout(query: string): Promise<{
 
 async function resolveTokenCA(address: string) {
   try {
-    const [tokenInfo, addrData, dexInfo] = await Promise.all([
+    const [tokenInfo, addrData] = await Promise.all([
       apiFetch(`${BLOCKSCOUT_API_V2}/tokens/${address.toLowerCase()}`, 8000),
       apiFetch(`${BLOCKSCOUT_API_V2}/addresses/${address.toLowerCase()}`, 6000).catch(() => null),
-      fetchDexToken(address),
     ]);
 
     return {
@@ -191,9 +162,9 @@ async function resolveTokenCA(address: string) {
         decimals: tokenInfo.decimals,
         total_supply: tokenInfo.total_supply,
         holders_count: tokenInfo.holders_count,
-        market_cap: dexInfo?.marketCap ? String(dexInfo.marketCap) : (tokenInfo.circulating_market_cap ?? null),
-        exchange_rate: dexInfo?.priceUsd && dexInfo.priceUsd !== "0" ? dexInfo.priceUsd : (tokenInfo.exchange_rate ?? null),
-        icon_url: (dexInfo?.imageUrl || tokenInfo.icon_url) ?? null,
+        market_cap: tokenInfo.circulating_market_cap ?? null,
+        exchange_rate: tokenInfo.exchange_rate ?? null,
+        icon_url: tokenInfo.icon_url ?? null,
       },
       creator: addrData?.creator_address_hash || null,
     };

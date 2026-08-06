@@ -100,7 +100,7 @@ const pages: PageGuide[] = [
       "Spot launchpads and deployed tech from the overview panels at the top.",
     ],
     howItWorks:
-      "Builder data is served from a curated local registry plus live enrichment from Blockscout for on-chain stats and DexScreener for DEX pairs and liquidity. Every card links back to the verified on-chain record.",
+      "Builder data is auto-discovered on-chain from Blockscout (token creators/deployers) plus live enrichment for on-chain stats, alongside the curated local registry. Every card links back to the verified on-chain record.",
   },
   {
     href: "/market",
@@ -108,10 +108,10 @@ const pages: PageGuide[] = [
     badge: "Trading",
     icon: LineChart,
     summary:
-      "Live stock and crypto market data, 24/7 news, plus a real on-chain swap panel. Track all 90+ Stock Tokens backed by Robinhood Custody and trade right from your wallet.",
+      "Live stock and crypto market data, 24/7 news, plus a real on-chain swap panel. Track all 96+ Stock Tokens backed by Robinhood Custody and trade right from your wallet.",
     howToUse: [
       "Use the symbol search to jump instantly to any Stock Token (NVDA, AAPL, QQQ, and more) or crypto pair.",
-      "Browse the 90+ Stock Tokens with live quotes and real interactive stock charts, and build a watchlist.",
+      "Browse the 96+ Stock Tokens with live quotes and real interactive stock charts, and build a watchlist.",
       "Click Buy or Sell on any Stock Token to open the trade modal — it fetches a live LI.FI quote and executes a real on-chain transaction from your wallet.",
       "Sort by Gainers, Losers, or Top Movers to follow the action, and open any asset for a detail view with sparkline, volume, and market state.",
       "Connect your wallet and use the built-in Swap panel to trade tokens on-chain.",
@@ -206,14 +206,14 @@ const morePages: PageGuide[] = [
     badge: "Detail",
     icon: Layers,
     summary:
-      "Live DEX profile for any token on Robinhood Chain — price, liquidity, volume, and pair data from DexScreener, plus its X account and chain links.",
+      "Live token profile for any token on Robinhood Chain — price, market cap, volume, and holder data from Blockscout, plus its X account and chain links.",
     howToUse: [
       "Open any token from the trending grid or a builder's holdings.",
-      "Review price, market cap, liquidity, volume, and price-change stats.",
-      "See the token's X account and view it on Blockscout or DexScreener.",
+      "Review price, market cap, volume, and holder stats.",
+      "See the token's X account and view it on Blockscout.",
     ],
     howItWorks:
-      "Pair and liquidity data streams live from DexScreener, and social data comes from the /api/twitter endpoint.",
+      "Price and holder data streams live from Blockscout, and social data comes from the /api/twitter endpoint.",
   },
   {
     href: "/team",

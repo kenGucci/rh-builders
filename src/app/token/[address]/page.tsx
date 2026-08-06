@@ -281,17 +281,6 @@ export default function TokenProfilePage() {
                     >
                       Blockscout <ExternalLink size={8} />
                     </a>
-
-                    {pair?.url && (
-                      <a
-                        href={pair.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[var(--accent)]/10 border border-[var(--accent)]/20 text-[10px] text-[var(--accent)] hover:bg-[var(--accent)]/20 transition-colors"
-                      >
-                        DexScreener <ExternalLink size={8} />
-                      </a>
-                    )}
                   </div>
                 </div>
 

@@ -5,7 +5,7 @@ import builders from "@/lib/builders.json";
 export const metadata: Metadata = {
   title: "Robinhood Chain (Beta) — Live Builders",
   description:
-    "Live tracking of builders deploying new tokens on Robinhood Chain (Beta · Live). On-chain stats, deployer wallets, and X-connected builders on Chain ID 4663.",
+    "Live tracking of every builder deploying tokens on Robinhood Chain (Beta · Live). On-chain stats, deployer wallets, and X-connected builders on Chain ID 4663.",
 };
 
 export default function BuildersPage() {
@@ -40,7 +40,7 @@ export default function BuildersPage() {
             </h1>
             <p className="text-sm text-[var(--text-muted)] flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-green-400 live-blink" />
-              Live · Tracking builders deploying new tokens on Robinhood
+              Live · Every builder deploying tokens on Robinhood
             </p>
           </div>
         </div>

@@ -20,7 +20,11 @@ export default function StockLogo({
 }) {
   const [idx, setIdx] = useState(0);
   const s = symbol.toUpperCase();
-  const sources = logo ? [logo, ...FALLBACK_SOURCES.map((b) => `${b}${s}`)] : FALLBACK_SOURCES.map((b) => `${b}${s}`);
+  const sources = [
+    `/api/logo/${s}`,
+    ...(logo ? [logo] : []),
+    ...FALLBACK_SOURCES.map((b) => `${b}${s}`),
+  ];
 
   if (idx >= sources.length) {
     return (

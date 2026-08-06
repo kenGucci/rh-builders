@@ -1,36 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { findStockToken, liveStockLogoUrl } from "@/lib/stock-tokens";
+import { getRhjQuotes } from "@/lib/rhj";
 
-const DEXSCREENER_API = "https://api.dexscreener.com";
 const BLOCKSCOUT_V2 = "https://robinhoodchain.blockscout.com/api/v2";
-
-interface DexPair {
-  chainId: string;
-  dexId: string;
-  pairAddress: string;
-  url: string;
-  baseToken: { address: string; name: string; symbol: string };
-  quoteToken: { address: string; name: string; symbol: string };
-  priceNative: string;
-  priceUsd: string;
-  txns: {
-    m5: { buys: number; sells: number };
-    h1: { buys: number; sells: number };
-    h6: { buys: number; sells: number };
-    h24: { buys: number; sells: number };
-  };
-  volume: { h24: number; h6: number; h1: number; m5: number };
-  priceChange: { m5: number; h1: number; h6: number; h24: number };
-  liquidity: { usd: number; base: number; quote: number };
-  fdv: number;
-  marketCap: number;
-  pairCreatedAt: number;
-  info?: {
-    imageUrl?: string;
-    websites?: Array<{ url: string; label: string }>;
-    socials?: Array<{ url: string; type: string }>;
-  };
-}
 
 interface TokenProfile {
   name: string;
@@ -90,10 +62,7 @@ export async function GET(
   }
 
   try {
-    const [dexData, bsData, countersData] = await Promise.allSettled([
-      fetch(`${DEXSCREENER_API}/latest/dex/tokens/${addr}`, {
-        signal: AbortSignal.timeout(8000),
-      }).then((r) => (r.ok ? r.json() : null)),
+    const [bsData, countersData] = await Promise.allSettled([
       fetch(`${BLOCKSCOUT_V2}/tokens/${addr}`, {
         signal: AbortSignal.timeout(8000),
       }).then((r) => (r.ok ? r.json() : null)),
@@ -102,55 +71,58 @@ export async function GET(
       }).then((r) => (r.ok ? r.json() : null)),
     ]);
 
-    const dexResult = dexData.status === "fulfilled" ? dexData.value : null;
     const bsResult = bsData.status === "fulfilled" ? bsData.value : null;
     const counters = countersData.status === "fulfilled" ? countersData.value : null;
 
-    const robinhoodPairs = (dexResult?.pairs || []).filter(
-      (p: DexPair) => p.chainId === "robinhood"
-    );
-
-    // Get profile info from first pair
-    const firstPair = robinhoodPairs[0];
-
     const stockToken = findStockToken(addr);
     const stockImage = stockToken ? liveStockLogoUrl(stockToken) : null;
+    const stockQuote = stockToken
+      ? (await getRhjQuotes([stockToken.symbol]))[stockToken.symbol]
+      : null;
+
+    const priceUsd =
+      stockQuote?.bid || bsResult?.exchange_rate || "0";
+    const marketCap = bsResult?.circulating_market_cap
+      ? Number(bsResult.circulating_market_cap)
+      : 0;
+    const volume24h = bsResult?.volume_24h
+      ? Number(bsResult.volume_24h)
+      : 0;
 
     const profile: TokenProfile = {
-      name: firstPair?.baseToken?.name || bsResult?.name || "Unknown",
-      symbol: firstPair?.baseToken?.symbol || bsResult?.symbol || "???",
+      name: bsResult?.name || stockToken?.name || "Unknown",
+      symbol: bsResult?.symbol || stockToken?.symbol || "???",
       address: addr,
-      imageUrl: bsResult?.icon_url || stockImage || firstPair?.info?.imageUrl || null,
-      websites: firstPair?.info?.websites || [],
-      socials: firstPair?.info?.socials || [],
+      imageUrl: stockImage || bsResult?.icon_url || null,
+      websites: [],
+      socials: [],
       description: bsResult?.description || null,
-      pairs: robinhoodPairs
-        .sort(
-          (a: DexPair, b: DexPair) =>
-            (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0)
-        )
-        .map((p: DexPair) => ({
-          dex: p.dexId || "unknown",
-          pairAddress: p.pairAddress || "",
-          quoteSymbol: p.quoteToken?.symbol || "WETH",
-          priceUsd: p.priceUsd || "0",
-          priceNative: p.priceNative || "0",
-          marketCap: p.marketCap || p.fdv || 0,
-          fdv: p.fdv || 0,
-          liquidityUsd: p.liquidity?.usd || 0,
-          volume24h: p.volume?.h24 || 0,
-          volume6h: p.volume?.h6 || 0,
-          volume1h: p.volume?.h1 || 0,
-          priceChange24h: p.priceChange?.h24 || 0,
-          priceChange1h: p.priceChange?.h1 || 0,
-          priceChange6h: p.priceChange?.h6 || 0,
-          buys24h: p.txns?.h24?.buys || 0,
-          sells24h: p.txns?.h24?.sells || 0,
-          buys1h: p.txns?.h1?.buys || 0,
-          sells1h: p.txns?.h1?.sells || 0,
-          url: p.url || "",
-          pairCreatedAt: p.pairCreatedAt || 0,
-        })),
+      pairs: [
+        {
+          dex: "robinhood",
+          pairAddress: "",
+          quoteSymbol: "USD",
+          priceUsd,
+          priceNative: "0",
+          marketCap,
+          fdv: marketCap,
+          liquidityUsd: 0,
+          volume24h,
+          volume6h: 0,
+          volume1h: 0,
+          priceChange24h: 0,
+          priceChange1h: 0,
+          priceChange6h: 0,
+          buys24h: 0,
+          sells24h: 0,
+          buys1h: 0,
+          sells1h: 0,
+          url: stockToken
+            ? `https://robinhoodchain.blockscout.com/token/${addr}`
+            : `https://robinhoodchain.blockscout.com/token/${addr}`,
+          pairCreatedAt: 0,
+        },
+      ],
       onChain: {
         totalSupply: bsResult?.total_supply || null,
         holders: counters?.token_holders_count

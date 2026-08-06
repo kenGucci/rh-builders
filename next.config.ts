@@ -23,7 +23,6 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "s3.yimg.com" },
       { protocol: "https", hostname: "www.google.com" },
       { protocol: "https", hostname: "i.ytimg.com" },
-      { protocol: "https", hostname: "cdn.dexscreener.com" },
       { protocol: "https", hostname: "cdn.robinhood.com" },
       { protocol: "https", hostname: "assets.parqet.com" },
       { protocol: "https", hostname: "financialmodelingprep.com" },

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveTokenLogo } from "@/lib/token-logos";
 
 const V2 = "https://robinhoodchain.blockscout.com/api/v2";
-const DEXSCREENER_API = "https://api.dexscreener.com";
 
 async function apiFetch(url: string) {
   const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
@@ -92,14 +91,12 @@ async function usdForAmount(
   try {
     let price = usdPriceCache.get(addr);
     if (!price) {
-      const res = await fetch(`${DEXSCREENER_API}/latest/dex/tokens/${addr}`, {
+      const res = await fetch(`${V2}/tokens/${addr}`, {
         signal: AbortSignal.timeout(6000),
       });
       if (!res.ok) return null;
-      const data = (await res.json()) as {
-        pairs?: Array<{ priceUsd?: string }>;
-      };
-      price = Number(data?.pairs?.find((p) => Number(p.priceUsd) > 0)?.priceUsd);
+      const data = (await res.json()) as { exchange_rate?: string };
+      price = Number(data?.exchange_rate);
       if (!price || !isFinite(price)) return null;
       usdPriceCache.set(addr, price);
     }

@@ -2,38 +2,28 @@ import { NextRequest, NextResponse } from "next/server";
 import { v2Fetch } from "@/lib/blockscout";
 import { resolveTokenLogo } from "@/lib/token-logos";
 
-const DEXSCREENER_API = "https://api.dexscreener.com";
-
-async function fetchDexData(tokenAddress: string) {
+async function fetchTokenStats(tokenAddress: string) {
   try {
-    const res = await fetch(
-      `${DEXSCREENER_API}/latest/dex/tokens/${tokenAddress.toLowerCase()}`,
-      { signal: AbortSignal.timeout(8000) }
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    const pair = (data.pairs || []).find(
-      (p: Record<string, unknown>) => p.chainId === "robinhood"
-    );
-    if (!pair) return null;
+    const tData = await v2Fetch(`/tokens/${tokenAddress.toLowerCase()}`) as Record<string, unknown> | null;
+    if (!tData) return null;
     return {
-      priceUsd: pair.priceUsd || "0",
-      priceNative: pair.priceNative || "0",
-      marketCap: pair.marketCap || pair.fdv || 0,
-      fdv: pair.fdv || 0,
-      liquidityUsd: (pair.liquidity as Record<string, unknown>)?.usd || 0,
-      volume24h: (pair.volume as Record<string, unknown>)?.h24 || 0,
-      volume1h: (pair.volume as Record<string, unknown>)?.h1 || 0,
-      priceChange24h: (pair.priceChange as Record<string, unknown>)?.h24 || 0,
-      priceChange1h: (pair.priceChange as Record<string, unknown>)?.h1 || 0,
-      buys24h: ((pair.txns as Record<string, unknown>)?.h24 as Record<string, unknown>)?.buys || 0,
-      sells24h: ((pair.txns as Record<string, unknown>)?.h24 as Record<string, unknown>)?.sells || 0,
-      dex: pair.dexId || "unknown",
-      pairAddress: pair.pairAddress || "",
-      url: pair.url || "",
+      priceUsd: String(tData.exchange_rate || "0"),
+      priceNative: "0",
+      marketCap: Number(tData.circulating_market_cap || 0),
+      fdv: Number(tData.circulating_market_cap || 0),
+      liquidityUsd: 0,
+      volume24h: Number(tData.volume_24h || 0),
+      volume1h: 0,
+      priceChange24h: 0,
+      priceChange1h: 0,
+      buys24h: 0,
+      sells24h: 0,
+      dex: "blockscout",
+      pairAddress: "",
+      url: `https://robinhoodchain.blockscout.com/token/${tokenAddress.toLowerCase()}`,
     };
   } catch (err) {
-    console.error("[builder-detail] fetchDexData failed:", tokenAddress, err);
+    console.error("[builder-detail] fetchTokenStats failed:", tokenAddress, err);
     return null;
   }
 }
@@ -171,9 +161,9 @@ export async function GET(request: NextRequest) {
       })
     : [];
 
-  // Fetch DexScreener data for each token in parallel (batch)
+  // Fetch on-chain stats for each token in parallel (batch)
   const dexResults = await Promise.allSettled(
-    rawTokenBalances.slice(0, 10).map((t) => fetchDexData(t.address))
+    rawTokenBalances.slice(0, 10).map((t) => fetchTokenStats(t.address))
   );
 
   // Check if builder is creator of any tokens

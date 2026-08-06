@@ -28,19 +28,19 @@ Browse all builders on Robinhood Chain with aggregate stats (total addresses, tr
 Deep-dive into any address: ETH/token balance, transaction count, token holdings table, balance history chart, live X/Twitter profile card, contract deployer info, and developer rewards panel with claim history.
 
 ### Market (`/market`)
-The Stock Token marketplace — **90+ 1:1-backed Stock Tokens** (NVDA, AAPL, TSLA, QQQ, and more) with live logos, 24/7 quotes, gainers/losers/movers, watchlist, and detail modals.
+The Stock Token marketplace — **96+ 1:1-backed Stock Tokens** (NVDA, AAPL, TSLA, QQQ, and more) with live logos, 24/7 quotes, gainers/losers/movers, watchlist, and detail modals.
 
 - **Market News 24/7** — Latest headlines for the tokens behind Stock Tokens, pulled live from Yahoo Finance.
 - **On X** — Live X profiles of the market voices moving the stock world (@robinhood, @CNBC, @MarketWatch, @WSJMarkets, @Stocktwits, @Nasdaq).
 - **See what's onchain** — Real-time chain dashboard: live blocks, live transactions, chain stats from Blockscout, running 24/7.
 - **Real swaps** — Connect your wallet (MetaMask / WalletConnect / Coinbase) to check balances, disconnect, and swap Stock Tokens directly on Robinhood Chain via LI.FI.
-- **Real on-chain txns** — Live DEX transactions from DexScreener and real chain transactions verified on Blockscout.
+- **Real on-chain txns** — Live transactions verified on Blockscout.
 
 ### Stock Token (`/stock/[symbol]`)
 A full page for any Stock Token — company profile, live quote and chart, market state, and Buy/Sell actions, with the official token logo from Robinhood's CDN.
 
 ### Token Profile (`/token/[address]`)
-Live DEX profile for any token on Robinhood Chain — price, liquidity, volume, and pair data from DexScreener, plus its X account and chain links. Token logos resolve automatically (Blockscout → Stock Token catalog → DexScreener) with letter-avatar fallbacks.
+Live token profile for any token on Robinhood Chain — price, market cap, volume, and holder data from Blockscout (via the official Robinhood Chain API for Stock Tokens), plus its X account and chain links. Token logos resolve automatically (FMP → Blockscout → Stock Token catalog) with letter-avatar fallbacks.
 
 ### X Profile (`/x/[handle]`)
 Any X/Twitter handle resolves to a live profile page — banner, avatar, description, follower counts, location, and join date, all fetched live from X.
@@ -90,8 +90,8 @@ src/
 - **Database:** Supabase (PostgreSQL) — feedback + user-facing records
 - **Rate Limiting:** Upstash Redis + Ratelimit (60 req/min per IP)
 - **Data Sources:**
-  - [Blockscout](https://robinhoodchain.blockscout.com) — On-chain analytics, live blocks & transactions
-  - [DexScreener](https://dexscreener.com) — DEX token data + live token logos
+  - [Blockscout](https://robinhoodchain.blockscout.com) — On-chain analytics, token lists, creator/discovery, live blocks & transactions
+  - [Robinhood Chain API (RHJ)](https://api.robinhood.com) — Official Stock Token registry (assets) + live bid/ask prices
   - [Yahoo Finance](https://finance.yahoo.com) — Stock & crypto quotes + 24/7 market news
   - [Financial Modeling Prep](https://financialmodelingprep.com) — Stock & crypto quotes (fallback)
   - [LI.FI](https://li.quest) — Real on-chain swap quotes
@@ -103,8 +103,8 @@ src/
 ## Features
 
 - **Real-time data 24/7** — Live market quotes, 24/7 stock news, on-chain blocks & transactions, auto-refreshing with staggered intervals
-- **Stock Tokens** — 90+ 1:1-backed tokens (NVDA, AAPL, TSLA, QQQ, …) with real quotes, official logos, and real on-chain swaps
-- **Live token logos** — Automatic logo resolution (Blockscout → stock catalog → DexScreener) with letter-avatar fallbacks
+- **Stock Tokens** — 96+ 1:1-backed tokens (NVDA, AAPL, TSLA, QQQ, …) with real quotes, official logos, and real on-chain swaps
+- **Live token logos** — Automatic logo resolution (FMP → Blockscout → stock catalog) with letter-avatar fallbacks
 - **Real on-chain dashboard** — Live blocks, live transactions, chain stats from Blockscout
 - **Wallet support** — Connect / disconnect via MetaMask, WalletConnect, Coinbase (RainbowKit), real token balances
 - **Open platform** — No login gate; everything browsable without an account
